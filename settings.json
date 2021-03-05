@@ -1,0 +1,49 @@
+{
+    "HSDIO": {
+        "deviceID": "Dev7",
+        "chanMap": {
+            "wl_addr": [1, 3, 5, 7, 9, 11],
+            "sl_addr": [13, 15, 30, 28, 26, 24, 22],
+            "wl_dec_en": [17],
+            "sl_dec_en": [19],
+            "wl_clk": [4]
+        }
+    },
+
+    "DAQmx": {
+        "chanMap": {
+            "read_ai": "Dev5/ai4",
+            "wl_ext": ["Dev5/ao0:1", "Dev4/ao0:1"]
+        }
+    },
+
+    "DCPower": {
+        "deviceID": "PXI1Slot8",
+        "chans": ["0", "1"]
+    },
+
+    "FGen": {
+        "deviceID": "Dev1",
+        "chan": "0"
+    },
+    
+    "READ": {
+        "read_clk_rate": 500000,
+        "n_samples": 100,
+        "shunt_res_value": 560,
+        "VWL": 2.5,
+        "VBL": 0.2,
+        "settling_time": 1.5e-3
+    },
+
+    "SET": {
+        "VWL": 2.5,
+        "VBL": 2.5,
+        "settling_time": 1.5e-3
+    },
+
+    "addr_hold_time": 5e-4,
+    "samp_clk_rate": 1000000,
+
+    "log_file": "TODO"
+}
