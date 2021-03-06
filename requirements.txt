@@ -1,0 +1,4 @@
+nidaqmx
+nifgen
+nidcpower
+numpy

@@ -26,7 +26,7 @@ class NIHSDIO:
         self.chan_map = chanMap if chanMap is not None else {}
 
         # Create driver and VI session
-        self.driver = CDLL("lib/niHSDIO_64.dll")
+        self.driver = CDLL("dll/niHSDIO_64.dll")
         self.sess = c_uint(0)
 
         # Initialize generation session
