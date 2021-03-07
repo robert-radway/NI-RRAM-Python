@@ -45,7 +45,7 @@ class NIRRAM:
 
         # Store/initialize parameters
         self.settings = settings
-        self.settings["chip"] = chip
+        self.chip = chip
         self.addr = 0
         self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
 
@@ -332,21 +332,26 @@ class NIRRAM:
         # Return results
         return res, cond, meas_i, meas_v, success
 
-    def target(self, target_res_low, target_res_high, max_attempts=25):
+    def target(self, target_res_low, target_res_high, scheme="PINGPONG", max_attempts=25):
         """Performs SET/RESET pulses in increasing fashion until target range is achieved.
         Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
         # Iterative pulse-verify
         for attempt in range(max_attempts):
             res, cond, meas_i, meas_v = self.read()
             if res > target_res_high:
-                res, cond, meas_i, meas_v, _ = self.dynamic_set(target_res_high)
+                res, cond, meas_i, meas_v, _ = self.dynamic_set(target_res_high, scheme)
             if res < target_res_low:
-                res, cond, meas_i, meas_v, _ = self.dynamic_reset(target_res_low)
-            if target_res_low < res and res < target_res_high:
+                res, cond, meas_i, meas_v, _ = self.dynamic_reset(target_res_low, scheme)
+            if target_res_low <= res <= target_res_high:
                 success = True
                 break
-            else:
-                success = False
+            success = False
+
+        # Log results
+        self.plogfile.write(f"{self.addr},{self.chip},{scheme},")
+        self.plogfile.write(f"{target_res_low},{target_res_high},")
+        self.plogfile.write(f"{self.prof['READs']},{self.prof['SETs']},{self.prof['RESETs']}")
+        self.plogfile.write(f"{success}")
 
         # Return results
         return res, cond, meas_i, meas_v, attempt, success

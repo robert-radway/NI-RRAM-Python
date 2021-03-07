@@ -1,5 +1,5 @@
 """Testing file"""
-from ni_rram import NIRRAM
+from nirram import NIRRAM
 
 nisys = NIRRAM("Chip_9")
 for i in range(500, 510):
