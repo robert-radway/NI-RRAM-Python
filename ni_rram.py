@@ -28,7 +28,7 @@ class NIRRAMException(Exception):
 
 class NIRRAM:
     """The NI RRAM controller class that controls the instrument drivers."""
-    def __init__(self, chip, settings="settings.json"):
+    def __init__(self, chip, settings="settings/default.json"):
         # If settings is a string, load as JSON file
         if isinstance(settings, str):
             with open(settings) as settings_file:
@@ -38,7 +38,10 @@ class NIRRAM:
         if not isinstance(settings, dict):
             raise NIRRAMException(f"Settings should be a dict, got {repr(settings)}.")
 
-        # TODO: initialize logger
+        # Initialize RRAM logging
+        self.mlogfile = open(settings["master_log_file"], "w")
+        self.plogfile = open(settings["prog_log_file"], "w")
+        self.mlogfile.write(f"INIT {chip}\n")
 
         # Store/initialize parameters
         self.settings = settings
@@ -115,7 +118,8 @@ class NIRRAM:
         # Address decoder disable
         self.decoder_disable()
 
-        # TODO: log READ operation
+        # Log operation to master file
+        self.mlogfile.write(f"{self.addr},READ,{res},{cond},{meas_i},{meas_v}\n")
 
         # Return measurement tuple
         return res, cond, meas_i, meas_v
@@ -162,6 +166,9 @@ class NIRRAM:
         # Address decoder disable
         self.decoder_disable()
 
+        # Log the pulse
+        self.mlogfile.write(f"{self.addr},SET,{vwl},{vbl},0\n")
+
     def reset_pulse(self, vwl=None, vsl=None, pulse_width=None):
         """Perform a RESET operation."""
         # Get parameters
@@ -193,6 +200,9 @@ class NIRRAM:
 
         # Address decoder disable
         self.decoder_disable()
+
+        # Log the pulse
+        self.mlogfile.write(f"{self.addr},RESET,{vwl},0,{vsl}\n")
 
 
     def set_vsl(self, voltage):
@@ -232,6 +242,22 @@ class NIRRAM:
         active_wl.wait_until_done()
         active_wl.stop()
 
+    def set_addr(self, addr):
+        """Set the address and hold briefly"""
+        # Update address
+        self.addr = addr
+
+        # Extract SL and WL addresses
+        sl_addr = (self.addr >> 1) & 0b1111111
+        wl_addr = (self.addr >> 10) & 0b111111
+
+        # Write addresses to corresponding HSDIO channels
+        self.hsdio.write_data_across_chans("sl_addr", sl_addr)
+        self.hsdio.write_data_across_chans("wl_addr", wl_addr)
+        accurate_delay(self.settings["addr_hold_time"])
+
+        # Reset profiling counters
+        self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
 
     def pulse_vwl(self, voltage, pulse_width):
         """Pulse (active) VWL using NI-DAQmx driver (inactive disabled)"""
@@ -265,22 +291,66 @@ class NIRRAM:
         self.hsdio.write_data_across_chans("sl_dec_en", 0b0)
         self.hsdio.write_data_across_chans("wl_clk", 0b0)
 
-    def set_addr(self, addr):
-        """Set the address and hold briefly"""
-        # Update address
-        self.addr = addr
 
-        # Extract SL and WL addresses
-        sl_addr = (self.addr >> 1) & 0b1111111
-        wl_addr = (self.addr >> 10) & 0b111111
+    def dynamic_set(self, target_res, scheme="PINGPONG"):
+        """Performs SET pulses in increasing fashion until resistance reaches target_res.
+        Returns tuple (res, cond, meas_i, meas_v, success)."""
+        # Get settings
+        cfg = self.settings[scheme]
 
-        # Write addresses to corresponding HSDIO channels
-        self.hsdio.write_data_across_chans("sl_addr", sl_addr)
-        self.hsdio.write_data_across_chans("wl_addr", wl_addr)
-        accurate_delay(self.settings["addr_hold_time"])
+        # Iterative pulse-verify
+        for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
+            for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
+                self.set_pulse(vwl, vbl, cfg["SET_PW"])
+            res, cond, meas_i, meas_v = self.read()
+            if res <= target_res:
+                success = True
+                break
+        else:
+            success = False
 
-        # Reset profiling counters
-        self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
+        # Return results
+        return res, cond, meas_i, meas_v, success
+
+    def dynamic_reset(self, target_res, scheme="PINGPONG"):
+        """Performs RESET pulses in increasing fashion until resistance reaches target_res.
+        Returns tuple (res, cond, meas_i, meas_v, success)."""
+        # Get settings
+        cfg = self.settings[scheme]
+
+        # Iterative pulse-verify
+        for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
+            for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+                self.reset_pulse(vwl, vsl, cfg["RESET_PW"])
+            res, cond, meas_i, meas_v = self.read()
+            if res >= target_res:
+                success = True
+                break
+        else:
+            success = False
+
+        # Return results
+        return res, cond, meas_i, meas_v, success
+
+    def target(self, target_res_low, target_res_high, max_attempts=25):
+        """Performs SET/RESET pulses in increasing fashion until target range is achieved.
+        Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
+        # Iterative pulse-verify
+        for attempt in range(max_attempts):
+            res, cond, meas_i, meas_v = self.read()
+            if res > target_res_high:
+                res, cond, meas_i, meas_v, _ = self.dynamic_set(target_res_high)
+            if res < target_res_low:
+                res, cond, meas_i, meas_v, _ = self.dynamic_reset(target_res_low)
+            if target_res_low < res and res < target_res_high:
+                success = True
+                break
+            else:
+                success = False
+
+        # Return results
+        return res, cond, meas_i, meas_v, attempt, success
+
 
     def close(self):
         """Close all NI sessions"""
@@ -304,8 +374,9 @@ class NIRRAM:
         self.sl_ext_chan.abort()
         self.sl_ext_chan.close()
 
-        # Give some time to shutdown
-        time.sleep(1)
+        # Close log fiels
+        self.mlogfile.close()
+        self.plogfile.close()
 
     def __del__(self):
         # Try to close session on deletion
@@ -313,6 +384,7 @@ class NIRRAM:
             self.close()
         except NIHSDIOException:
             pass
+
 
 if __name__=="__main__":
     # Basic test

@@ -1,8 +1,0 @@
-{
-    "python.pythonPath": "C:\\Users\\Murmann-Group\\anaconda3\\envs\\NI-RRAM-Python\\python.exe",
-    "python.linting.pylintPath": "C:\\Users\\Murmann-Group\\anaconda3\\envs\\NI-RRAM-Python\\Scripts\\pylint.exe",
-    "python.linting.enabled": true,
-    "python.linting.lintOnSave" : true,
-    "python.linting.pylintUseMinimalCheckers": false,
-    "C_Cpp.errorSquiggles": "Disabled",
-}

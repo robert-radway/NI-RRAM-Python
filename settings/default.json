@@ -57,8 +57,26 @@
         "settling_time": 1e-3
     },
 
+    "PINGPONG": {
+        "VWL_start": 0.8,
+        "VWL_step": 0.05,
+        "VWL_stop": 4,
+
+        "VBL_start": 3,
+        "VBL_step": 3,
+        "VBL_stop": 3,
+
+        "VSL_start": 3,
+        "VSL_step": 3,
+        "VSL_stop": 3,
+
+        "SET_PW": 10e-6,
+        "RESET_PW": 10e-6
+    },
+
     "addr_hold_time": 1e-3,
     "samp_clk_rate": 1000000,
 
-    "log_file": "TODO"
+    "master_log_file": "log/master.log",
+    "prog_log_file": "log/prog.log"
 }

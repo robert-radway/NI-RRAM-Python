@@ -1,7 +1,6 @@
+"""Testing file"""
 from ni_rram import NIRRAM
-from time import sleep
+
 nisys = NIRRAM("Chip_9")
-nisys.set_addr(348)
-print(nisys.read())
-nisys.set_pulse()
-print(nisys.read())
+for i in range(500, 510):
+    print(nisys.target(10000*i + 10000, 10000*i + 20000))
