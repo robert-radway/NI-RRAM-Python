@@ -43,35 +43,40 @@
         "settling_time": 1e-3
     },
 
-    "FORM": {
-        "VWL": 1.4,
-        "VBL": 3,
-        "PW": 10e-6,
-        "settling_time": 1e-3
-    },
-
     "RESET": {
         "VWL": 3,
         "VSL": 3,
         "PW": 40e-6,
         "settling_time": 1e-3
     },
+    
+    "FORM": {
+        "VWL_start": 0.8,
+        "VWL_step": 0.1,
+        "VWL_stop": 4,
+
+        "VBL_start": 3.3,
+        "VBL_step": 1,
+        "VBL_stop": 3.31,
+
+        "SET_PW": 100e-6
+    },
 
     "PINGPONG": {
         "VWL_start": 0.8,
-        "VWL_step": 0.05,
+        "VWL_step": 0.1,
         "VWL_stop": 4,
 
-        "VBL_start": 3,
-        "VBL_step": 3,
-        "VBL_stop": 3,
+        "VBL_start": 3.3,
+        "VBL_step": 1,
+        "VBL_stop": 3.31,
 
-        "VSL_start": 3,
-        "VSL_step": 3,
-        "VSL_stop": 3,
+        "VSL_start": 3.3,
+        "VSL_step": 1,
+        "VSL_stop": 3.31,
 
-        "SET_PW": 10e-6,
-        "RESET_PW": 10e-6
+        "SET_PW": 1e-6,
+        "RESET_PW": 1e-6
     },
 
     "addr_hold_time": 1e-3,

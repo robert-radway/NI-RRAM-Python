@@ -39,8 +39,8 @@ class NIRRAM:
             raise NIRRAMException(f"Settings should be a dict, got {repr(settings)}.")
 
         # Initialize RRAM logging
-        self.mlogfile = open(settings["master_log_file"], "w")
-        self.plogfile = open(settings["prog_log_file"], "w")
+        self.mlogfile = open(settings["master_log_file"], "a")
+        self.plogfile = open(settings["prog_log_file"], "a")
         self.mlogfile.write(f"INIT {chip}\n")
 
         # Store/initialize parameters
@@ -292,6 +292,11 @@ class NIRRAM:
         self.hsdio.write_data_across_chans("wl_clk", 0b0)
 
 
+    def dynamic_form(self, target_res=50000):
+        """Performs SET pulses in increasing fashion until resistance reaches target_res.
+        Returns tuple (res, cond, meas_i, meas_v, success)."""
+        res, cond, meas_i, meas_v, success = self.dynamic_set(target_res, scheme="FORM")
+
     def dynamic_set(self, target_res, scheme="PINGPONG"):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -299,15 +304,16 @@ class NIRRAM:
         cfg = self.settings[scheme]
 
         # Iterative pulse-verify
+        success = False
         for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
             for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                 self.set_pulse(vwl, vbl, cfg["SET_PW"])
-            res, cond, meas_i, meas_v = self.read()
-            if res <= target_res:
-                success = True
+                res, cond, meas_i, meas_v = self.read()
+                if res <= target_res:
+                    success = True
+                    break
+            if success:
                 break
-        else:
-            success = False
 
         # Return results
         return res, cond, meas_i, meas_v, success
@@ -319,42 +325,55 @@ class NIRRAM:
         cfg = self.settings[scheme]
 
         # Iterative pulse-verify
+        success = False
         for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
             for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
                 self.reset_pulse(vwl, vsl, cfg["RESET_PW"])
-            res, cond, meas_i, meas_v = self.read()
-            if res >= target_res:
-                success = True
+                res, cond, meas_i, meas_v = self.read()
+                if res >= target_res:
+                    success = True
+                    break
+            if success:
                 break
-        else:
-            success = False
 
         # Return results
         return res, cond, meas_i, meas_v, success
 
-    def target(self, target_res_low, target_res_high, scheme="PINGPONG", max_attempts=25):
+    def target(self, target_res_lo, target_res_hi, scheme="PINGPONG", max_attempts=25, debug=True):
         """Performs SET/RESET pulses in increasing fashion until target range is achieved.
         Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
         # Iterative pulse-verify
+        success = False
         for attempt in range(max_attempts):
             res, cond, meas_i, meas_v = self.read()
-            if res > target_res_high:
-                res, cond, meas_i, meas_v, _ = self.dynamic_set(target_res_high, scheme)
-            if res < target_res_low:
-                res, cond, meas_i, meas_v, _ = self.dynamic_reset(target_res_low, scheme)
-            if target_res_low <= res <= target_res_high:
+            if debug:
+                print("ATTEMPT", attempt)
+                print("RES", res)
+            if res > target_res_hi:
+                if debug:
+                    print("DYNSET", res)
+                res, cond, meas_i, meas_v, _ = self.dynamic_set(target_res_hi, scheme)
+            if res < target_res_lo:
+                if debug:
+                    print("DYNRESET", res)
+                res, cond, meas_i, meas_v, _ = self.dynamic_reset(target_res_lo, scheme)
+            if target_res_lo <= res <= target_res_hi:
                 success = True
                 break
-            success = False
 
         # Log results
         self.plogfile.write(f"{self.addr},{self.chip},{scheme},")
-        self.plogfile.write(f"{target_res_low},{target_res_high},")
-        self.plogfile.write(f"{self.prof['READs']},{self.prof['SETs']},{self.prof['RESETs']}")
-        self.plogfile.write(f"{success}")
+        self.plogfile.write(f"{target_res_lo},{target_res_hi},{res},")
+        self.plogfile.write(f"{self.prof['READs']},{self.prof['SETs']},{self.prof['RESETs']},")
+        self.plogfile.write(f"{success}\n")
 
         # Return results
         return res, cond, meas_i, meas_v, attempt, success
+
+    def target_g(self, target_g_lo, target_g_hi, scheme="PINGPONG", max_attempts=25, debug=True):
+        """Performs SET/RESET pulses in increasing fashion until target range is achieved.
+        Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
+        self.target(1/target_g_hi, 1/target_g_lo, scheme, max_attempts, debug)
 
 
     def close(self):
