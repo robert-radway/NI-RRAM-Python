@@ -295,7 +295,7 @@ class NIRRAM:
     def dynamic_form(self, target_res=50000):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
-        res, cond, meas_i, meas_v, success = self.dynamic_set(target_res, scheme="FORM")
+        return self.dynamic_set(target_res, scheme="FORM")
 
     def dynamic_set(self, target_res, scheme="PINGPONG"):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.

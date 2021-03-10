@@ -1,6 +1,6 @@
 {
     "HSDIO": {
-        "deviceID": "Dev7",
+        "deviceID": "Dev23",
         "chanMap": {
             "wl_addr": [1, 3, 5, 7, 9, 11],
             "sl_addr": [13, 15, 30, 28, 26, 24, 22],
@@ -12,18 +12,18 @@
 
     "DAQmx": {
         "chanMap": {
-            "read_ai": "Dev5/ai4",
-            "wl_ext": ["Dev5/ao0:1", "Dev4/ao0:1"]
+            "read_ai": "Dev22/ai4",
+            "wl_ext": ["Dev22/ao0:1", "Dev21/ao0:1"]
         }
     },
 
     "DCPower": {
-        "deviceID": "PXI1Slot8",
+        "deviceID": "PXI2Slot5_3",
         "chans": ["0", "1"]
     },
 
     "FGen": {
-        "deviceID": "Dev1",
+        "deviceID": "Dev18",
         "chan": "0"
     },
     
@@ -51,15 +51,15 @@
     },
     
     "FORM": {
-        "VWL_start": 0.8,
-        "VWL_step": 0.1,
+        "VWL_start": 0.9,
+        "VWL_step": 0.05,
         "VWL_stop": 4,
 
         "VBL_start": 3.3,
         "VBL_step": 1,
         "VBL_stop": 3.31,
 
-        "SET_PW": 100e-6
+        "SET_PW": 1000e-6
     },
 
     "PINGPONG": {
