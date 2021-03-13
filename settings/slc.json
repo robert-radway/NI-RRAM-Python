@@ -63,9 +63,13 @@
     },
 
     "PINGPONG": {
-        "VWL_start": 0.8,
-        "VWL_step": 0.1,
-        "VWL_stop": 4,
+        "VWL_SET_start": 0.8,
+        "VWL_SET_step": 0.1,
+        "VWL_SET_stop": 4,
+
+        "VWL_RESET_start": 0.8,
+        "VWL_RESET_step": 0.1,
+        "VWL_RESET_stop": 4,
 
         "VBL_start": 3.3,
         "VBL_step": 1,

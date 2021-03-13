@@ -2,3 +2,5 @@ nidaqmx
 nifgen
 nidcpower
 numpy
+matplotlib
+pandas
