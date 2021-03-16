@@ -25,24 +25,15 @@ Note that wl_ext_sel and sl_ext_sel need to be decoded programmatically to deter
 ## Chip Status
 
 Chip 1: Breakout Board Chip, status: unsure if working, looks like the wire bonds are shorted...  
-
 Chip 2: Prototyping Chip, status: some cells over-SET, working otherwise, nothing formed past 2512 as far as known  
-
 Chip 3: FORMed all, programmed with first set of inputs (HRS: 70-90kOhm)... was somewhat working, but then we tried to push to 500kOhm and shorted a bunch of cells. Lesson learned: don't push past 100kOhm.  
-
 Chip 4: FORMed every 8 cells, programmed with a simple debug vector, working but cell HRS is 70-90kOhm  
-
 Chip 5: FORMed every 8 cells, programmed with a simple debug vector, HRS is >100kOhm, working  
-
 Chip 6: FORMed all, programmed with first set of inputs (HRS: >100kOhm), working!!! But now shorted  
-
 Chip 7: FORMed all, programmed with second batch of inputs (HRS: >100kOhm), TODO: reexamine.
     - Programming batch_0 vectors and tuning HRS
-
 Chip 8: FORMed all, programmed with a simple debug vector (same as 4), we think the sense amp might be broken  
-
 Chip 9: prototyping  
-
 Chip 10: FORMed all, programmed with batch_0 feature vectors (HRS >100kOhm)
 
 
