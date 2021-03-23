@@ -3,7 +3,7 @@ import argparse
 from nirram import NIRRAM
 
 # Get arguments
-parser = argparse.ArgumentParser(description="FORM a chip.")
+parser = argparse.ArgumentParser(description="READ a chip.")
 parser.add_argument("chipname", help="chip name for logging")
 parser.add_argument("outfile", help="file to output to")
 parser.add_argument("--start-addr", type=int, default=0, help="start address")
