@@ -4,7 +4,7 @@ import pandas as pd
 
 # Chip number
 CHIP_ID = 'C1'
-tsv_file = 'read_fresh.tsv'
+tsv_file = 'read_formed.tsv'
 
 
 # Load target output as dataframe
@@ -20,7 +20,7 @@ data = pd.read_csv(f'../log/{CHIP_ID}/{tsv_file}', names=cols, sep='\t', dtype=d
 r_mat = data['R'].values.reshape(256, 256) / 1000 # kOhm
 
 fig = plt.figure()
-mat = plt.gca().matshow(r_mat, vmin=0, vmax=1000)
+mat = plt.gca().matshow(r_mat, vmin=0, vmax=100)
 cbar = plt.colorbar(mat)
 cbar.set_label('Resistance (KOhm', rotation=270)
 plt.xlabel('BL/SL #')

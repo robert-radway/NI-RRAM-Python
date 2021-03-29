@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt, numpy as np, pandas as pd
 
 # Chip number
-CHIP = 10
-tsv_file = 'read.tsv'
+CHIP = 'C1'
+tsv_file = 'read_3.tsv'
 
 # Load bitstream
 bs = np.loadtxt(open("../bitstream/vectors_bitstream.txt"), dtype=np.int32)
@@ -14,7 +14,7 @@ dtypes = {
     'addr': np.int32,
     'R': np.float64
 }
-data = pd.read_csv(f'../log/CHIP_{CHIP}/{tsv_file}', names=cols, sep='\t', dtype=dtypes, index_col='addr')
+data = pd.read_csv(f'../log/{CHIP}/{tsv_file}', names=cols, sep='\t', dtype=dtypes, index_col='addr')
 data['bin'] = bs[:len(data)]
 
 # CDF curves
