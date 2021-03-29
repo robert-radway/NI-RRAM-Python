@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt, numpy as np, pandas as pd
 
 # Chip number
-CHIP = 'C1'
-tsv_file = 'read_3.tsv'
+CHIP = 7
+tsv_file = 'read_0325.tsv'
 
 # Load bitstream
 bs = np.loadtxt(open("../bitstream/vectors_bitstream.txt"), dtype=np.int32)
