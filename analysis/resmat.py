@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Chip number
-CHIP_ID = 'C1'
+CHIP_ID = 'C2'
 tsv_file = 'read_formed.tsv'
 
 
