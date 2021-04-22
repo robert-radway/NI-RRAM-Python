@@ -7,7 +7,7 @@
             "settings/default.digilevels",
             "settings/default.digitiming"
         ],
-        "patterns": "patterns/*.digipat"
+        "patterns": "settings/patterns/*.digipat"
     },
     
     "READ": {
