@@ -60,8 +60,11 @@ class NIRRAM:
             self.digital.load_pattern(abspath(pat))
         self.digital.burst_pattern("all_off")
         
-        # Set address to 0
+        # Set address and all voltages to 0
         self.set_addr(0)
+        self.set_vwl(0)
+        self.set_vbl(0)
+        self.set_vsl(0)
 
 
     def read(self):
