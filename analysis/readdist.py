@@ -1,19 +1,13 @@
 # Import libraries
 import matplotlib.pyplot as plt, numpy as np, pandas as pd
 
-<<<<<<< HEAD
 # Chip ID
-CHIP = 'C2'
+CHIP = 'C3'
 tsv_file = 'read.tsv'
-=======
-# Chip number
-CHIP = 7
-tsv_file = 'read_0325.tsv'
->>>>>>> b2d044268b7995dee9ad083e3f7d5c52aaa9e23a
 
 # Load bitstream
-# bs = np.loadtxt(open("../bitstream/vectors_bitstream.txt"), dtype=np.int32)
-bs = np.loadtxt(open("../bitstream/vectors_bitstream_2.txt"), dtype=np.int32)
+bs = np.loadtxt(open("../bitstream/vectors_bitstream.txt"), dtype=np.int32)
+# bs = np.loadtxt(open("../bitstream/vectors_bitstream_2.txt"), dtype=np.int32)
 
 # Load target output as dataframe
 cols = ['addr', 'R']

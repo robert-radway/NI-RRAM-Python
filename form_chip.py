@@ -16,7 +16,7 @@ nisys = NIRRAM(args.chipname)
 # Do operation across cells
 for addr in range(args.start_addr, args.end_addr, args.step_addr):
     nisys.set_addr(addr)
-    form = nisys.dynamic_form()
+    form = nisys.dynamic_form(target_res=10000)
     print(f"Address {addr}: {form}")
 
 # Shutdown

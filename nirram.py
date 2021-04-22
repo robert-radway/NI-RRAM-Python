@@ -107,7 +107,7 @@ class NIRRAM:
         meas_v = np.mean(self.read_chan.read(self.settings["READ"]["n_samples"]))
         self.read_chan.wait_until_done()
         self.read_chan.stop()
-        meas_i = meas_v/self.settings["READ"]["shunt_res_value"]
+        meas_i = meas_v/self.settings["READ"]["shunt_res_value"] + self.settings["READ"]["current_offset"]
         res = np.abs(self.settings["READ"]["VBL"]/meas_i - self.settings["READ"]["shunt_res_value"])
         cond = 1/res
 
@@ -167,7 +167,7 @@ class NIRRAM:
         self.decoder_disable()
 
         # Log the pulse
-        self.mlogfile.write(f"{self.addr},SET,{vwl},{vbl},0\n")
+        self.mlogfile.write(f"{self.addr},SET,{vwl},{vbl},0,{pulse_width}\n")
 
     def reset_pulse(self, vwl=None, vsl=None, pulse_width=None):
         """Perform a RESET operation."""
@@ -202,7 +202,7 @@ class NIRRAM:
         self.decoder_disable()
 
         # Log the pulse
-        self.mlogfile.write(f"{self.addr},RESET,{vwl},0,{vsl}\n")
+        self.mlogfile.write(f"{self.addr},RESET,{vwl},0,{vsl},{pulse_width}\n")
 
 
     def set_vsl(self, voltage):
@@ -237,10 +237,16 @@ class NIRRAM:
         signal = [[(1-active_wl_chan)*voltage]*2, [active_wl_chan*voltage]*2]
         inactive_wl.write([[0,0],[0,0]], auto_start=True)
         inactive_wl.wait_until_done()
-        inactive_wl.stop()
+        try:
+            inactive_wl.stop()
+        except nidaqmx.errors.DaqWarning:
+            pass
         active_wl.write(signal, auto_start=True)
         active_wl.wait_until_done()
-        active_wl.stop()
+        try:
+            active_wl.stop()
+        except nidaqmx.errors.DaqWarning:
+            pass
 
     def set_addr(self, addr):
         """Set the address and hold briefly"""
@@ -274,10 +280,16 @@ class NIRRAM:
         signal = [[(1-active_wl_chan)*voltage, 0], [active_wl_chan*voltage, 0]]
         inactive_wl.write([[0,0],[0,0]], auto_start=True)
         inactive_wl.wait_until_done()
-        inactive_wl.stop()
+        try:
+            inactive_wl.stop()
+        except nidaqmx.errors.DaqWarning:
+            pass
         active_wl.write(signal, auto_start=True)
         active_wl.wait_until_done()
-        active_wl.stop()
+        try:
+            active_wl.stop()
+        except nidaqmx.errors.DaqWarning:
+            pass
 
     def decoder_enable(self):
         """Enable decoding circuitry using digital signals"""
@@ -305,7 +317,7 @@ class NIRRAM:
 
         # Iterative pulse-verify
         success = False
-        for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
+        for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
             for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                 self.set_pulse(vwl, vbl, cfg["SET_PW"])
                 res, cond, meas_i, meas_v = self.read()
@@ -326,7 +338,7 @@ class NIRRAM:
 
         # Iterative pulse-verify
         success = False
-        for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
+        for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
             for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
                 self.reset_pulse(vwl, vsl, cfg["RESET_PW"])
                 res, cond, meas_i, meas_v = self.read()
