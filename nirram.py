@@ -3,21 +3,13 @@ import json
 import time
 import warnings
 import nidaqmx
-import nidcpower
-import nifgen
+import nidigital
 import numpy as np
-from nihsdio import NIHSDIO, NIHSDIOException
+from os.path import abspath
 
 
 # Warnings become errors
 warnings.filterwarnings("error")
-
-
-def accurate_delay(delay):
-    """Function to provide accurate time delay"""
-    _ = time.perf_counter() + delay
-    while time.perf_counter() < _:
-        pass
 
 
 class NIRRAMException(Exception):
@@ -26,6 +18,8 @@ class NIRRAMException(Exception):
         super().__init__(f"NIRRAM: {msg}")
 
 
+# TODO: set up digital pattern editor stuff, pinmap, timing, levels etc.
+# TODO: need to configure it so that different word lines are accessible
 class NIRRAM:
     """The NI RRAM controller class that controls the instrument drivers."""
     def __init__(self, chip, settings="settings/default.json"):
@@ -38,6 +32,9 @@ class NIRRAM:
         if not isinstance(settings, dict):
             raise NIRRAMException(f"Settings should be a dict, got {repr(settings)}.")
 
+        # Convert NIDigital spec paths to absolute paths
+        settings["NIDigital"]["specs"] = [abspath(path) for path in settings["NIDigital"]["specs"]]
+
         # Initialize RRAM logging
         self.mlogfile = open(settings["master_log_file"], "a")
         self.plogfile = open(settings["prog_log_file"], "a")
@@ -49,39 +46,22 @@ class NIRRAM:
         self.addr = 0
         self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
 
-        # Initialize NI-HSDIO driver
-        self.hsdio = NIHSDIO(**settings["HSDIO"])
-
         # Initialize NI-DAQmx driver for READ voltage
         self.read_chan = nidaqmx.Task()
         self.read_chan.ai_channels.add_ai_voltage_chan(settings["DAQmx"]["chanMap"]["read_ai"])
         read_rate, spc = settings["READ"]["read_rate"], settings["READ"]["n_samples"]
         self.read_chan.timing.cfg_samp_clk_timing(read_rate, samps_per_chan=spc)
 
-        # Initialize NI-DAQmx driver for WL voltages
-        self.wl_ext_chans = []
-        for chan in settings["DAQmx"]["chanMap"]["wl_ext"]:
-            task = nidaqmx.Task()
-            task.ao_channels.add_ao_voltage_chan(chan)
-            task.timing.cfg_samp_clk_timing(settings["samp_clk_rate"], samps_per_chan=2)
-            self.wl_ext_chans.append(task)
-
-        # Initialize NI-DCPower driver for BL voltages
-        self.bl_ext_chans = []
-        for chan in settings["DCPower"]["chans"]:
-            sess = nidcpower.Session(settings["DCPower"]["deviceID"], chan)
-            # sess.current_limit = 1 # requires aux power input
-            sess.voltage_level = 0
-            sess.commit()
-            sess.initiate()
-            self.bl_ext_chans.append(sess)
-
-        # Initialize NI-FGen driver for SL voltage
-        self.sl_ext_chan = nifgen.Session(settings["FGen"]["deviceID"])
-        self.sl_ext_chan.output_mode = nifgen.OutputMode.FUNC
-        self.sl_ext_chan.configure_standard_waveform(nifgen.Waveform.DC, 0.0, frequency=10000000)
-        self.sl_ext_chan.initiate()
-
+        # Initialize NI-Digital driver
+        self.digital = nidigital.Session(settings["NIDigital"]["deviceID"])
+        self.digital.load_pin_map(settings["NIDigital"]["pinmap"])
+        self.digital.load_specifications_levels_and_timing(*settings["NIDigital"]["specs"])
+        self.digital.apply_levels_and_timing(*settings["NIDigital"]["specs"][1:])
+        self.digital.unload_all_patterns()
+        for pat in glob.glob(settings["NIDigital"]["patterns"]):
+            self.digital.load_pattern(abspath(pat))
+        self.digital.burst_pattern("all_off")
+        
         # Set address to 0
         self.set_addr(0)
 
@@ -91,16 +71,10 @@ class NIRRAM:
         # Increment the number of READs
         self.prof["READs"] += 1
 
-        # Address decoder enable
-        self.decoder_enable()
-
         # Set voltages
         self.set_vsl(0)
         self.set_vbl(self.settings["READ"]["VBL"])
         self.set_vwl(self.settings["READ"]["VWL"])
-
-        # Settling time for VBL
-        accurate_delay(self.settings["READ"]["settling_time"])
 
         # Measure
         self.read_chan.start()
@@ -119,7 +93,7 @@ class NIRRAM:
         self.decoder_disable()
 
         # Log operation to master file
-        self.mlogfile.write(f"{self.addr},READ,{res},{cond},{meas_i},{meas_v}\n")
+        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},READ,{res},{cond},{meas_i},{meas_v}\n")
 
         # Return measurement tuple
         return res, cond, meas_i, meas_v
@@ -167,7 +141,7 @@ class NIRRAM:
         self.decoder_disable()
 
         # Log the pulse
-        self.mlogfile.write(f"{self.addr},SET,{vwl},{vbl},0\n")
+        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},SET,{vwl},{vbl},0,{pulse_width}\n") # TODO: for all!!!
 
     def reset_pulse(self, vwl=None, vsl=None, pulse_width=None):
         """Perform a RESET operation."""
@@ -202,59 +176,30 @@ class NIRRAM:
         self.decoder_disable()
 
         # Log the pulse
-        self.mlogfile.write(f"{self.addr},RESET,{vwl},0,{vsl}\n")
+        self.mlogfile.write(f"{self.addr},RESET,{vwl},0,{vsl},{pulse_width}\n")
 
 
     def set_vsl(self, voltage):
-        """Set VSL using NI-FGen driver"""
-        # Set DC offset to V/2 since it is doubled by FGen for some reason
-        self.sl_ext_chan.func_dc_offset = voltage/2
+        """Set VSL using NI-Digital driver"""
+        self.digital.channels["sl_ext"].configure_voltage_levels(0, voltage, 0, voltage, 0)
 
     def set_vbl(self, voltage):
         """Set (active) VBL using NI-DCPower driver (inactive disabled)"""
-        # LSB indicates active BL channel
-        active_bl_chan = (self.addr >> 0) & 0b1
-        active_bl = self.bl_ext_chans[active_bl_chan]
-        inactive_bl = self.bl_ext_chans[1-active_bl_chan]
-
-        # Set voltages and commit
-        inactive_bl.voltage_level = 0
-        inactive_bl.commit()
-        active_bl.voltage_level = voltage
-        active_bl.commit()
-        inactive_bl.wait_for_event(nidcpower.Event.SOURCE_COMPLETE)
-        active_bl.wait_for_event(nidcpower.Event.SOURCE_COMPLETE)
+        self.digital.channels["bl_ext"].configure_voltage_levels(0, voltage, 0, voltage, 0)
 
     def set_vwl(self, voltage):
         """Set (active) VWL using NI-DAQmx driver (inactive disabled)"""
-        # Select 8th and 9th bit to get the channel and the driver card, respectively
-        active_wl_chan = (self.addr >> 8) & 0b1
-        active_wl_dev = (self.addr >> 9) & 0b1
-        active_wl = self.wl_ext_chans[active_wl_dev]
-        inactive_wl = self.wl_ext_chans[1-active_wl_dev]
-
-        # Write voltage to hold
-        signal = [[(1-active_wl_chan)*voltage]*2, [active_wl_chan*voltage]*2]
-        inactive_wl.write([[0,0],[0,0]], auto_start=True)
-        inactive_wl.wait_until_done()
-        inactive_wl.stop()
-        active_wl.write(signal, auto_start=True)
-        active_wl.wait_until_done()
-        active_wl.stop()
+        self.digital.channels["wl_ext"].configure_voltage_levels(0, voltage, 0, voltage, 0)
 
     def set_addr(self, addr):
-        """Set the address and hold briefly"""
+        """Set the address"""
         # Update address
         self.addr = addr
 
-        # Extract SL and WL addresses
-        sl_addr = (self.addr >> 1) & 0b1111111
-        wl_addr = (self.addr >> 10) & 0b111111
-
-        # Write addresses to corresponding HSDIO channels
-        self.hsdio.write_data_across_chans("sl_addr", sl_addr)
-        self.hsdio.write_data_across_chans("wl_addr", wl_addr)
-        accurate_delay(self.settings["addr_hold_time"])
+        # Configure waveform
+        self.digital.pins["addr"].create_source_waveform_parallel("addr_waveform", nidigital.SourceDataMapping.BROADCAST)
+        self.digital.write_source_waveform_broadcast("addr_waveform", [addr])
+        self.digital.burst_pattern("load_addr")
 
         # Reset profiling counters
         self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
@@ -274,23 +219,16 @@ class NIRRAM:
         signal = [[(1-active_wl_chan)*voltage, 0], [active_wl_chan*voltage, 0]]
         inactive_wl.write([[0,0],[0,0]], auto_start=True)
         inactive_wl.wait_until_done()
-        inactive_wl.stop()
+        try:
+            inactive_wl.stop()
+        except nidaqmx.errors.DaqWarning:
+            pass
         active_wl.write(signal, auto_start=True)
         active_wl.wait_until_done()
-        active_wl.stop()
-
-    def decoder_enable(self):
-        """Enable decoding circuitry using digital signals"""
-        self.hsdio.write_data_across_chans("wl_dec_en", 0b11)
-        self.hsdio.write_data_across_chans("sl_dec_en", 0b1)
-        self.hsdio.write_data_across_chans("wl_clk", 0b1)
-
-    def decoder_disable(self):
-        """Disable decoding circuitry using digital signals"""
-        self.hsdio.write_data_across_chans("wl_dec_en", 0b00)
-        self.hsdio.write_data_across_chans("sl_dec_en", 0b0)
-        self.hsdio.write_data_across_chans("wl_clk", 0b0)
-
+        try:
+            active_wl.stop()
+        except nidaqmx.errors.DaqWarning:
+            pass
 
     def dynamic_form(self, target_res=50000):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
@@ -305,7 +243,7 @@ class NIRRAM:
 
         # Iterative pulse-verify
         success = False
-        for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
+        for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
             for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                 self.set_pulse(vwl, vbl, cfg["SET_PW"])
                 res, cond, meas_i, meas_v = self.read()
@@ -326,7 +264,7 @@ class NIRRAM:
 
         # Iterative pulse-verify
         success = False
-        for vwl in np.arange(cfg["VWL_start"], cfg["VWL_stop"], cfg["VWL_step"]):
+        for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
             for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
                 self.reset_pulse(vwl, vsl, cfg["RESET_PW"])
                 res, cond, meas_i, meas_v = self.read()
@@ -379,37 +317,17 @@ class NIRRAM:
     def close(self):
         """Close all NI sessions"""
         # Close NI-HSDIO
-        self.hsdio.close()
+        self.digital.close()
 
-        # Close NI-DAQmx AI
-        self.read_chan.close()
-
-        # Close NI-DAQmx AOs
-        for task in self.wl_ext_chans:
-            task.stop()
-            task.close()
-
-        # Close NI-DCPower
-        for sess in self.bl_ext_chans:
-            sess.abort()
-            sess.close()
-
-        # Close NI-FGen
-        self.sl_ext_chan.abort()
-        self.sl_ext_chan.close()
-
-        # Close log fiels
+        # Close log files
         self.mlogfile.close()
         self.plogfile.close()
 
     def __del__(self):
-        # Try to close session on deletion
-        try:
-            self.close()
-        except NIHSDIOException:
-            pass
+        # Close session on deletion
+        self.close()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # Basic test
-    nirram = NIRRAM("Chip9")
+    nirram = NIRRAM("C5")

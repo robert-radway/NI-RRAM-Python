@@ -1,6 +1,5 @@
 nidaqmx
-nifgen
-nidcpower
+nidigital
 numpy
 matplotlib
 pandas
