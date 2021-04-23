@@ -293,7 +293,8 @@ class NIRRAM:
         to measure one cycle (default: never READ)"""
         # Configure pulse width and cycle counts
         read_cycs = int(min(read_cycs if read_cycs is not None else 1e15, cycs))
-        self.set_pw(self.settings["SET"]["PW"] if pulse_width is None else pulse_width)
+        pulse_width = self.settings["SET"]["PW"] if pulse_width is None else pulse_width
+        self.set_pw(pulse_width)
         self.set_endurance_cycles(read_cycs)
 
         # Initialize return data
@@ -319,25 +320,23 @@ class NIRRAM:
             self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
             self.mlogfile.write(f"ENDURANCE,{vwl},{vbl},{vsl},{pulse_width},{read_cycs}\n")
 
-            # READ after some cycles
-            if cyc % read_cycs == (read_cycs-1):
-                # Cycle manually, read, record
-                if reset_first:
-                    self.reset_pulse()
-                    resetread = self.read()
-                    self.set_pulse()
-                    setread = self.read()
-                    data.append((cyc+1, resetread, setread))
-                else:
-                    self.set_pulse()
-                    setread = self.read()
-                    self.reset_pulse()
-                    resetread = self.read()
-                    data.append((cyc+1, setread, resetread))
+            # Cycle manually, read, record
+            if reset_first:
+                self.reset_pulse()
+                resetread = self.read()
+                self.set_pulse()
+                setread = self.read()
+                data.append(((cyc+1)*read_cycs, resetread, setread))
+            else:
+                self.set_pulse()
+                setread = self.read()
+                self.reset_pulse()
+                resetread = self.read()
+                data.append(((cyc+1)*read_cycs, setread, resetread))
 
-                # Debugging print statements
-                if debug:
-                    print((cyc+1, setread, resetread))
+            # Debugging print statements
+            if debug:
+                print(((cyc+1)*read_cycs, setread, resetread))
 
         # Return endurance results
         return data

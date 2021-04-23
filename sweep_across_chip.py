@@ -20,6 +20,7 @@ parser.add_argument("--step-addr", type=int, default=1, help="address stride")
 parser.add_argument("--pw-list", type=float, nargs="+", default=PWS, help="PWs")
 parser.add_argument("--vwl-list", type=float, nargs="+", default=VWLS, help="VWLs")
 parser.add_argument("--vbsl-list", type=float, nargs="+", default=VBSLS, help="VBLs or VSLs")
+parser.add_argument("--no-print", action="store_true", help="do not print anything")
 group = parser.add_mutually_exclusive_group()
 group.add_argument("--set", action="store_true")
 group.add_argument("--reset", action="store_false")
@@ -35,12 +36,18 @@ nisys = NIRRAM(args.chipname)
 addrs = range(args.start_addr, args.end_addr, args.step_addr)
 params = itertools.cycle(itertools.product(args.pw_list, args.vwl_list, args.vbsl_list))
 for addr, (pw, vwl, vbsl) in zip(addrs, params):
-    preread = ["test"]
-    postread = ["test"]
     nisys.set_addr(addr)
-    read = nisys.read()
+    preread = nisys.read()
+    if args.set:
+        nisys.set_pulse(vwl, vbsl, pw)
+    else:
+        nisys.reset_pulse(vwl, vbsl, pw)
+    postread = nisys.read()
+
+    # Record
     outfile.write(f"{addr}\t{pw}\t{vwl}\t{vbsl}\t{preread[0]}\t{postread[0]}\n")
-    print(f"{addr}\t{pw}\t{vwl}\t{vbsl}\t{preread[0]}\t{postread[0]}")
+    if not args.no_print:
+        print(f"{addr}\t{pw}\t{vwl}\t{vbsl}\t{preread[0]}\t{postread[0]}")
 
 # Shutdown
 outfile.close()

@@ -35,7 +35,7 @@ for i, addr in enumerate(range(args.start_addr, args.end_addr, args.step_addr)):
     nisys.set_addr(addr)
     print(addr)
     glo, ghi = CONDS[i % args.num_levels], CONDS[i % args.num_levels + 1]
-    nisys.target_g(glo, ghi, max_attempts=args.max_attempts)
+    nisys.target_g(glo, ghi, max_attempts=args.max_attempts, debug=False)
     if args.retention_outfile is not None:
         for j in range(args.ret_reads):
             read = nisys.read()
