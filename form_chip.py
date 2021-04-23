@@ -17,7 +17,8 @@ nisys = NIRRAM(args.chipname)
 for addr in range(args.start_addr, args.end_addr, args.step_addr):
     nisys.set_addr(addr)
     form = nisys.dynamic_form()
-    print(f"Address {addr}: {form}")
+    if addr % 10 == 0:
+        print(f"Address {addr}: {form}")
 
 # Shutdown
 nisys.close()

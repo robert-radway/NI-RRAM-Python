@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<SourceFile Checksum="41174379F80D361C1F0FD3861E4B3842" xmlns="http://www.ni.com/PlatformFramework">
+<SourceFile Checksum="5F465A08904E73BB78AC292B8EA2F714" xmlns="http://www.ni.com/PlatformFramework">
 	<SourceModelFeatureSet>
 		<ParsableNamespace AssemblyFileVersion="5.3.2.50247" FeatureSetName="Digital Pattern Editor" Name="http://www.ni.com/PatternBasedDigital" OldestCompatibleVersion="4.5.0.0" Version="5.3.1.49152" />
 		<ParsableNamespace AssemblyFileVersion="5.3.2.50247" FeatureSetName="Editor" Name="http://www.ni.com/PlatformFramework" OldestCompatibleVersion="5.2.0.49153" Version="5.2.0.49153" />
@@ -33,7 +33,7 @@
 			<FileReference Id="129" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_bl_sl\.digipat" StoragePath="patterns\pulse_bl_sl.digipat" />
 			<FileReference Id="130" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_reset_first\.digipat" StoragePath="patterns\endurance_reset_first.digipat" />
 			<FileReference Id="143" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_set_first\.digipat" StoragePath="patterns\endurance_set_first.digipat" />
-			<FileReference Id="144" ModelDefinitionType="SourceWaveformDefinition" Name="addr_waveform_example\.tdms" StoragePath="addr_waveform_example.tdms" />
+			<FileReference Id="144" ModelDefinitionType="SourceWaveformDefinition" Name="addr_waveform_example\.tdms" StoragePath="waveforms\addr_waveform_example.tdms" />
 		</NameScopingEnvoy>
 		<EmbeddedDefinitionReference Id="6" ModelDefinitionType="DigitalPatternEditor.ProjectPropertiesDefinition" Name="ProjectProperties">
 			<ProjectPropertiesDefinition xmlns="http://www.ni.com/PatternBasedDigital" />

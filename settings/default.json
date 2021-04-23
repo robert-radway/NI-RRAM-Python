@@ -1,6 +1,6 @@
 {
     "NIDigital": {
-        "deviceID": "PXI1Slot2",
+        "deviceID": "PXI2Slot3",
         "pinmap": "settings/default.pinmap",
         "specs": [
             "settings/default.specs",
@@ -9,13 +9,21 @@
         ],
         "patterns": "settings/patterns/*.digipat"
     },
+
+    "DAQmx": {
+        "chanMap": {
+            "read_ai": "Dev22/ai4"
+        }
+    },
     
     "READ": {
         "read_rate": 1000000,
         "n_samples": 1000,
         "shunt_res_value": 560,
         "VWL": 2.5,
-        "VBL": 0.2
+        "VBL": 0.2,
+        "settling_time": 200e-9,
+        "current_offset": 0
     },
 
     "SET": {
@@ -31,9 +39,9 @@
     },
     
     "FORM": {
-        "VWL_start": 0.9,
-        "VWL_step": 0.05,
-        "VWL_stop": 4,
+        "VWL_SET_start": 1.3,
+        "VWL_SET_step": 0.05,
+        "VWL_SET_stop": 4,
 
         "VBL_start": 3.3,
         "VBL_step": 1,
@@ -43,9 +51,13 @@
     },
 
     "PINGPONG": {
-        "VWL_start": 0.8,
-        "VWL_step": 0.1,
-        "VWL_stop": 4,
+        "VWL_SET_start": 0.8,
+        "VWL_SET_step": 0.1,
+        "VWL_SET_stop": 4,
+
+        "VWL_RESET_start": 0.8,
+        "VWL_RESET_step": 0.1,
+        "VWL_RESET_stop": 3,
 
         "VBL_start": 3.3,
         "VBL_step": 1,
@@ -59,8 +71,10 @@
         "RESET_PW": 100e-6
     },
 
-    "addr_hold_time": 1e-3,
-    "samp_clk_rate": 1000000,
+    "RANGE": {
+        "low_cond": 0,
+        "high_cond": 128e-6
+    },
 
     "master_log_file": "log/master.log",
     "prog_log_file": "log/prog.log"

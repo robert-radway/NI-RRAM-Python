@@ -1,12 +1,13 @@
 """Defines the NI RRAM controller class"""
+import glob
 import json
+import math
 import time
 import warnings
+from os.path import abspath
 import nidaqmx
 import nidigital
 import numpy as np
-from math import ceil
-from os.path import abspath
 
 
 # Warnings become errors
@@ -59,7 +60,7 @@ class NIRRAM:
         for pat in glob.glob(settings["NIDigital"]["patterns"]):
             self.digital.load_pattern(abspath(pat))
         self.digital.burst_pattern("all_off")
-        
+
         # Set address and all voltages to 0
         self.set_addr(0)
         self.set_vwl(0)
@@ -72,10 +73,11 @@ class NIRRAM:
         # Increment the number of READs
         self.prof["READs"] += 1
 
-        # Set voltages
+        # Set voltages and settling time (pulse width)
         self.set_vsl(0)
         self.set_vbl(self.settings["READ"]["VBL"])
         self.set_vwl(self.settings["READ"]["VWL"])
+        self.set_pw(self.settings["READ"]["settling_time"])
 
         # Enable READ waveform
         self.digital.burst_pattern("read_on")
@@ -86,6 +88,7 @@ class NIRRAM:
         self.read_chan.wait_until_done()
         self.read_chan.stop()
         meas_i = meas_v/self.settings["READ"]["shunt_res_value"]
+        meas_i += self.settings["READ"]["current_offset"]
         res = np.abs(self.settings["READ"]["VBL"]/meas_i - self.settings["READ"]["shunt_res_value"])
         cond = 1/res
 
@@ -93,7 +96,8 @@ class NIRRAM:
         self.digital.burst_pattern("all_off")
 
         # Log operation to master file
-        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},READ,{res},{cond},{meas_i},{meas_v}\n")
+        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
+        self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
 
         # Return measurement tuple
         return res, cond, meas_i, meas_v
@@ -124,13 +128,7 @@ class NIRRAM:
         self.set_vwl(vwl)
 
         # Pulse VWL
-        self.pulse_vwl(vwl, pulse_width)
-
-        # Turn off VBL
-        self.set_vbl(0)
-
-        # Address decoder disable
-        self.decoder_disable()
+        self.pulse_vwl(pulse_width)
 
         # Log the pulse
         self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
@@ -167,8 +165,8 @@ class NIRRAM:
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
         active_bl_chan = (self.addr >> 0) & 0b1
         for i in range(2):
-            v = voltage if i == active_bl_chan else 0
-            self.digital.channels[f"bl_ext_{i}"].configure_voltage_levels(0, v, 0, v, 0)
+            vhi = voltage if i == active_bl_chan else 0
+            self.digital.channels[f"bl_ext_{i}"].configure_voltage_levels(0, vhi, 0, vhi, 0)
 
     def set_vwl(self, voltage_hi, voltage_lo=0):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
@@ -184,7 +182,8 @@ class NIRRAM:
         self.addr = addr
 
         # Configure waveform
-        self.digital.pins["addr"].create_source_waveform_parallel("addr_waveform", nidigital.SourceDataMapping.BROADCAST)
+        broadcast = nidigital.SourceDataMapping.BROADCAST
+        self.digital.pins["addr"].create_source_waveform_parallel("addr_waveform", broadcast)
         self.digital.write_source_waveform_broadcast("addr_waveform", [addr])
         self.digital.burst_pattern("load_addr")
 
@@ -203,7 +202,7 @@ class NIRRAM:
 
     def pulse_vwl(self, pulse_width):
         """Pulse (active) VWL using NI-Digital driver (inactive are off)"""
-        self.set_pw(self, pw)
+        self.set_pw(pulse_width)
         self.digital.burst_pattern("pulse_wl")
 
     def dynamic_form(self, target_res=10000):
@@ -289,18 +288,19 @@ class NIRRAM:
         Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
         self.target(1/target_g_hi, 1/target_g_lo, scheme, max_attempts, debug)
 
-    def endurance(self, cycles=int(1e6), read_cycles=int(1e9), pulse_width=None, reset_first=True):
-        """TODO: Do endurance cycle testing. Parameter read_cycles is number of cycles after which
+    def endurance(self, cycs=1000, read_cycs=None, pulse_width=None, reset_first=True, debug=True):
+        """Do endurance cycle testing. Parameter read_cycs is number of cycles after which
         to measure one cycle (default: never READ)"""
         # Configure pulse width and cycle counts
+        read_cycs = int(min(read_cycs if read_cycs is not None else 1e15, cycs))
         self.set_pw(self.settings["SET"]["PW"] if pulse_width is None else pulse_width)
-        self.set_endurance_cycles(read_cycles))
+        self.set_endurance_cycles(read_cycs)
 
         # Initialize return data
         data = []
 
         # Iterate to do cycles
-        for c in range(int(ceil(cycles/read_cycles))):
+        for cyc in range(int(math.ceil(cycs/read_cycs))):
             # Configure endurance voltages
             vbl = self.settings["SET"]["VBL"]
             vwl = self.settings["RESET"]["VWL"], self.settings["SET"]["VWL"]
@@ -314,47 +314,49 @@ class NIRRAM:
                 self.digital.burst_pattern("endurance_reset_first")
             else:
                 self.digital.burst_pattern("endurance_set_first")
-            
+
             # Log the endurance cycles
             self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
-            self.mlogfile.write(f"ENDURANCE,{vwl},{vbl},{vsl},{pulse_width},{read_cycles}\n")
-            
+            self.mlogfile.write(f"ENDURANCE,{vwl},{vbl},{vsl},{pulse_width},{read_cycs}\n")
+
             # READ after some cycles
-            if c % read_cycles == (read_cycles-1):
+            if cyc % read_cycs == (read_cycs-1):
+                # Cycle manually, read, record
                 if reset_first:
                     self.reset_pulse()
                     resetread = self.read()
                     self.set_pulse()
                     setread = self.read()
-                    data.append((c+1, resetread, setread))
+                    data.append((cyc+1, resetread, setread))
                 else:
                     self.set_pulse()
                     setread = self.read()
                     self.reset_pulse()
                     resetread = self.read()
-                    data.append((c+1, setread, resetread))
-        
+                    data.append((cyc+1, setread, resetread))
+
+                # Debugging print statements
+                if debug:
+                    print((cyc+1, setread, resetread))
+
         # Return endurance results
         return data
 
 
     def close(self):
         """Close all NI sessions"""
-        # Close NI-HSDIO
+        # Close NI-Digital
         self.digital.close()
+
+        # Close NI-DAQmx AI
+        self.read_chan.close()
 
         # Close log files
         self.mlogfile.close()
         self.plogfile.close()
 
-    def __del__(self):
-        # Close session on deletion
-        self.close()
-
 
 if __name__ == "__main__":
     # Basic test
     nirram = NIRRAM("C4")
-
-    nirram.set_addr(10)
-    print(nirram.read())
+    nirram.close()

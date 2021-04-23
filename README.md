@@ -5,7 +5,7 @@ NI RRAM programming in Python
 Install: jupyter and pylint
 
 ## Pip environment
-Install: nidaqmx, nidigital, (numpy, matplotlib, pandas)
+Install: nidaqmx, nidigital, numpy, (matplotlib, pandas, stats for analysis notebook)
 
 ## Scripts
 - form_chip.py: FORM a chip
