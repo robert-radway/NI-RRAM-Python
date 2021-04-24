@@ -67,13 +67,19 @@
         "VSL_step": 1,
         "VSL_stop": 3.51,
 
-        "SET_PW": 100e-6,
+        "SET_PW": 1e-6,
         "RESET_PW": 100e-6
     },
 
-    "RANGE": {
+    "MLC": {
         "low_cond": 0,
-        "high_cond": 128e-6
+        "high_cond": 128e-6,
+        "g_ranges": [
+            [0, 12e-6],
+            [60e-6, 64e-6],
+            [96e-6, 100e-6],
+            [124e-6, 1]
+        ]
     },
 
     "master_log_file": "log/master.log",

@@ -30,6 +30,7 @@
 		<DUTPin name="dummy_wl_sel_0" />
 		<DUTPin name="dummy_wl_sel_1" />
 		<DUTPin name="dummy_sl_sel" />
+		<DUTPin name="bl_test" />
 	</Pins>
 	<PinGroups>
 		<PinGroup name="sl_addr">
@@ -106,5 +107,6 @@
 		<Connection pin="dummy_wl_sel_0" siteNumber="0" instrument="PXI2Slot3" channel="29" />
 		<Connection pin="dummy_wl_sel_1" siteNumber="0" instrument="PXI2Slot3" channel="27" />
 		<Connection pin="dummy_sl_sel" siteNumber="0" instrument="PXI2Slot3" channel="25" />
+		<Connection pin="bl_test" siteNumber="0" instrument="PXI2Slot3" channel="21" />
 	</Connections>
 </PinMap>

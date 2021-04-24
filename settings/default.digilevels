@@ -66,6 +66,14 @@
         <Vterm>0</Vterm>
         <TerminationMode>HighZ</TerminationMode>
       </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="bl_test">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
     </DigitalPinLevelSets>
     <PowerPinLevelSets>
       <PowerPinLevelSet pin="pin_name" />

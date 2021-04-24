@@ -16,6 +16,7 @@ parser.add_argument("--max-attempts", type=float, default=25, help="max programm
 parser.add_argument("--start-addr", type=int, default=0, help="start address")
 parser.add_argument("--end-addr", type=int, default=65536, help="end address")
 parser.add_argument("--step-addr", type=int, default=1, help="address stride")
+parser.add_argument("--use-settings-ranges", action="store_true", help="use ranges in json file")
 args = parser.parse_args()
 
 # Initialize NI system
@@ -34,7 +35,7 @@ if args.retention_outfile is not None:
 for i, addr in enumerate(range(args.start_addr, args.end_addr, args.step_addr)):
     nisys.set_addr(addr)
     print(addr)
-    glo, ghi = CONDS[i % args.num_levels], CONDS[i % args.num_levels + 1]
+    glo, ghi = (CONDS[i % args.num_levels], CONDS[i % args.num_levels + 1]) if 
     nisys.target_g(glo, ghi, max_attempts=args.max_attempts, debug=False)
     if args.retention_outfile is not None:
         for j in range(args.ret_reads):
