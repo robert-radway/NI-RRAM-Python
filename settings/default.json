@@ -51,7 +51,7 @@
         "VBL_step": 1,
         "VBL_stop": 3.31,
 
-        "SET_PW": 1200e-6
+        "SET_PW": 1000e-6
     },
 
     "PINGPONG": {
