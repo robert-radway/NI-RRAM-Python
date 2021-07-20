@@ -22,12 +22,16 @@
     },
     
     "READ": {
-        "mode": "digital",
-        "read_chan": 8,
-        "aperture_time": 0.000004,
-        "current_limit_range": 0.000002,
-        "settling_time": 2e-3,
-        "shunt_res_val": 0
+        "mode": "scope",
+        "read_rate": 60000000,
+        "n_samples": 1000,
+        "n_records": 1,
+        "shunt_res_value": 560,
+        "VWL": 2.5,
+        "VBL": 0.2,
+        "settling_time": 200e-9,
+        "voltage_offset": 0.06,
+        "gain": 31.66666666
     },
 
     "SET": {
@@ -47,9 +51,9 @@
         "VWL_SET_step": 0.05,
         "VWL_SET_stop": 4,
 
-        "VBL_start": 3.3,
+        "VBL_start": 4,
         "VBL_step": 1,
-        "VBL_stop": 3.31,
+        "VBL_stop": 4.01,
 
         "SET_PW": 1200e-6
     },

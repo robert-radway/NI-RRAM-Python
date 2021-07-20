@@ -24,7 +24,7 @@ for addr in range(args.start_addr, args.end_addr, args.step_addr):
     read = nisys.read()
     outfile.write(f"{addr}\t{read[0]}\n")
     if not args.no_print:
-        print(f"{addr}\t{read[0]}")
+        print(f"{addr}\t{read}")
 
 # Shutdown
 outfile.close()
