@@ -23,7 +23,7 @@ class NIRRAMException(Exception):
 
 class NIRRAM:
     """The NI RRAM controller class that controls the instrument drivers."""
-    def __init__(self, chip, settings="settings/default.json"):
+    def __init__(self, chip, settings="settings/skywater.json"):
         # If settings is a string, load as JSON file
         if isinstance(settings, str):
             with open(settings) as settings_file:
@@ -53,18 +53,20 @@ class NIRRAM:
         self.digital.apply_levels_and_timing(*settings["NIDigital"]["specs"][1:])
         self.digital.unload_all_patterns()
         for pat in glob.glob(settings["NIDigital"]["patterns"]):
+            print(pat)
             self.digital.load_pattern(abspath(pat))
         self.digital.burst_pattern("all_off")
 
         # Configure READ measurements
         if settings["READ"]["mode"] == "digital":
             # Configure NI-Digital current read measurements
-            self.read_chan = self.digital.channels[settings["READ"]["read_chan"]]
+            self.read_chan = self.digital.channels[settings["NIDigital"]["read_chan"]]
             self.read_chan.ppmu_aperture_time = settings["READ"]["aperture_time"]
             self.read_chan.ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
             self.read_chan.ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-            self.read_chan.ppmu_current_limit_range = 0.000002
+            self.read_chan.ppmu_current_limit_range = settings["READ"]["current_limit_range"]
             self.read_chan.ppmu_voltage_level = 0
+            self.read_chan.ppmu_source()
         elif settings["READ"]["mode"] == "scope": 
             # Initialize NI-Scope driver for READ voltage
             self.scope = niscope.Session(settings["NIScope"]["deviceID"])
@@ -110,10 +112,12 @@ class NIRRAM:
         # Measure
         if self.settings["READ"]["mode"] == "digital":
             # Measure with NI-Digital
+            self.read_chan.selected_function = nidigital.SelectedFunction.PPMU
             self.read_chan.ppmu_source()
-            self.digital.burst_pattern("read_on") # just for timing
-            meas_v = None
-            meas_i = self.read_chan.ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+            self.digital.burst_pattern("read_on_nosl") # just for timing
+            meas_v = 0
+            meas_i = -self.read_chan.ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+            self.read_chan.selected_function = nidigital.SelectedFunction.DIGITAL
         elif self.settings["READ"]["mode"] == "scope":
             # Enable READ waveform
             self.digital.burst_pattern("read_on")
@@ -214,15 +218,15 @@ class NIRRAM:
 
     def set_vbl(self, voltage):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
-        active_bl_chan = (self.addr >> 0) & 0b1
-        for i in range(2):
+        active_bl_chan = (self.addr >> 0) & 0b1 if self.settings["multi_bl_wl"] else 0
+        for i in range(2 if self.settings["multi_bl_wl"] else 1):
             vhi = voltage if i == active_bl_chan else 0
             self.digital.channels[f"bl_ext_{i}"].configure_voltage_levels(0, vhi, 0, vhi, 0)
 
     def set_vwl(self, voltage_hi, voltage_lo=0):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
-        active_wl_chan = (self.addr >> 8) & 0b11
-        for i in range(4):
+        active_wl_chan = (self.addr >> 8) & 0b11 if self.settings["multi_bl_wl"] else 0
+        for i in range(4 if self.settings["multi_bl_wl"] else 1):
             vhi = voltage_hi if i == active_wl_chan else 0
             vlo = voltage_lo if i == active_wl_chan else 0
             self.digital.channels[f"wl_ext_{i}"].configure_voltage_levels(vlo, vhi, vlo, vhi, 0)
