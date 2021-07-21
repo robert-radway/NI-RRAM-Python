@@ -1,4 +1,6 @@
 {
+    "multi_bl_wl": true,
+    
     "NIDigital": {
         "deviceID": "PXI2Slot3",
         "pinmap": "settings/default.pinmap",
@@ -29,7 +31,7 @@
         "shunt_res_value": 560,
         "VWL": 2.5,
         "VBL": 0.2,
-        "settling_time": 200e-9,
+        "settling_time": 1e-3,
         "voltage_offset": 0.06,
         "gain": 31.66666666
     },
