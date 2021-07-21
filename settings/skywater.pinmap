@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.2">
+	<Instruments>
+		<NIDigitalPatternInstrument name="PXI2Slot3" numberOfChannels="32" />
+	</Instruments>
+	<Pins>
+		<DUTPin name="addr_0" />
+		<DUTPin name="addr_1" />
+		<DUTPin name="addr_2" />
+		<DUTPin name="addr_3" />
+		<DUTPin name="addr_4" />
+		<DUTPin name="addr_5" />
+		<DUTPin name="addr_6" />
+		<DUTPin name="addr_7" />
+		<DUTPin name="addr_8" />
+		<DUTPin name="addr_9" />
+		<DUTPin name="addr_10" />
+		<DUTPin name="addr_11" />
+		<DUTPin name="addr_12" />
+		<DUTPin name="addr_13" />
+		<DUTPin name="addr_14" />
+		<DUTPin name="addr_15" />
+		<DUTPin name="addr_16" />
+		<DUTPin name="addr_17" />
+		<DUTPin name="addr_18" />
+		<DUTPin name="addr_19" />
+		<DUTPin name="sl_dec_en" />
+		<DUTPin name="wl_dec_en" />
+		<DUTPin name="wl_ext_0" />
+		<DUTPin name="sl_ext_0" />
+		<DUTPin name="bl_ext_0" />
+		<DUTPin name="wl_clk" />
+		<DUTPin name="bl_test" />
+	</Pins>
+	<PinGroups>
+		<PinGroup name="addr">
+			<PinReference pin="addr_19" />
+			<PinReference pin="addr_18" />
+			<PinReference pin="addr_17" />
+			<PinReference pin="addr_16" />
+			<PinReference pin="addr_15" />
+			<PinReference pin="addr_14" />
+			<PinReference pin="addr_13" />
+			<PinReference pin="addr_12" />
+			<PinReference pin="addr_11" />
+			<PinReference pin="addr_10" />
+			<PinReference pin="addr_9" />
+			<PinReference pin="addr_8" />
+			<PinReference pin="addr_7" />
+			<PinReference pin="addr_6" />
+			<PinReference pin="addr_5" />
+			<PinReference pin="addr_4" />
+			<PinReference pin="addr_3" />
+			<PinReference pin="addr_2" />
+			<PinReference pin="addr_1" />
+			<PinReference pin="addr_0" />
+		</PinGroup>
+		<PinGroup name="wl_ext">
+			<PinReference pin="wl_ext_0" />
+		</PinGroup>
+		<PinGroup name="sl_ext">
+			<PinReference pin="sl_ext_0" />
+		</PinGroup>
+		<PinGroup name="bl_ext">
+			<PinReference pin="bl_ext_0" />
+		</PinGroup>
+	</PinGroups>
+	<Sites>
+		<Site siteNumber="0" />
+	</Sites>
+	<Connections>
+		<Connection pin="addr_0" siteNumber="0" instrument="PXI2Slot3" channel="23" />
+		<Connection pin="addr_1" siteNumber="0" instrument="PXI2Slot3" channel="21" />
+		<Connection pin="addr_2" siteNumber="0" instrument="PXI2Slot3" channel="19" />
+		<Connection pin="addr_3" siteNumber="0" instrument="PXI2Slot3" channel="17" />
+		<Connection pin="addr_4" siteNumber="0" instrument="PXI2Slot3" channel="15" />
+		<Connection pin="addr_5" siteNumber="0" instrument="PXI2Slot3" channel="13" />
+		<Connection pin="addr_6" siteNumber="0" instrument="PXI2Slot3" channel="3" />
+		<Connection pin="addr_7" siteNumber="0" instrument="PXI2Slot3" channel="5" />
+		<Connection pin="addr_8" siteNumber="0" instrument="PXI2Slot3" channel="7" />
+		<Connection pin="addr_9" siteNumber="0" instrument="PXI2Slot3" channel="9" />
+		<Connection pin="addr_10" siteNumber="0" instrument="PXI2Slot3" channel="11" />
+		<Connection pin="addr_11" siteNumber="0" instrument="PXI2Slot3" channel="20" />
+		<Connection pin="addr_12" siteNumber="0" instrument="PXI2Slot3" channel="22" />
+		<Connection pin="addr_13" siteNumber="0" instrument="PXI2Slot3" channel="24" />
+		<Connection pin="addr_14" siteNumber="0" instrument="PXI2Slot3" channel="26" />
+		<Connection pin="addr_15" siteNumber="0" instrument="PXI2Slot3" channel="28" />
+		<Connection pin="addr_16" siteNumber="0" instrument="PXI2Slot3" channel="30" />
+		<Connection pin="addr_17" siteNumber="0" instrument="PXI2Slot3" channel="31" />
+		<Connection pin="addr_18" siteNumber="0" instrument="PXI2Slot3" channel="29" />
+		<Connection pin="addr_19" siteNumber="0" instrument="PXI2Slot3" channel="27" />
+		<Connection pin="sl_dec_en" siteNumber="0" instrument="PXI2Slot3" channel="1" />
+		<Connection pin="wl_dec_en" siteNumber="0" instrument="PXI2Slot3" channel="25" />
+		<Connection pin="wl_ext_0" siteNumber="0" instrument="PXI2Slot3" channel="18" />
+		<Connection pin="sl_ext_0" siteNumber="0" instrument="PXI2Slot3" channel="16" />
+		<Connection pin="bl_ext_0" siteNumber="0" instrument="PXI2Slot3" channel="0" />
+		<Connection pin="bl_test" siteNumber="0" instrument="PXI2Slot3" channel="4" />
+		<Connection pin="wl_clk" siteNumber="0" instrument="PXI2Slot3" channel="2" />
+	</Connections>
+</PinMap>
