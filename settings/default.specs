@@ -6,7 +6,7 @@
       <f:Comment>Minimum pulse width</f:Comment>
     </f:Formula>
     <f:Formula symbol="addr_hold_time">
-      <f:Definition>1 µs</f:Definition>
+      <f:Definition>3 µs</f:Definition>
       <f:Comment>Address hold time</f:Comment>
     </f:Formula>
   </Section>
