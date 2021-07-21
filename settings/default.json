@@ -1,6 +1,9 @@
 {
+    "multi_bl_wl": true,
+
     "NIDigital": {
         "deviceID": "PXI2Slot3",
+        "read_chan": 8,
         "pinmap": "settings/default.pinmap",
         "specs": [
             "settings/default.specs",
@@ -23,11 +26,12 @@
     
     "READ": {
         "mode": "digital",
-        "read_chan": 8,
-        "aperture_time": 0.000004,
-        "current_limit_range": 0.000002,
-        "settling_time": 2e-3,
-        "shunt_res_val": 0
+        "aperture_time": 0.000500,
+        "current_limit_range": 0.00032,
+        "settling_time": 1000e-9,
+        "shunt_res_value": 0,
+        "VWL": 2.5,
+        "VBL": 0.2
     },
 
     "SET": {
@@ -47,11 +51,11 @@
         "VWL_SET_step": 0.05,
         "VWL_SET_stop": 4,
 
-        "VBL_start": 3.3,
+        "VBL_start": 5,
         "VBL_step": 1,
-        "VBL_stop": 3.31,
+        "VBL_stop": 5.01,
 
-        "SET_PW": 1000e-6
+        "SET_PW": 1200e-6
     },
 
     "PINGPONG": {
