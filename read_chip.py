@@ -1,5 +1,6 @@
 """Script to READ a chip"""
 import argparse
+import time
 from nirram import NIRRAM
 
 # Get arguments
@@ -22,7 +23,7 @@ nisys = NIRRAM(args.chipname)
 for addr in range(args.start_addr, args.end_addr, args.step_addr):
     nisys.set_addr(addr)
     read = nisys.read()
-    outfile.write(f"{addr}\t{read[0]}\n")
+    outfile.write(f"{addr}\t{time.time()}\t{read[0]}\t{read[1]}\n")
     if not args.no_print:
         print(f"{addr}\t{read}")
 
