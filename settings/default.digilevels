@@ -2,15 +2,7 @@
 <PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
   <PinLevelsSheet>
     <DigitalPinLevelSets>
-      <DigitalPinLevelSet pin="sl_addr">
-        <Vil>0</Vil>
-        <Vih>1.8</Vih>
-        <Vol>0</Vol>
-        <Voh>0</Voh>
-        <Vterm>0</Vterm>
-        <TerminationMode>HighZ</TerminationMode>
-      </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="wl_addr">
+      <DigitalPinLevelSet pin="addr">
         <Vil>0</Vil>
         <Vih>1.8</Vih>
         <Vol>0</Vol>
@@ -75,8 +67,5 @@
         <TerminationMode>HighZ</TerminationMode>
       </DigitalPinLevelSet>
     </DigitalPinLevelSets>
-    <PowerPinLevelSets>
-      <PowerPinLevelSet pin="pin_name" />
-    </PowerPinLevelSets>
   </PinLevelsSheet>
 </PinLevelsFile>

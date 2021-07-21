@@ -12,7 +12,7 @@
       </DigitalPinLevelSet>
       <DigitalPinLevelSet pin="wl_clk">
         <Vil>0</Vil>
-        <Vih>5</Vih>
+        <Vih>0</Vih>
         <Vol>0</Vol>
         <Voh>0</Voh>
         <Vterm>0</Vterm>
@@ -60,7 +60,7 @@
       </DigitalPinLevelSet>
       <DigitalPinLevelSet pin="bl_test">
         <Vil>0</Vil>
-        <Vih>5</Vih>
+        <Vih>0</Vih>
         <Vol>0</Vol>
         <Voh>0</Voh>
         <Vterm>0</Vterm>
