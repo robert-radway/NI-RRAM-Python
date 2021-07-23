@@ -23,7 +23,7 @@ class NIRRAMException(Exception):
 
 class NIRRAM:
     """The NI RRAM controller class that controls the instrument drivers."""
-    def __init__(self, chip, settings="settings/skywater.json"):
+    def __init__(self, chip, settings="settings/default.json"):
         # If settings is a string, load as JSON file
         if isinstance(settings, str):
             with open(settings) as settings_file:

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<SourceFile Checksum="3E811BC5C4B02902C3304547969495E0" xmlns="http://www.ni.com/PlatformFramework">
+<SourceFile Checksum="4B1018A993990475B2722353C23CB886" xmlns="http://www.ni.com/PlatformFramework">
 	<SourceModelFeatureSet>
 		<ParsableNamespace AssemblyFileVersion="5.3.2.50247" FeatureSetName="Digital Pattern Editor" Name="http://www.ni.com/PatternBasedDigital" OldestCompatibleVersion="4.5.0.0" Version="5.3.1.49152" />
 		<ParsableNamespace AssemblyFileVersion="5.3.2.50247" FeatureSetName="Editor" Name="http://www.ni.com/PlatformFramework" OldestCompatibleVersion="5.2.0.49153" Version="5.2.0.49153" />
@@ -21,16 +21,16 @@
 			<EmbeddedDefinitionReference Id="10" ModelDefinitionType="{http://www.ni.com/PatternBasedDigital}DigitalScopeDefinition" Name="DigitalScope">
 				<DigitalScopeDefinition xmlns="http://www.ni.com/PatternBasedDigital" />
 			</EmbeddedDefinitionReference>
-			<FileReference Id="88" ModelDefinitionType="PinMap" Name="default\.pinmap" StoragePath="default.pinmap" p4:IsActive="False" xmlns:p4="http://www.ni.com/PatternBasedDigital" />
+			<FileReference Id="88" ModelDefinitionType="PinMap" Name="default\.pinmap" StoragePath="default.pinmap" />
 			<FileReference Id="89" ModelDefinitionType="SpecificationsDefinition" Name="default\.specs" StoragePath="default.specs" />
 			<FileReference Id="90" ModelDefinitionType="TimingDefinition" Name="default\.digitiming" StoragePath="default.digitiming" p4:IsActive="True" xmlns:p4="http://www.ni.com/PatternBasedDigital" />
 			<FileReference Id="91" ModelDefinitionType="PinLevelsDefinition" Name="default\.digilevels" StoragePath="default.digilevels" p4:IsActive="True" xmlns:p4="http://www.ni.com/PatternBasedDigital" />
 			<FileReference Id="151" ModelDefinitionType="PinMap" Name="skywater\.pinmap" StoragePath="skywater.pinmap" p4:IsActive="True" xmlns:p4="http://www.ni.com/PatternBasedDigital" />
 			<FileReference Id="152" ModelDefinitionType="PinLevelsDefinition" Name="skywater\.digilevels" StoragePath="skywater.digilevels" />
-			<FileReference Id="175" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="all_off\.digipat" StoragePath="patterns\all_off.digipat" />
-			<FileReference Id="176" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_wl\.digipat" StoragePath="patterns\pulse_wl.digipat" />
-			<FileReference Id="177" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_set_first\.digipat" StoragePath="patterns\endurance_set_first.digipat" />
-			<FileReference Id="178" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_on_nosl\.digipat" StoragePath="patterns\read_on_nosl.digipat" />
+			<FileReference Id="175" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="all_off_default\.digipat" StoragePath="patterns\all_off_default.digipat" />
+			<FileReference Id="176" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_wl_default\.digipat" StoragePath="patterns\pulse_wl_default.digipat" />
+			<FileReference Id="177" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_set_first_default\.digipat" StoragePath="patterns\endurance_set_first_default.digipat" />
+			<FileReference Id="178" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_on_nosl_default\.digipat" StoragePath="patterns\read_on_nosl_default.digipat" />
 			<FileReference Id="179" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="set_pw\.digipat" StoragePath="patterns\set_pw.digipat" />
 			<FileReference Id="180" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_set_first_skywater\.digipat" StoragePath="patterns\endurance_set_first_skywater.digipat" />
 			<FileReference Id="181" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_on_nosl_skywater\.digipat" StoragePath="patterns\read_on_nosl_skywater.digipat" />
@@ -38,14 +38,14 @@
 			<FileReference Id="183" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="all_off_skywater\.digipat" StoragePath="patterns\all_off_skywater.digipat" />
 			<FileReference Id="184" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_wl_skywater\.digipat" StoragePath="patterns\pulse_wl_skywater.digipat" />
 			<FileReference Id="185" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="load_addr_skywater\.digipat" StoragePath="patterns\load_addr_skywater.digipat" />
-			<FileReference Id="186" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_reset_first\.digipat" StoragePath="patterns\endurance_reset_first.digipat" />
+			<FileReference Id="186" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_reset_first_default\.digipat" StoragePath="patterns\endurance_reset_first_default.digipat" />
 			<FileReference Id="187" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="endurance_reset_first_skywater\.digipat" StoragePath="patterns\endurance_reset_first_skywater.digipat" />
-			<FileReference Id="188" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_on\.digipat" StoragePath="patterns\read_on.digipat" />
+			<FileReference Id="188" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_on_default\.digipat" StoragePath="patterns\read_on_default.digipat" />
 			<FileReference Id="189" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_bl_sl_skywater\.digipat" StoragePath="patterns\pulse_bl_sl_skywater.digipat" />
-			<FileReference Id="190" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="load_addr\.digipat" StoragePath="patterns\load_addr.digipat" />
-			<FileReference Id="191" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_bl_sl\.digipat" StoragePath="patterns\pulse_bl_sl.digipat" />
+			<FileReference Id="190" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="load_addr_default\.digipat" StoragePath="patterns\load_addr_default.digipat" />
+			<FileReference Id="191" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="pulse_bl_sl_default\.digipat" StoragePath="patterns\pulse_bl_sl_default.digipat" />
 			<FileReference Id="193" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_off_skywater\.digipat" StoragePath="patterns\read_off_skywater.digipat" />
-			<FileReference Id="194" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_off\.digipat" StoragePath="patterns\read_off.digipat" />
+			<FileReference Id="194" ModelDefinitionType="DigitalPatternEditor.PatternDefinition" Name="read_off_default\.digipat" StoragePath="patterns\read_off_default.digipat" />
 		</NameScopingEnvoy>
 		<EmbeddedDefinitionReference Id="6" ModelDefinitionType="DigitalPatternEditor.ProjectPropertiesDefinition" Name="ProjectProperties">
 			<ProjectPropertiesDefinition xmlns="http://www.ni.com/PatternBasedDigital" />

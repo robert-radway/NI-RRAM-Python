@@ -10,7 +10,7 @@
             "settings/default.digilevels",
             "settings/default.digitiming"
         ],
-        "patterns": "settings/patterns/*.digipat"
+        "patterns": "settings/patterns/*default.digipat"
     },
 
     "DAQmx": {
@@ -59,11 +59,11 @@
     },
 
     "PINGPONG": {
-        "VWL_SET_start": 0.8,
+        "VWL_SET_start": 1.5,
         "VWL_SET_step": 0.1,
         "VWL_SET_stop": 4,
 
-        "VWL_RESET_start": 0.8,
+        "VWL_RESET_start": 1.5,
         "VWL_RESET_step": 0.1,
         "VWL_RESET_stop": 3,
 
@@ -72,8 +72,8 @@
         "VBL_stop": 3.31,
 
         "VSL_start": 3.5,
-        "VSL_step": 1,
-        "VSL_stop": 3.51,
+        "VSL_step": 0.5,
+        "VSL_stop": 4.1,
 
         "SET_PW": 1e-6,
         "RESET_PW": 100e-6
