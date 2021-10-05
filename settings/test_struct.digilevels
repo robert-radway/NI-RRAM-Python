@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
+  <PinLevelsSheet>
+    <DigitalPinLevelSets>
+      <DigitalPinLevelSet pin="test_left_5">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_left_4">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_left_3">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_left_2">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_left_1">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_left_0">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_bottom_5">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_bottom_4">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_bottom_3">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_bottom_2">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_bottom_1">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="test_bottom_0">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+        <Vterm>0</Vterm>
+        <TerminationMode>HighZ</TerminationMode>
+      </DigitalPinLevelSet>
+    </DigitalPinLevelSets>
+  </PinLevelsSheet>
+</PinLevelsFile>

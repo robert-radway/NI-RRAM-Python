@@ -200,7 +200,7 @@ class NIRRAM:
         self.prof["RESETs"] += 1
 
         # Set voltages
-        self.set_vbl(0)
+        self.set_vbl(0, other=vsl)
         self.set_vsl(vsl)
         self.set_vwl(vwl)
 
@@ -214,22 +214,27 @@ class NIRRAM:
 
     def set_vsl(self, voltage):
         """Set VSL using NI-Digital driver"""
-        self.digital.channels["sl_ext"].configure_voltage_levels(0, voltage, 0, voltage, 0)
+        sl_ext_chan = "sl_ext" if "test_struct" not in self.settings else "test_bottom_2"
+        self.digital.channels[sl_ext_chan].configure_voltage_levels(0, voltage, 0, voltage, 0)
 
-    def set_vbl(self, voltage):
+    def set_vbl(self, voltage, other=0):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
         active_bl_chan = (self.addr >> 0) & 0b1 if self.settings["multi_bl_wl"] else 0
         for i in range(2 if self.settings["multi_bl_wl"] else 1):
-            vhi = voltage if i == active_bl_chan else 0
-            self.digital.channels[f"bl_ext_{i}"].configure_voltage_levels(0, vhi, 0, vhi, 0)
+            vhi = voltage if i == active_bl_chan else other
+            bl_ext_chan = f"bl_ext_{i}" if "test_struct" not in self.settings else f"test_bottom_{i}"
+            self.digital.channels[bl_ext_chan].configure_voltage_levels(0, vhi, 0, vhi, 0)
+
 
     def set_vwl(self, voltage_hi, voltage_lo=0):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
-        active_wl_chan = (self.addr >> 8) & 0b11 if self.settings["multi_bl_wl"] else 0
+        wl_shift = 8 if "test_struct" not in self.settings else 1
+        active_wl_chan = (self.addr >> wl_shift) & 0b11 if self.settings["multi_bl_wl"] else 0
         for i in range(4 if self.settings["multi_bl_wl"] else 1):
             vhi = voltage_hi if i == active_wl_chan else 0
             vlo = voltage_lo if i == active_wl_chan else 0
-            self.digital.channels[f"wl_ext_{i}"].configure_voltage_levels(vlo, vhi, vlo, vhi, 0)
+            wl_ext_chan = "wl_ext" if "test_struct" not in self.settings else "test_left"
+            self.digital.channels[f"{wl_ext_chan}_{i}"].configure_voltage_levels(vlo, vhi, vlo, vhi, 0)
 
     def set_addr(self, addr):
         """Set the address"""
@@ -237,10 +242,11 @@ class NIRRAM:
         self.addr = addr
 
         # Configure waveform
-        broadcast = nidigital.SourceDataMapping.BROADCAST
-        self.digital.pins["addr"].create_source_waveform_parallel("addr_waveform", broadcast)
-        self.digital.write_source_waveform_broadcast("addr_waveform", [addr])
-        self.digital.burst_pattern("load_addr")
+        if "test_struct" not in self.settings:
+            broadcast = nidigital.SourceDataMapping.BROADCAST
+            self.digital.pins["addr"].create_source_waveform_parallel("addr_waveform", broadcast)
+            self.digital.write_source_waveform_broadcast("addr_waveform", [addr])
+            self.digital.burst_pattern("load_addr")
 
         # Reset profiling counters
         self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}

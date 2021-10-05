@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser(description="Program multiple levels to RRAM ce
 parser.add_argument("chipname", help="chip name for logging")
 parser.add_argument("--retention-outfile", help="file to put retention data in (default: no data)")
 parser.add_argument("--ret-reads", type=int, default=500, help="how many retention reads to do")
-parser.add_argument("--ret-readall-cycles", type=int, default=25, help="how often to reread during programming")
+parser.add_argument("--ret-readall-cycles", type=int, default=20, help="how often to reread during programming")
 parser.add_argument("--num-levels", type=int, default=32, help="number of MLC levels")
 parser.add_argument("--min-conductance", type=float, default=0, help="lower end of dyn range")
 parser.add_argument("--max-conductance", type=float, default=128e-6, help="upper end of dyn range")
