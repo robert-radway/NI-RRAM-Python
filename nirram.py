@@ -214,11 +214,15 @@ class NIRRAM:
 
     def set_vsl(self, voltage):
         """Set VSL using NI-Digital driver"""
+        assert(voltage <= 5)
+        assert(voltage >= 0)
         sl_ext_chan = "sl_ext" if "test_struct" not in self.settings else "test_bottom_2"
         self.digital.channels[sl_ext_chan].configure_voltage_levels(0, voltage, 0, voltage, 0)
 
     def set_vbl(self, voltage, other=0):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
+        assert(voltage <= 5)
+        assert(voltage >= 0)
         active_bl_chan = (self.addr >> 0) & 0b1 if self.settings["multi_bl_wl"] else 0
         for i in range(2 if self.settings["multi_bl_wl"] else 1):
             vhi = voltage if i == active_bl_chan else other
@@ -228,6 +232,12 @@ class NIRRAM:
 
     def set_vwl(self, voltage_hi, voltage_lo=0):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
+        # Assertions
+        assert(voltage_hi <= 4)
+        assert(voltage_hi >= 0)
+        assert(voltage_lo <= 4)
+        assert(voltage_lo >= 0)
+        
         wl_shift = 8 if "test_struct" not in self.settings else 1
         active_wl_chan = (self.addr >> wl_shift) & 0b11 if self.settings["multi_bl_wl"] else 0
         for i in range(4 if self.settings["multi_bl_wl"] else 1):
@@ -316,6 +326,10 @@ class NIRRAM:
     def target(self, target_res_lo, target_res_hi, scheme="PINGPONG", max_attempts=25, debug=True):
         """Performs SET/RESET pulses in increasing fashion until target range is achieved.
         Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
+        # Assert the resistance is greater than 6kOhm
+        assert(target_res_lo >= 6000)
+        assert(target_res_hi >= target_res_lo)
+
         # Iterative pulse-verify
         success = False
         for attempt in range(max_attempts):
