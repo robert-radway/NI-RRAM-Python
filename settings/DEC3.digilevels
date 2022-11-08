@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
+  <PinLevelsSheet>
+    <PpmuPinLevelSets>
+      <PpmuPinLevelSet pin="Source">
+        <Vf>1.8</Vf>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="Gate">
+        <Vf>0.7</Vf>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="Drain">
+        <Vf>0</Vf>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="Body">
+        <Vf>0</Vf>
+      </PpmuPinLevelSet>
+    </PpmuPinLevelSets>
+  </PinLevelsSheet>
+</PinLevelsFile>

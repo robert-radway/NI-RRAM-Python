@@ -5,9 +5,7 @@ import math
 import time
 import warnings
 from os.path import abspath
-import nidaqmx
 import nidigital
-import niscope
 import numpy as np
 
 
@@ -52,51 +50,57 @@ class NIRRAM:
         self.digital.load_specifications_levels_and_timing(*settings["NIDigital"]["specs"])
         self.digital.apply_levels_and_timing(*settings["NIDigital"]["specs"][1:])
         self.digital.unload_all_patterns()
-        for pat in glob.glob(settings["NIDigital"]["patterns"]):
-            print(pat)
-            self.digital.load_pattern(abspath(pat))
-        self.digital.burst_pattern("all_off")
+        # for pat in glob.glob(settings["NIDigital"]["patterns"]):
+        #     print(pat)
+        #     #self.digital.load_pattern(abspath(pat))
+        # #self.digital.burst_pattern("all_off")
 
         # Configure READ measurements
         if settings["READ"]["mode"] == "digital":
-            # Configure NI-Digital current read measurements
-            self.read_chan = self.digital.channels[settings["NIDigital"]["read_chan"]]
-            self.read_chan.ppmu_aperture_time = settings["READ"]["aperture_time"]
-            self.read_chan.ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
-            self.read_chan.ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-            self.read_chan.ppmu_current_limit_range = settings["READ"]["current_limit_range"]
-            self.read_chan.ppmu_voltage_level = 0
-            self.read_chan.ppmu_source()
-        elif settings["READ"]["mode"] == "scope": 
-            # Initialize NI-Scope driver for READ voltage
-            self.scope = niscope.Session(settings["NIScope"]["deviceID"])
-            self.read_chan = self.scope.channels[settings["NIScope"]["read_chan"]]
-            self.read_chan.configure_vertical(
-                range=5.0,
-                coupling=niscope.VerticalCoupling.DC
-            )
-            self.scope.configure_horizontal_timing(
-                min_sample_rate=settings["READ"]["read_rate"],
-                min_num_pts=settings["READ"]["n_samples"],
-                ref_position=0,
-                num_records=settings["READ"]["n_records"],
-                enforce_realtime=True
-            )
-        elif settings["READ"]["mode"] == "daqmx":
-            # Initialize NI-DAQmx driver for READ voltage
-            self.read_chan = nidaqmx.Task()
-            self.read_chan.ai_channels.add_ai_voltage_chan(settings["DAQmx"]["chanMap"]["read_ai"])
-            read_rate, spc = settings["READ"]["read_rate"], settings["READ"]["n_samples"]
-            self.read_chan.timing.cfg_samp_clk_timing(read_rate, samps_per_chan=spc)
+            self.read_chan = []
+            for chan in settings["NIDigital"]["read_chan"]:
+                # Configure NI-Digital current read measurements
+                self.read_chan.append(self.digital.channels[chan])
+                self.read_chan[chan].ppmu_aperture_time = settings["READ"]["aperture_time"]
+                self.read_chan[chan].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+                self.read_chan[chan].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+                self.read_chan[chan].ppmu_current_limit_range = settings["READ"]["current_limit_range"]
+                self.read_chan[chan].ppmu_voltage_level = 0
+                self.read_chan[chan].ppmu_source()
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
         # Set address and all voltages to 0
-        self.set_addr(0)
-        self.set_vwl(0)
-        self.set_vbl(0)
-        self.set_vsl(0)
+        # self.set_addr(0)
+        # self.set_vwl(0)
+        # self.set_vbl(0)
+        # self.set_vsl(0)
 
+    def set_ppmu(self, pin_voltage_dict):
+        """Set pin voltages based on dict values"""
+
+        # Measure
+        if self.settings["READ"]["mode"] == "digital":
+            for chan in pin_voltage_dict.keys():
+                self.read_chan[chan].ppmu_voltage_level = pin_voltage_dict[chan]
+                self.read_chan[chan].ppmu_source()
+        else:
+            raise NIRRAMException("Invalid READ mode specified in settings")
+        return
+
+    def read_ppmu(self, pins):
+        """Set pin voltages based on dict values"""
+        voltages = []
+        currents =[]
+        # Measure
+        if self.settings["READ"]["mode"] == "digital":
+            for chan in pins:
+                # Measure with NI-Digital
+                voltages.append(self.read_chan[chan].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+                currents.append(self.read_chan[chan].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
+        else:
+            raise NIRRAMException("Invalid READ mode specified in settings")
+        return voltages, currents
 
     def read(self, allsamps=False):
         """Perform a READ operation. Returns tuple with (res, cond, meas_i, meas_v)"""
@@ -118,25 +122,6 @@ class NIRRAM:
             meas_v = 0
             meas_i = -self.read_chan.ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
             self.read_chan.selected_function = nidigital.SelectedFunction.DIGITAL
-        elif self.settings["READ"]["mode"] == "scope":
-            # Enable READ waveform
-            self.digital.burst_pattern("read_on")
-            # Measure with NI-Scope
-            with self.scope.initiate():
-                waveforms = self.read_chan.fetch(num_records=self.settings["READ"]["n_records"])
-            samples = np.array([sample for waveform in waveforms for sample in waveform.samples])
-            meas_v = np.mean(samples) - self.settings["READ"]["voltage_offset"] if not allsamps else samples
-            meas_i = meas_v/self.settings["READ"]["gain"]/self.settings["READ"]["shunt_res_value"]
-        elif self.settings["READ"]["mode"] == "daqmx":
-            # Enable READ waveform
-            self.digital.burst_pattern("read_on")
-            # Measure with NI-DAQmx
-            self.read_chan.start()
-            meas_v = self.read_chan.read(self.settings["READ"]["n_samples"])
-            meas_v = np.mean(meas_v) if not allsamps else np.array(meas_v)
-            self.read_chan.wait_until_done()
-            self.read_chan.stop()
-            meas_i = meas_v/self.settings["READ"]["shunt_res_value"]
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
@@ -152,10 +137,7 @@ class NIRRAM:
         self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
 
         # Return measurement tuple
-        if allsamps:
-            return res, cond, meas_i, meas_v, waveforms[0].x_increment
-        else:
-            return res, cond, meas_i, meas_v
+        return res, cond, meas_i, meas_v
 
     def form_pulse(self, vwl=None, vbl=None, pulse_width=None):
         """Perform a FORM operation."""
@@ -228,7 +210,6 @@ class NIRRAM:
             vhi = voltage if i == active_bl_chan else other
             bl_ext_chan = f"bl_ext_{i}" if "test_struct" not in self.settings else f"test_bottom_{i}"
             self.digital.channels[bl_ext_chan].configure_voltage_levels(0, vhi, 0, vhi, 0)
-
 
     def set_vwl(self, voltage_hi, voltage_lo=0):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
@@ -421,14 +402,6 @@ class NIRRAM:
         """Close all NI sessions"""
         # Close NI-Digital
         self.digital.close()
-
-        # Close voltage READ equipment
-        if self.settings["READ"]["mode"] == "scope":
-            # Close NI-Scope
-            self.scope.close()
-        elif self.settings["READ"]["mode"] == "daqmx":
-            # Close NI-DAQmx AI
-            self.read_chan.close()
 
         # Close log files
         self.mlogfile.close()

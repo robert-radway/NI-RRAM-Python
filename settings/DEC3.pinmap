@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.5">
+	<Instruments>
+		<NIDigitalPatternInstrument name="PXI1Slot9" numberOfChannels="32" group="Digital" />
+	</Instruments>
+	<Pins>
+		<DUTPin name="Source" />
+		<DUTPin name="Gate" />
+		<DUTPin name="Drain" />
+		<DUTPin name="Body" />
+	</Pins>
+	<PinGroups></PinGroups>
+	<Sites>
+		<Site siteNumber="0" />
+	</Sites>
+	<Connections>
+		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="0" />
+		<Connection pin="Source" siteNumber="0" instrument="PXI1Slot9" channel="1" />
+		<Connection pin="Drain" siteNumber="0" instrument="PXI1Slot9" channel="2" />
+		<Connection pin="Gate" siteNumber="0" instrument="PXI1Slot9" channel="3" />
+	</Connections>
+</PinMap>

@@ -4,22 +4,28 @@ from nirram import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="RESET a chip.")
-parser.add_argument("chipname", help="chip name for logging")
-parser.add_argument("--start-addr", type=int, default=0, help="start address")
-parser.add_argument("--end-addr", type=int, default=65536, help="end address")
-parser.add_argument("--step-addr", type=int, default=1, help="address stride")
-parser.add_argument("--target-res", type=int, default=86666.666, help="target resistance")
+parser.add_argument("device_no", help="chip name for logging")
+parser.add_argument("--start-vds", type=int, default=0, help="start vds")
+parser.add_argument("--end-vds", type=int, default=1.8, help="end vds")
+parser.add_argument("--step-vds", type=int, default=0.1, help="address vds")
+parser.add_argument("--start-vgs", type=int, default=0, help="start vgs")
+parser.add_argument("--end-vgs", type=int, default=1.8, help="end vgs")
+parser.add_argument("--step-vgs", type=int, default=0.1, help="address vgs")
 args = parser.parse_args()
 
 # Initialize NI system
 nisys = NIRRAM(args.chipname)
-nisys.settings["PINGPONG"]["VWL_RESET_START"] = 3
 
+results = []
 # Do operation across cells
-for addr in range(args.start_addr, args.end_addr, args.step_addr):
-    nisys.set_addr(addr)
-    reset = nisys.dynamic_reset(args.target_res)
-    print(f"Address {addr}: {reset}")
+for vds in range(args.start_vds, args.end_vds, args.step_vds):
+    for vgs in range(args.start_vds, args.end_vds, args.step_vds):
+        # 0 --> Body
+        # 1 --> Source
+        # 2 --> Drain
+        # 3 --> Gate
+        nisys.set_ppmu({"3": vgs, "1":vds, "2":0, "0":0})
+        nisys.read_ppmu([0,1,2,3])
 
 # Shutdown
 nisys.close()

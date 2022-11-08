@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TimingFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/Timing">
+  <TimingSheet>
+    <TimeSets>
+      <TimeSet name="test">
+        <Period>100e-9</Period>
+        <PinEdges>
+          <PinEdge pin="Source">
+            <DriveNonReturn>
+              <On>0</On>
+              <Data>1e-6</Data>
+              <Off>1e-6</Off>
+            </DriveNonReturn>
+            <CompareStrobe>
+              <Strobe>50e-9</Strobe>
+            </CompareStrobe>
+            <DataSource>Pattern</DataSource>
+          </PinEdge>
+        </PinEdges>
+      </TimeSet>
+    </TimeSets>
+  </TimingSheet>
+</TimingFile>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Specifications xmlns:f="http://www.ni.com/schemas/Semiconductor/Formula.xsd" schemaVersion="1.0" xmlns="http://www.ni.com/schemas/Semiconductor/Specifications.xsd">
+  <Section name="timing">
+    <f:Formula symbol="period">
+      <f:Definition>20 ns</f:Definition>
+      <f:Comment>Minimum pulse width</f:Comment>
+    </f:Formula>
+    <f:Formula symbol="addr_hold_time">
+      <f:Definition>3 µs</f:Definition>
+      <f:Comment>Address hold time</f:Comment>
+    </f:Formula>
+  </Section>
+</Specifications>
