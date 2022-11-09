@@ -3,4 +3,5 @@ nidigital
 numpy
 matplotlib
 pandas
+pyvisa
 scipy

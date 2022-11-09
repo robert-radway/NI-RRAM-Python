@@ -2,10 +2,7 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../cascade_controller"
-		},
+		}
 	],
 	"settings": {}
 }
