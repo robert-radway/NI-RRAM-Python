@@ -41,8 +41,21 @@ class NIRRAM:
         # Store/initialize parameters
         self.settings = settings
         self.chip = chip
-        self.addr = 0
-        self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
+        self.bls = settings["BLS"]
+        self.sls = settings["SLS"]
+        self.wls = settings["WLS"]
+
+        # Only works for 1T1R arrays
+        self.addr_idxs = {}
+        self.addr_prof = {}
+        for wl in self.wls:
+            self.addr_idxs[wl] = {}
+            self.addr_prof[wl] = {}
+            for i in range(len(self.bls)):
+                bl = self.bls[i]
+                sl = self.sls[i]
+                self.addr_idxs[wl][bl] = (bl, sl, wl)
+                self.addr_prof[wl][bl] = {"FORMs": 0, "READs": 0, "SETs": 0, "RESETs": 0} 
 
         # Initialize NI-Digital driver
         self.digital = nidigital.Session(settings["NIDigital"]["deviceID"])
@@ -50,259 +63,267 @@ class NIRRAM:
         self.digital.load_specifications_levels_and_timing(*settings["NIDigital"]["specs"])
         self.digital.apply_levels_and_timing(*settings["NIDigital"]["specs"][1:])
         self.digital.unload_all_patterns()
-        # for pat in glob.glob(settings["NIDigital"]["patterns"]):
-        #     print(pat)
-        #     #self.digital.load_pattern(abspath(pat))
-        # #self.digital.burst_pattern("all_off")
+        for pattern in glob.glob(settings["NIDigital"]["patterns"]):
+            print(pattern)
+            self.digital.load_pattern(abspath(pattern))
 
         # Configure READ measurements
         if settings["READ"]["mode"] == "digital":
-            self.read_chan = []
-            for chan in settings["NIDigital"]["read_chan"]:
+            for bl in self.bls:
                 # Configure NI-Digital current read measurements
-                self.read_chan.append(self.digital.channels[chan])
-                self.read_chan[chan].ppmu_aperture_time = settings["READ"]["aperture_time"]
-                self.read_chan[chan].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
-                self.read_chan[chan].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-                self.read_chan[chan].ppmu_current_limit_range = settings["READ"]["current_limit_range"]
-                self.read_chan[chan].ppmu_voltage_level = 0
-                self.read_chan[chan].ppmu_source()
+                self.digital.channels[bl].ppmu_aperture_time = settings["READ"]["aperture_time"]
+                self.digital.channels[bl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+                self.digital.channels[bl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+                self.digital.channels[bl].ppmu_current_limit_range = settings["READ"]["current_limit_range"]
+                self.digital.channels[bl].ppmu_voltage_level = 0
+                self.digital.channels[bl].ppmu_source()
+            for sl in self.sls:
+                # Configure NI-Digital current read measurements
+                self.digital.channels[sl].ppmu_aperture_time = settings["READ"]["aperture_time"]
+                self.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+                self.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+                self.digital.channels[sl].ppmu_current_limit_range = settings["READ"]["current_limit_range"]
+                self.digital.channels[sl].ppmu_voltage_level = 0
+                self.digital.channels[sl].ppmu_source()
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
         # Set address and all voltages to 0
-        # self.set_addr(0)
-        # self.set_vwl(0)
-        # self.set_vbl(0)
-        # self.set_vsl(0)
+        for bl in self.bls: self.set_vbl(bl,0)
+        for sl in self.sls: self.set_vsl(sl,0)
+        for wl in self.wls: self.set_vwl(wl,0)
 
-    def set_ppmu(self, pin_voltage_dict):
-        """Set pin voltages based on dict values"""
 
-        # Measure
-        if self.settings["READ"]["mode"] == "digital":
-            for chan in pin_voltage_dict.keys():
-                self.read_chan[chan].ppmu_voltage_level = pin_voltage_dict[chan]
-                self.read_chan[chan].ppmu_source()
-        else:
-            raise NIRRAMException("Invalid READ mode specified in settings")
-        return
 
-    def read_ppmu(self, pins):
-        """Set pin voltages based on dict values"""
-        voltages = []
-        currents =[]
-        # Measure
-        if self.settings["READ"]["mode"] == "digital":
-            for chan in pins:
-                # Measure with NI-Digital
-                voltages.append(self.read_chan[chan].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
-                currents.append(self.read_chan[chan].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
-        else:
-            raise NIRRAMException("Invalid READ mode specified in settings")
-        return voltages, currents
-
-    def read(self, allsamps=False):
-        """Perform a READ operation. Returns tuple with (res, cond, meas_i, meas_v)"""
+    def read(self, vbl=None, vsl=None, vwl=None):
+        """Perform a READ operation. Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
         # Increment the number of READs
-        self.prof["READs"] += 1
-
         # Set voltages and settling time (pulse width)
-        self.set_vsl(0)
-        self.set_vbl(self.settings["READ"]["VBL"])
-        self.set_vwl(self.settings["READ"]["VWL"])
-        self.set_pw(self.settings["READ"]["settling_time"])
+        self.digital_all_off(100)
+        vbl = self.settings["READ"]["VBL"] if vbl is None else vbl
+        vwl = self.settings["READ"]["VWL"] if vwl is None else vwl
+        vsl = 0 if vsl is None else vsl
+        for bl in self.bls: 
+            self.ppmu_set_vbl(bl,vbl)
+            self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
+        for sl in self.sls: 
+            self.ppmu_set_vsl(sl,0)
+            self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
+        for wl in self.wls: 
+            self.ppmu_set_vwl(wl,vwl)
+            self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
 
+        self.digital.ppmu_source()
+        #self.set_pw(self.settings["READ"]["settling_time"])
+        measurement = []
+        time.sleep(1e-6)
+        # self.pulse(bl_mask =0b1111, sl_mask=0b1111, wl_mask=0b1111, pulse_len=self.settings["READ"]["settling_time"])
         # Measure
         if self.settings["READ"]["mode"] == "digital":
             # Measure with NI-Digital
-            self.read_chan.selected_function = nidigital.SelectedFunction.PPMU
-            self.read_chan.ppmu_source()
-            self.digital.burst_pattern("read_on_nosl") # just for timing
-            meas_v = 0
-            meas_i = -self.read_chan.ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
-            self.read_chan.selected_function = nidigital.SelectedFunction.DIGITAL
+            for wl in self.wls:
+                for bl in self.bls:
+                    meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+                    meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
+                    self.addr_prof[wl][bl]["READs"] +=1
+                    # Compute values
+                    res = np.abs(self.settings["READ"]["VBL"]/meas_i - self.settings["READ"]["shunt_res_value"])
+                    cond = 1/res
+                    measurement.append((res, cond, meas_i, meas_v))
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
-        # Compute values
-        res = np.abs(self.settings["READ"]["VBL"]/meas_i - self.settings["READ"]["shunt_res_value"])
-        cond = 1/res
 
         # Disable READ waveform
-        self.digital.burst_pattern("all_off")
+        #self.digital_all_off()
 
-        # Log operation to master file
-        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
-        self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
+        # # Log operation to master file
+        # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
+        # self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
 
         # Return measurement tuple
-        return res, cond, meas_i, meas_v
+        return measurement
 
-    def form_pulse(self, vwl=None, vbl=None, pulse_width=None):
+    def form_pulse(self, wl_mask=0b1111, bl_mask=0b1111, vwl=None, vbl=None, pulse_len=None):
         """Perform a FORM operation."""
         # Get parameters
         vwl = self.settings["FORM"]["VWL"] if vwl is None else vwl
         vbl = self.settings["FORM"]["VBL"] if vbl is None else vbl
-        pulse_width = self.settings["FORM"]["PW"] if pulse_width is None else pulse_width
+        pulse_len = self.settings["FORM"]["PW"] if pulse_len is None else pulse_len
 
         # Operation is equivalent to SET but with different parameters
-        self.set_pulse(vwl, vbl, pulse_width)
+        self.set_pulse(wl_mask, bl_mask, vwl, vbl, pulse_len)
 
-    def set_pulse(self, vwl=None, vbl=None, pulse_width=None):
+    def set_pulse(self, wl_mask=0b1111, bl_mask=0b1111, vwl=None, vbl=None, pulse_len=None):
         """Perform a SET operation."""
         # Get parameters
         vwl = self.settings["SET"]["VWL"] if vwl is None else vwl
         vbl = self.settings["SET"]["VBL"] if vbl is None else vbl
-        pulse_width = self.settings["SET"]["PW"] if pulse_width is None else pulse_width
+        pulse_len = self.settings["SET"]["PW"] if pulse_len is None else pulse_len
 
         # Increment the number of SETs
-        self.prof["SETs"] += 1
+        #self.prof["SETs"] += 1
 
         # Set voltages
-        self.set_vsl(0)
-        self.set_vbl(vbl)
-        self.set_vwl(vwl)
-
-        # Pulse VWL
-        self.pulse_vwl(pulse_width)
-
+        for bl in self.bls: self.set_vbl(bl, vbl)
+        for sl in self.sls: self.set_vsl(sl, 0)
+        for wl in self.wls: self.set_vwl(wl, vwl)
+        
+        # Pulse WL
+        self.pulse(bl_mask=bl_mask, wl_mask=wl_mask, pulse_len=pulse_len)
         # Log the pulse
-        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
-        self.mlogfile.write(f"SET,{vwl},{vbl},0,{pulse_width}\n")
+        #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
+        #self.mlogfile.write(f"SET,{vwl},{vbl},0,{pulse_width}\n")
 
-    def reset_pulse(self, vwl=None, vsl=None, pulse_width=None):
+    def reset_pulse(self, wl_mask=0b1111, sl_mask=0b1111, vwl=None, vsl=None, pulse_len=None):
         """Perform a RESET operation."""
         # Get parameters
         vwl = self.settings["RESET"]["VWL"] if vwl is None else vwl
         vsl = self.settings["RESET"]["VSL"] if vsl is None else vsl
-        pulse_width = self.settings["RESET"]["PW"] if pulse_width is None else pulse_width
+        pulse_len = self.settings["RESET"]["PW"] if pulse_len is None else pulse_len
 
         # Increment the number of SETs
-        self.prof["RESETs"] += 1
+        #self.prof["RESETs"] += 1
 
         # Set voltages
-        self.set_vbl(0, other=vsl)
-        self.set_vsl(vsl)
-        self.set_vwl(vwl)
+        for bl in self.bls: self.set_vbl(bl, 0)
+        for sl in self.sls: self.set_vsl(sl, vsl)
+        for wl in self.wls: self.set_vwl(wl, vwl)
 
-        # Pulse VWL
-        self.pulse_vwl(pulse_width)
+        self.pulse(sl_mask=sl_mask, wl_mask=wl_mask, pulse_len=pulse_len)
 
         # Log the pulse
-        self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
-        self.mlogfile.write(f"RESET,{vwl},0,{vsl},{pulse_width}\n")
+        #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
+        #self.mlogfile.write(f"RESET,{vwl},0,{vsl},{pulse_width}\n")
 
-
-    def set_vsl(self, voltage):
+    def set_vsl(self, vsl_chan, vsl):
         """Set VSL using NI-Digital driver"""
-        assert(voltage <= 5)
-        assert(voltage >= 0)
-        sl_ext_chan = "sl_ext" if "test_struct" not in self.settings else "test_bottom_2"
-        self.digital.channels[sl_ext_chan].configure_voltage_levels(0, voltage, 0, voltage, 0)
+        assert(vsl <= 5)
+        assert(vsl >= 0)
+        assert(vsl_chan in self.sls)
+        self.digital.channels[vsl_chan].configure_voltage_levels(0, vsl, 0, vsl, 0)
+        #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
-    def set_vbl(self, voltage, other=0):
+    def set_vbl(self, vbl_chan, vbl):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
-        assert(voltage <= 5)
-        assert(voltage >= 0)
-        active_bl_chan = (self.addr >> 0) & 0b1 if self.settings["multi_bl_wl"] else 0
-        for i in range(2 if self.settings["multi_bl_wl"] else 1):
-            vhi = voltage if i == active_bl_chan else other
-            bl_ext_chan = f"bl_ext_{i}" if "test_struct" not in self.settings else f"test_bottom_{i}"
-            self.digital.channels[bl_ext_chan].configure_voltage_levels(0, vhi, 0, vhi, 0)
+        assert(vbl <= 3.5)
+        assert(vbl >= 0)
+        assert(vbl_chan in self.bls)
+        self.digital.channels[vbl_chan].configure_voltage_levels(0, vbl, 0, vbl, 0)
 
-    def set_vwl(self, voltage_hi, voltage_lo=0):
+    def set_vwl(self, vwl_chan, vwl_hi, vwl_lo=0):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
         # Assertions
-        assert(voltage_hi <= 4)
-        assert(voltage_hi >= 0)
-        assert(voltage_lo <= 4)
-        assert(voltage_lo >= 0)
-        
-        wl_shift = 8 if "test_struct" not in self.settings else 1
-        active_wl_chan = (self.addr >> wl_shift) & 0b11 if self.settings["multi_bl_wl"] else 0
-        for i in range(4 if self.settings["multi_bl_wl"] else 1):
-            vhi = voltage_hi if i == active_wl_chan else 0
-            vlo = voltage_lo if i == active_wl_chan else 0
-            wl_ext_chan = "wl_ext" if "test_struct" not in self.settings else "test_left"
-            self.digital.channels[f"{wl_ext_chan}_{i}"].configure_voltage_levels(vlo, vhi, vlo, vhi, 0)
+        assert(vwl_hi <= 2.5)
+        assert(vwl_hi >= 0)
+        assert(vwl_lo <= 2.5)
+        assert(vwl_lo >= 0)
+        assert(vwl_chan in self.wls)
+        self.digital.channels[vwl_chan].configure_voltage_levels(vwl_lo, vwl_hi, vwl_lo, vwl_hi, 0)
 
-    def set_addr(self, addr):
-        """Set the address"""
-        # Update address
-        self.addr = addr
+    def ppmu_set_vsl(self, vsl_chan, vsl):
+        """Set VSL using NI-Digital driver"""
+        assert(vsl <= 6)
+        assert(vsl >= -2)
+        assert(vsl_chan in self.sls)
+        self.digital.channels[vsl_chan].ppmu_voltage_level = vsl
+        #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
+    def ppmu_set_vbl(self, vbl_chan, vbl):
+        """Set (active) VBL using NI-Digital driver (inactive disabled)"""
+        assert(vbl <= 6)
+        assert(vbl >= -2)
+        assert(vbl_chan in self.bls)
+        self.digital.channels[vbl_chan].ppmu_voltage_level = vbl
+
+    def ppmu_set_vwl(self, vwl_chan, vwl):
+        """Set (active) VWL using NI-Digital driver (inactive disabled)"""
+        # Assertions
+        assert(vwl <= 6)
+        assert(vwl >= -2)
+        assert(vwl_chan in self.wls)
+        self.digital.channels[vwl_chan].ppmu_voltage_level = vwl
+
+    def digital_all_off(self, pulse_len=1):
+        self.pulse(pulse_len=pulse_len, prepulse_len=0, postpulse_len=0)
+
+    def pulse(self, bl_mask = 0b0000, sl_mask = 0b0000, wl_mask = 0b0000, pulse_len=10, prepulse_len=2, postpulse_len=2, max_waveform_len=2000):
+        """Pass wl data to the pulse train"""
+        data_prepulse = (bl_mask << 8) + (sl_mask << 4) 
+        data = (bl_mask << 8) + (sl_mask << 4) + wl_mask
+        data_postpulse = (bl_mask << 8) + (sl_mask << 4)
+        waveform = [data_prepulse for i in range(prepulse_len)] + [data for i in range(pulse_len)] + [data_postpulse for i in range(postpulse_len)] + [0 for i in range(max_waveform_len-pulse_len-prepulse_len-postpulse_len)]
         # Configure waveform
-        if "test_struct" not in self.settings:
-            broadcast = nidigital.SourceDataMapping.BROADCAST
-            self.digital.pins["addr"].create_source_waveform_parallel("addr_waveform", broadcast)
-            self.digital.write_source_waveform_broadcast("addr_waveform", [addr])
-            self.digital.burst_pattern("load_addr")
-
-        # Reset profiling counters
-        self.prof = {"READs": 0, "SETs": 0, "RESETs": 0}
+        #print(waveform)
+        broadcast = nidigital.SourceDataMapping.BROADCAST
+        self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
+        self.digital.write_source_waveform_broadcast("wl_data", waveform)
+        self.set_pw(pulse_len+prepulse_len+postpulse_len)
+        self.digital.burst_pattern("WL_PULSE_DEC3")
 
     def set_pw(self, pulse_width):
         """Set pulse width"""
         pw_register = nidigital.SequencerRegister.REGISTER0
-        self.digital.write_sequencer_register(pw_register, int(round(pulse_width/20e-9)))
+        self.digital.write_sequencer_register(pw_register, pulse_width)
 
     def set_endurance_cycles(self, cycles):
         """Set number of endurance cycles"""
         cycle_register = nidigital.SequencerRegister.REGISTER1
         self.digital.write_sequencer_register(cycle_register, cycles)
 
-    def pulse_vwl(self, pulse_width):
-        """Pulse (active) VWL using NI-Digital driver (inactive are off)"""
-        self.set_pw(pulse_width)
-        self.digital.burst_pattern("pulse_wl")
-
-    def dynamic_form(self, target_res=10000):
+    def dynamic_form(self):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
-        return self.dynamic_set(target_res, scheme="FORM")
+        return self.dynamic_set(mode="FORM")
 
-    def dynamic_set(self, target_res, scheme="PINGPONG"):
+    def dynamic_set(self, mode="SET"):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         # Get settings
-        cfg = self.settings[scheme]
-
+        cfg = self.settings[mode]
+        target_res = self.settings["TARGETS"][mode]
         # Iterative pulse-verify
         success = False
-        for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
-            for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
-                self.set_pulse(vwl, vbl, cfg["SET_PW"])
-                res, cond, meas_i, meas_v = self.read()
-                if res <= target_res:
-                    success = True
+        for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
+            for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
+                for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
+                    #print(pw,vwl,vbl)
+                    self.set_pulse(vbl=vbl, vwl=vwl, pulse_len=int(pw))
+                    res, cond, meas_i, meas_v = self.read()[0]
+                    if res <= target_res:
+                        success = True
+                        break
+                if success:
                     break
             if success:
                 break
-
         # Return results
-        return res, cond, meas_i, meas_v, success
+        return res, cond, meas_i, meas_v, success, vwl, vbl, pw
 
-    def dynamic_reset(self, target_res, scheme="PINGPONG"):
+    def dynamic_reset(self, mode="RESET"):
         """Performs RESET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         # Get settings
-        cfg = self.settings[scheme]
-
+        cfg = self.settings[mode]
+        target_res = self.settings["TARGETS"][mode]
         # Iterative pulse-verify
         success = False
-        for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
-            for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
-                self.reset_pulse(vwl, vsl, cfg["RESET_PW"])
-                res, cond, meas_i, meas_v = self.read()
-                if res >= target_res:
-                    success = True
+        for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
+            for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
+                for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+                    #print(pw,vwl,vsl)
+                    self.reset_pulse(vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                    res, cond, meas_i, meas_v = self.read()[0]
+                    if res >= target_res:
+                        success = True
+                        break
+                if success:
                     break
             if success:
                 break
-
         # Return results
-        return res, cond, meas_i, meas_v, success
+        return res, cond, meas_i, meas_v, success, vwl, vsl, pw
 
     def target(self, target_res_lo, target_res_hi, scheme="PINGPONG", max_attempts=25, debug=True):
         """Performs SET/RESET pulses in increasing fashion until target range is achieved.

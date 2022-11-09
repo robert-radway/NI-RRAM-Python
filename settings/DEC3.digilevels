@@ -1,14 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
   <PinLevelsSheet>
+    <DigitalPinLevelSets>
+      <DigitalPinLevelSet pin="BL_0">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_0">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_0">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="Body">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+      </DigitalPinLevelSet>
+    </DigitalPinLevelSets>
     <PpmuPinLevelSets>
-      <PpmuPinLevelSet pin="Source">
+      <PpmuPinLevelSet pin="BL_0">
         <Vf>1.8</Vf>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="Gate">
-        <Vf>0.7</Vf>
+      <PpmuPinLevelSet pin="WL_0">
+        <Vf>1</Vf>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="Drain">
+      <PpmuPinLevelSet pin="SL_0">
         <Vf>0</Vf>
       </PpmuPinLevelSet>
       <PpmuPinLevelSet pin="Body">

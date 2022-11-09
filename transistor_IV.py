@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 # Get arguments
 parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("device_no", help="chip name for logging")
-parser.add_argument("--start-vds", type=int, default=0, help="start vds")
+parser.add_argument("--start-vds", type=int, default=1.8, help="start vds")
 parser.add_argument("--end-vds", type=int, default=1.8, help="end vds")
-parser.add_argument("--step-vds", type=int, default=6, help="step vds")
+parser.add_argument("--step-vds", type=int, default=1, help="step vds")
 parser.add_argument("--start-vgs", type=int, default=-1.8, help="start vgs")
 parser.add_argument("--end-vgs", type=int, default=1.8, help="end vgs")
-parser.add_argument("--step-vgs", type=int, default=36, help="step vgs")
+parser.add_argument("--step-vgs", type=int, default=100, help="step vgs")
 args = parser.parse_args()
 
 # Initialize NI system
@@ -31,9 +31,8 @@ for vds in labels:
         # 1 --> Source
         # 2 --> Drain
         # 3 --> Gate
-        nisys.set_ppmu({3: vgs, 1:vds, 2:0, 0:0})
-        voltages, currents = nisys.read_ppmu(pins=[0,1,2,3])
-        results[i].append(currents[1])
+        currents = nisys.read(vbl=vds, vwl=vgs)[0][2]
+        results[i].append(currents)
     i += 1
 results = np.array(results)
 plt.semilogy(x, results.T)
