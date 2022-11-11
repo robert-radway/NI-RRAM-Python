@@ -391,11 +391,12 @@ class NIRRAM:
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
             for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
                 for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
+                    #print(pw, vwl, vbl, vsl)
                     self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
                     res_array, cond_array, meas_i_array, meas_v_array = self.read()
                     for wl in self.wls:
                         for bl in self.bls:
-                            if res_array.loc[wl,bl] <= target_res:
+                            if (res_array.loc[wl,bl] <= target_res) & mask.mask.loc[wl,bl]:
                                 mask.mask.loc[wl,bl] = False
                                 data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, True]
                                 print(data)
@@ -432,7 +433,7 @@ class NIRRAM:
                     res_array, cond_array, meas_i_array, meas_v_array = self.read()
                     for wl in self.wls:
                         for bl in self.bls:
-                            if res_array.loc[wl,bl] >= target_res:
+                            if (res_array.loc[wl,bl] >= target_res) & mask.mask.loc[wl,bl]:
                                 mask.mask.loc[wl,bl] = False
                                 data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, True]
                                 print(data)
