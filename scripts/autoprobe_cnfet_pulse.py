@@ -26,37 +26,44 @@ def run(
     )
 
     for module_column in [ # should be ~ 50 uA/um
-        "cnt_left_bottom_1t1r_1", # W = 5 um
-        "cnt_left_bottom_1t1r_2", # W = 10 um
-        "cnt_left_bottom_1t1r_3", # W = 20 um
-        "cnt_left_bottom_1t1r_4", # W = 52 um 
-        "cnt_left_bottom_1t1r_5", # W = 105 um, 5-8 are identical
-        "cnt_left_bottom_1t1r_6", # W = 105 um
-        "cnt_left_bottom_1t1r_7", # W = 105 um
-        "cnt_left_bottom_1t1r_8", # W = 105 um
+        # "cnt_left_bottom_1t1r_1", # W = 5 um
+        # "cnt_left_bottom_1t1r_2", # W = 10 um
+        # "cnt_left_bottom_1t1r_3", # W = 20 um
+        # "cnt_left_bottom_1t1r_4", # W = 52 um 
+        # "cnt_left_bottom_1t1r_5", # W = 105 um, 5-8 are identical
+        # "cnt_left_bottom_1t1r_6", # W = 105 um
+        # "cnt_left_bottom_1t1r_7", # W = 105 um
+        # "cnt_left_bottom_1t1r_8", # W = 105 um
+        "cnt_left_top_1t1r_2", # W = 10 um
+        "cnt_left_top_1t1r_3", # W = 20 um
+        "cnt_left_top_1t1r_4", # W = 52 um 
+        "cnt_left_top_1t1r_5", # W = 105 um, 5-8 are identical
+        "cnt_left_top_1t1r_6", # W = 105 um
+        "cnt_left_top_1t1r_7", # W = 105 um
+        "cnt_left_top_1t1r_8", # W = 105 um
+        "cnt_left_top_1t1r_1", # W = 5 um
     ]:
-        for row in range(14, 16):
+        for row in range(1, 16):
             module = f"{module_column}_row_{row}"
             probe.move_to_module(module)
             
             with probe.start_measurement() as measurement:
                 logging.info("Starting measurement")
-                time.sleep(3)
 
                 #Initialize NI system
                 nisys = NIRRAM(chip, module, settings="settings/DEC3.json", polarity="PMOS")
-
-                print(nisys.read(record=True))
-                #input("Dynamic Form")
-                print(nisys.dynamic_form())
+                
+                nisys.read(record=True)
+                # input("Dynamic Form")
+                nisys.dynamic_form()
                 for i in range(iterations):
-                    print(nisys.dynamic_reset())
-                    print(nisys.dynamic_set())
+                    nisys.dynamic_reset()
+                    nisys.dynamic_set()
                 nisys.close()
 
                 logging.info(f"Save data to: {nisys.datafile_path}")
 
-    probe.move_to_module("cnt_left_bottom_1t1r_2_row_14")
+    # probe.move_to_module("cnt_left_bottom_1t1r_2_row_14")
 
 if __name__ == "__main__":
     import argparse
