@@ -1,6 +1,6 @@
 """Script to sweep test endurance of a chip"""
 import argparse
-from nirram import NIRRAM
+from digitalpattern import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="Endurance cycle a chip.")

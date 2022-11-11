@@ -2,7 +2,7 @@
 import argparse
 import itertools
 import numpy as np
-from nirram import NIRRAM
+from digitalpattern import NIRRAM
 
 # Default arguments
 PWS = [20e-9, 40e-9, 100e-9, 200e-9, 400e-9, 1e-6, 2e-6] # 7

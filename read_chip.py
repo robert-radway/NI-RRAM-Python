@@ -1,7 +1,7 @@
 """Script to READ a chip"""
 import argparse
 import time
-from nirram import NIRRAM
+from digitalpattern import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="READ a chip.")

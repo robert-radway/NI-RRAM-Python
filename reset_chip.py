@@ -1,6 +1,6 @@
 """Script to RESET a chip"""
 import argparse
-from nirram import NIRRAM
+from digitalpattern import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="RESET a chip.")

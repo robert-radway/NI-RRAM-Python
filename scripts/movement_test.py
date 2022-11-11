@@ -19,10 +19,10 @@ def run(
     )
     
     for module_column in [
-        "si_nmos_1t_1",
-        "si_nmos_1t_2",
+        "si_nmos_1t1r_1",
+        "si_nmos_1t1r_2",
     ]:
-        for row in range(1, 4):
+        for row in range(1, 2):
             module = f"{module_column}_row_{row}"
             probe.move_to_module(module)
             

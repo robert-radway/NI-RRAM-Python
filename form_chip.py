@@ -1,6 +1,6 @@
 """Script to FORM a chip"""
 import argparse
-from nirram import NIRRAM
+from digitalpattern import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="FORM a chip.")

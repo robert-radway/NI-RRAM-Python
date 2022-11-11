@@ -2,7 +2,7 @@
 import argparse
 import itertools
 import numpy as np
-from nirram import NIRRAM
+from digitalpattern import NIRRAM
 
 PWS = [20e-9, 40e-9, 100e-9, 200e-9, 400e-9, 1e-6] # 6
 SET_VWLS = np.arange(1, 3.1, 0.1) # 21
