@@ -161,15 +161,11 @@ class NIRRAM:
         for sl in self.sls: 
             self.ppmu_set_vsl(sl,vsl)
             self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
-        for wl in self.wls: 
-            self.ppmu_set_vwl(wl,vwl)
-            self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
         for b in self.body: 
             assert( -2 <= vb <= 6)
             self.digital.channels[b].ppmu_voltage_level = vb
             self.digital.channels[b].selected_function = nidigital.SelectedFunction.PPMU
 
-        self.digital.ppmu_source()
         time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
         
         # Measure
@@ -180,6 +176,12 @@ class NIRRAM:
         if self.settings["READ"]["mode"] == "digital":
             # Measure with NI-Digital
             for wl in self.wls:
+                for wl_i in self.wls:
+                    if wl_i == wl: self.ppmu_set_vwl(wl,vwl)
+                    else: self.ppmu_set_vwl(wl,vsl)
+                    self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
+                self.digital.ppmu_source()
+                time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 for bl in self.bls:
                     meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
                     meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
@@ -394,6 +396,7 @@ class NIRRAM:
                     #print(pw, vwl, vbl, vsl)
                     self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
                     res_array, cond_array, meas_i_array, meas_v_array = self.read()
+                    #print(res_array)
                     for wl in self.wls:
                         for bl in self.bls:
                             if (res_array.loc[wl,bl] <= target_res) & mask.mask.loc[wl,bl]:
