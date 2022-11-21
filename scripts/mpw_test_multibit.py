@@ -19,9 +19,18 @@ nisys = NIRRAM(args.chip, args.device, settings="settings/MPW.json", polarity="P
 nisys.read(record=True)
 # input("Dynamic Form")
 nisys.dynamic_form()
-for i in range(10):
+for i in range(1000000):
     nisys.dynamic_set(mode="SET")
-    nisys.dynamic_reset(mode="RESET")
+    nisys.dynamic_reset(mode="RESET_0") # increasing soft reset levels, comment out as needed
+    nisys.dynamic_reset(mode="RESET_1")
+    nisys.dynamic_reset(mode="RESET_2")
+    # nisys.dynamic_reset(mode="RESET_3")
+
+    # IF YOU HAVE ENOUGH WINDOW, CAN TRY WITH MORE LEVELS!
+    # nisys.dynamic_reset(mode="RESET_4")
+    # nisys.dynamic_reset(mode="RESET_5")
+    # nisys.dynamic_reset(mode="RESET_6")
+    # nisys.dynamic_reset(mode="RESET_7")
 nisys.close()
 
 # for autoprobing cnfet, addd polarity = pmos
