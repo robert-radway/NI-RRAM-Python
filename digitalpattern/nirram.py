@@ -380,12 +380,17 @@ class NIRRAM:
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         return self.dynamic_set(mode="FORM")
 
-    def dynamic_set(self, mode="SET", record=True):
+    def dynamic_set(
+        self,
+        mode="SET",
+        record=True,
+        target_res=None, # target res, if None will use value in settings
+    ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         # Get settings
         cfg = self.settings[mode][self.polarity]
-        target_res = self.settings["TARGETS"][mode]
+        target_res = target_res if target_res is not None else self.settings["TARGETS"][mode]
         vsl = cfg["VSL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
         # Iterative pulse-verify
@@ -419,12 +424,17 @@ class NIRRAM:
                     print(data)
                     if record: self.datafile.writerow(data)
 
-    def dynamic_reset(self, mode="RESET", record=True):
+    def dynamic_reset(
+        self,
+        mode="RESET",
+        record=True,
+        target_res=None, # target res, if None will use value in settings
+    ):
         """Performs RESET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         # Get settings
         cfg = self.settings[mode][self.polarity]
-        target_res = self.settings["TARGETS"][mode]
+        target_res = target_res if target_res is not None else self.settings["TARGETS"][mode]
         vbl = cfg["VBL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
         # Iterative pulse-verify
@@ -548,7 +558,107 @@ class NIRRAM:
 
         # Return endurance results
         return data
+    
 
+    def sweep_gradual_reset_in_range(
+        self,
+        res_low: float,       # resistance low bound for set before resetting
+        res_high: float,      # resistance high bound for stopping reset before setting
+        mode="RESET_SWEEP", # mode containing reset gradual config
+        record=True,          # record output data
+    ):
+        """This is used to sweep achievable resistances values, by sweeping a series
+        of reset pulses and recording the value after each pulse:
+        1. First run a dynamic set to push device to a specific `res_low` target
+        2. For each value in the VSL sweep, reset pulse device, record resistance
+        3. Break when `res_high` target hit. 
+        """
+
+        # initialization: do built in set to get into res_low target
+        self.dynamic_set(target_res=res_low)
+
+        # get settings for this
+        cfg = self.settings[mode][self.polarity]
+        vbl = cfg["VBL"]
+        vwl = cfg["VWL"]
+        pw = cfg["PW"]
+        pcount = cfg["PCOUNT"]
+        mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+
+        # iterative reset pulse, save resistance after each pulse regardless of outcome
+        success = False
+        for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+            # do "pcount" pulses
+            for i in range(pcount):
+                self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                res_array, cond_array, meas_i_array, meas_v_array = self.read()
+
+                # save data
+                for wl in self.wls:
+                    for bl in self.bls:
+                        cell_success = False
+                        if (res_array.loc[wl,bl] >= res_high) & mask.mask.loc[wl,bl]:
+                            cell_success = True
+                            mask.mask.loc[wl,bl] = False
+                        data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                        print(f"{i}. {data}")
+                        if record: self.datafile.writerow(data)
+            
+            success = (mask.mask.to_numpy().sum()==0)
+            if success:
+                print(f"REACHED TARGET {res_high}, BREAKING.")
+                break
+        
+
+    def sweep_gradual_set_in_range(
+        self,
+        res_low: float,     # resistance low bound for set before resetting
+        res_high: float,    # resistance high bound for stopping reset before setting
+        mode="SET_SWEEP",   # mode containing reset gradual config
+        record=True,        # record output data
+    ):
+        """This is used to sweep achievable resistances values, by sweeping a series
+        of reset pulses and recording the value after each pulse:
+        1. First run a dynamic reset to push device to a specific `res_low` target
+        2. For each value in the VSL sweep, reset pulse device, record resistance
+        3. Break when `res_high` target hit. 
+        """
+
+        # initialization: do built in set to get into res_low target
+        self.dynamic_reset(target_res=res_high)
+
+        # get settings for this
+        cfg = self.settings[mode][self.polarity]
+        vsl = cfg["VSL"]
+        vwl = cfg["VWL"]
+        pw = cfg["PW"]
+        pcount = cfg["PCOUNT"]
+        mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+
+        # iterative reset pulse, save resistance after each pulse regardless of outcome
+        success = False
+        for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
+            # do "pcount" pulses
+            for i in range(pcount):
+                self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                res_array, cond_array, meas_i_array, meas_v_array = self.read()
+
+                # save data
+                for wl in self.wls:
+                    for bl in self.bls:
+                        cell_success = False
+                        if (res_array.loc[wl,bl] <= res_low) & mask.mask.loc[wl,bl]:
+                            cell_success = True
+                            mask.mask.loc[wl,bl] = False
+                        data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                        print(f"{i}. {data}")
+                        if record: self.datafile.writerow(data)
+            
+            success = (mask.mask.to_numpy().sum()==0)
+            if success:
+                print(f"REACHED TARGET {res_high}, BREAKING.")
+                break
+        
 
     def close(self):
         """Close all NI sessions"""

@@ -151,7 +151,7 @@
             "VWL_RESET_step": -0.1,
             "VWL_RESET_stop": -1.8,
     
-            "VSL_start": 1.5,
+            "VSL_start": 2.0,
             "VSL_step": -0.1,
             "VSL_stop": 0,
     
@@ -479,6 +479,89 @@
             "PW_stop": 100,
             "PW_steps": 3   
         } 
+    },
+
+    "RESET_SWEEP": {
+        "NMOS": {
+            "VWL": 2.5,
+            "VSL": 3,
+            "VBL": 0,
+            "PW": 100,
+            "PCOUNT": 1,
+    
+            "VWL_RESET_start": 1.8,
+            "VWL_RESET_step": 0.1,
+            "VWL_RESET_stop": 2.5,
+    
+            "VSL_start": 2,
+            "VSL_step": 0.2,
+            "VSL_stop": 5,
+    
+            "PW_start": 1,
+            "PW_stop": 100,
+            "PW_steps": 3   
+        },
+
+        "PMOS": {
+            "VWL": -1,
+            "VSL": 0,
+            "VBL": 2.5,
+            "PW": 100,
+            "PCOUNT": 3,
+    
+            "VWL_RESET_start": -1,
+            "VWL_RESET_step": -0.1,
+            "VWL_RESET_stop": -1.8,
+    
+            "VSL_start": 2.5,
+            "VSL_step": -0.001,
+            "VSL_stop": 0,
+    
+            "PW_start": 1,
+            "PW_stop": 100,
+            "PW_steps": 3   
+        } 
+    },
+
+    "SET_SWEEP": {
+        "NMOS": {
+            "VWL": 0,
+            "VBL": 4,
+            "VSL": 2,
+            "PW": 100,
+    
+            "VWL_SET_start": 1.2,
+            "VWL_SET_step": 0.1,
+            "VWL_SET_stop": 2.2,
+    
+            "VBL_start": 1.5,
+            "VBL_step": 0.1,
+            "VBL_stop": 2.5,
+    
+            "PW_start": 1,
+            "PW_stop": 100,
+            "PW_steps": 3
+        },
+
+        "PMOS": {
+            "VWL": 0.5,
+            "VBL": 0,
+            "VSL": 0.7,
+            "PW": 200,
+            "PCOUNT": 3,
+
+            "VWL_SET_start": 0,
+            "VWL_SET_step": -0.1,
+            "VWL_SET_stop": -0.7,
+
+            "VBL_start": 0,
+            "VBL_stop": -2.0,
+            "VBL_step": -0.001,
+
+            "PW_start": 1,
+            "PW_stop": 100,
+            "PW_steps": 3    
+        }
     },
 
     "TARGETS": {
