@@ -13,17 +13,25 @@ parser.add_argument("device", help="device name for logging")
 args = parser.parse_args()
 
 # Initialize NI system
-nisys = NIRRAM(args.chip, args.device, settings="settings/MPW.json", polarity="PMOS") # FOR CNFET RRAM
+# For CNFET: make sure polarity is PMOS
+nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1TNR.json", polarity="PMOS") # FOR CNFET RRAM
 # nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_silicon.json", polarity="NMOS") # FOR Si NMOS RRAM
 
+
+# DEBUGGING READ
+print("OLD READ:")
 nisys.read(record=True)
+print("1TNR READ:")
+nisys.read_1tnr(record=True)
+
+
+# nisys.read_1tnr(record=True)
 # input("Dynamic Form")
-nisys.dynamic_form()
-nisys.dynamic_reset()
-for i in range(10000):
-    nisys.sweep_gradual_set_in_range(mode="SET_SWEEP", res_low=30000, res_high=200000)
-    nisys.sweep_gradual_reset_in_range(mode="RESET_SWEEP", res_low=30000, res_high=200000)
+# nisys.dynamic_form(is_1tnr=True)
+# # nisys.dynamic_set(mode="SET")
+# nisys.dynamic_reset(mode="RESET", is_1tnr=True)
+# for i in range(4):
+#     nisys.dynamic_set(mode="SET", is_1tnr=True)
+#     nisys.dynamic_reset(mode="RESET", is_1tnr=True)
 
 nisys.close()
-
-# for autoprobing cnfet, addd polarity = pmos

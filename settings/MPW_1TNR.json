@@ -1,7 +1,7 @@
 {
     "NIDigital": {
         "deviceID": "PXI1Slot9",
-        "pinmap": "settings/MPW.pinmap",
+        "pinmap": "settings/MPW_1TNR.pinmap",
         "specs": [
             "settings/DEC3.specs",
             "settings/DEC3.digilevels",
@@ -11,8 +11,8 @@
     },
 
     "WLS": ["WL_0"],
-    "BLS": ["BL_0"],
-    "SLS": ["SL_0"],
+    "BLS": ["BL_0", "BL_1"],
+    "SLS": ["SL_0", "SL_0"],
     "BODY": ["Body"],
 
     "all_WLS": ["WL_0", "WL_1", "WL_2", "WL_3"],
@@ -35,7 +35,7 @@
 
         "PMOS": {
             "VWL": -1.2,
-            "VBL": -0.3,
+            "VBL": -0.1,
             "VSL": 0,
             "VB": 1.5
             }
@@ -104,16 +104,16 @@
         "PMOS": {
             "VWL": 0.5,
             "VBL": 0,
-            "VSL": 0.5,
+            "VSL": 0.6,
             "PW": 1000,
 
-            "VWL_SET_start": 0,
+            "VWL_SET_start": -0.6,
             "VWL_SET_step": -0.1,
-            "VWL_SET_stop": -0.7,
+            "VWL_SET_stop": -1.2,
 
-            "VBL_start": 0,
+            "VBL_start": 0.0,
             "VBL_step": -0.1,
-            "VBL_stop": -1.3,
+            "VBL_stop": -1.6,
 
             "PW_start": 1,
             "PW_stop": 100,
@@ -565,8 +565,8 @@
     },
 
     "TARGETS": {
-        "FORM": 20000,
-        "SET": 20000,
+        "FORM": 30000,
+        "SET": 40000,
         "RESET_0": 60000,
         "RESET_1": 120000,
         "RESET_2": 190000,
@@ -575,7 +575,7 @@
         "RESET_5": 250000,
         "RESET_6": 290000,
         "RESET_7": 330000,
-        "RESET": 100000
+        "RESET": 200000
     },
 
     "master_log_file": "logs/master.log",

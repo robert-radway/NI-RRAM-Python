@@ -144,10 +144,12 @@ class NIRRAM:
 
 
     def read(self, vbl=None, vsl=None, vwl=None, vb=None, record=False):
-        """Perform a READ operation. Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
+        """Perform a READ operation. This operation works for single 1T1R devices and 
+        arrays of devices, where each device has its own WL/BL.
+        Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
         # Increment the number of READs
         # Let the cell relax after programming to get an accurate read 
-        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
+        #self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
         
         # Set the read voltage levels
         vbl = self.settings["READ"][self.polarity]["VBL"] if vbl is None else vbl
@@ -183,6 +185,12 @@ class NIRRAM:
                 self.digital.ppmu_source()
                 time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 for bl in self.bls:
+                    # DEBUGGING: test each bitline 
+                    # for bl in self.bls:
+                    # meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+                    # meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    # meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    # print(f"{bl} v: {meas_v} i: {meas_i} ig: {meas_i_gate}")
                     meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
                     meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
@@ -197,6 +205,101 @@ class NIRRAM:
                     cond_array.loc[wl,bl] = cond
                     if record: 
                         self.datafile.writerow([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v])
+                        print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
+        else:
+            raise NIRRAMException("Invalid READ mode specified in settings")
+
+        # Disable READ, make sure all the supplies in off state for any subsequent operations
+        #self.digital_all_off(10)
+
+        # Log operation to master file
+        # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
+        # self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
+        # Return measurement results
+        return res_array, cond_array, meas_i_array, meas_v_array
+        
+    def read_1tnr(self, vbl=None, vsl=None, vwl=None, vb=None, record=False):
+        """Perform a READ operation for a 1TNR. In this case, a single
+        FET is connected to multiple RRAMs. In this case, we have a
+        single WL, single SL, and multiple BLs. We need to sequentially
+        turn BL on/off to read that RRAM, while leaving other bitlines at
+        VSL to prevent parallel current paths.
+        
+        Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)
+        """
+        # Increment the number of READs
+        # Let the cell relax after programming to get an accurate read 
+        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
+        
+        # Set the read voltage levels
+        vbl = self.settings["READ"][self.polarity]["VBL"] if vbl is None else vbl
+        vwl = self.settings["READ"][self.polarity]["VWL"] if vwl is None else vwl
+        vsl = self.settings["READ"][self.polarity]["VSL"] if vsl is None else vsl
+        vb = self.settings["READ"][self.polarity]["VB"] if vb is None else vb
+        # print(f"READ @ vbl: {vbl}, vwl: {vwl}, vsl: {vsl}, vb: {vb}")
+
+        # initially set both BLs and SLs to VSL
+        for bl in self.bls: 
+            self.ppmu_set_vbl(bl,vsl)
+            self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
+        for sl in self.sls: 
+            self.ppmu_set_vsl(sl,vsl)
+            self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
+        for b in self.body: 
+            assert( -2 <= vb <= 6)
+            self.digital.channels[b].ppmu_voltage_level = vb
+            self.digital.channels[b].selected_function = nidigital.SelectedFunction.PPMU
+
+        time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+
+        # Measure
+        res_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
+        cond_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
+        meas_i_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
+        meas_v_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
+        if self.settings["READ"]["mode"] == "digital":
+            # Measure with NI-Digital
+            for wl in self.wls:
+                for wl_i in self.wls:
+                    if wl_i == wl: self.ppmu_set_vwl(wl,vwl)
+                    else: self.ppmu_set_vwl(wl,vsl)
+                    self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
+                self.digital.ppmu_source()
+                time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                
+                for bl in self.bls:
+                    # set specific bl and measure
+                    self.ppmu_set_vbl(bl, vbl)
+                    self.digital.channels[bl].ppmu_source()
+                    time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+
+                    # test each bitline
+                    # for x in self.bls:
+                    #     meas_v = self.digital.channels[x].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+                    #     meas_i = self.digital.channels[x].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    #     meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    #     print(f"{x} v: {meas_v} i: {meas_i} ig: {meas_i_gate}")
+                    
+                    meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+                    meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+
+                    # reset bl back to vsl
+                    self.ppmu_set_vbl(bl, vsl)
+                    self.digital.channels[bl].ppmu_source()
+                    time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+
+                    #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
+                    self.addr_prof[wl][bl]["READs"] +=1
+                    # Compute values
+                    res = np.abs((self.settings["READ"][self.polarity]["VBL"] - self.settings["READ"][self.polarity]["VSL"])/meas_i - self.settings["READ"]["shunt_res_value"])
+                    cond = 1/res
+                    meas_i_array.loc[wl,bl] = meas_i
+                    meas_v_array.loc[wl,bl] = meas_v
+                    res_array.loc[wl,bl] = res
+                    cond_array.loc[wl,bl] = cond
+                    if record: 
+                        self.datafile.writerow([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
                         print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
@@ -332,7 +435,7 @@ class NIRRAM:
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(pulse_len+prepulse_len+postpulse_len)
-        self.digital.burst_pattern("WL_PULSE_DEC3")
+        self.digital.burst_pattern("PULSE_MPW_ProbeCard") #WL_PULSE_DEC3
 
     def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200):
         """Create pulse train"""
@@ -363,7 +466,7 @@ class NIRRAM:
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(pulse_len+prepulse_len+postpulse_len)
-        self.digital.burst_pattern("WL_PULSE_DEC3")
+        self.digital.burst_pattern("PULSE_MPW_ProbeCard")
 
     def set_pw(self, pulse_width):
         """Set pulse width"""
@@ -375,16 +478,17 @@ class NIRRAM:
         cycle_register = nidigital.SequencerRegister.REGISTER1
         self.digital.write_sequencer_register(cycle_register, cycles)
 
-    def dynamic_form(self):
+    def dynamic_form(self, is_1tnr=False):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
-        return self.dynamic_set(mode="FORM")
+        return self.dynamic_set(mode="FORM", is_1tnr=is_1tnr)
 
     def dynamic_set(
         self,
         mode="SET",
         record=True,
         target_res=None, # target res, if None will use value in settings
+        is_1tnr=False,
     ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -393,6 +497,8 @@ class NIRRAM:
         target_res = target_res if target_res is not None else self.settings["TARGETS"][mode]
         vsl = cfg["VSL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        # select read method
+        read_pulse = self.read_1tnr if is_1tnr else self.read
         # Iterative pulse-verify
         success = False
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
@@ -400,15 +506,12 @@ class NIRRAM:
                 for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                     #print(pw, vwl, vbl, vsl)
                     self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
-                    res_array, cond_array, meas_i_array, meas_v_array = self.read()
+                    res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
                     #print(res_array)
                     for wl in self.wls:
                         for bl in self.bls:
                             if (res_array.loc[wl,bl] <= target_res) & mask.mask.loc[wl,bl]:
                                 mask.mask.loc[wl,bl] = False
-                                data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, True]
-                                print(data)
-                                if record: self.datafile.writerow(data)
                     success = (mask.mask.to_numpy().sum()==0)
                     if success:
                         break
@@ -416,19 +519,20 @@ class NIRRAM:
                     break
             if success:
                 break
-        # Return results
+        # report final results
         for wl in self.wls:
             for bl in self.bls:
-                if res_array.loc[wl,bl] > target_res:
-                    data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, False]
-                    print(data)
-                    if record: self.datafile.writerow(data)
+                cell_success = res_array.loc[wl,bl] <= target_res
+                data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                print(data)
+                if record: self.datafile.writerow(data)
 
     def dynamic_reset(
         self,
         mode="RESET",
         record=True,
         target_res=None, # target res, if None will use value in settings
+        is_1tnr=False,   # if 1TNR device, do different type of read
     ):
         """Performs RESET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -437,34 +541,34 @@ class NIRRAM:
         target_res = target_res if target_res is not None else self.settings["TARGETS"][mode]
         vbl = cfg["VBL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        # select read method
+        read_pulse = self.read_1tnr if is_1tnr else self.read
         # Iterative pulse-verify
         success = False
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
             for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
                 for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
                     self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
-                    res_array, cond_array, meas_i_array, meas_v_array = self.read()
+                    res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
                     for wl in self.wls:
                         for bl in self.bls:
                             if (res_array.loc[wl,bl] >= target_res) & mask.mask.loc[wl,bl]:
                                 mask.mask.loc[wl,bl] = False
-                                data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, True]
-                                print(data)
-                                if record: self.datafile.writerow(data)
-                    success = (mask.mask.to_numpy().sum()==0)
+                    success = (mask.mask.to_numpy().sum() == 0)
                     if success:
                         break
                 if success:
                     break
             if success:
                 break
-        # Return results
+        
+        # record final cell results
         for wl in self.wls:
             for bl in self.bls:
-                if res_array.loc[wl,bl] < target_res:
-                    data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, False]
-                    print(data)
-                    if record: self.datafile.writerow(data)
+                cell_success = res_array.loc[wl,bl] >= target_res
+                data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                print(data)
+                if record: self.datafile.writerow(data)
 
     def target(self, target_res_lo, target_res_hi, scheme="PINGPONG", max_attempts=25, debug=True):
         """Performs SET/RESET pulses in increasing fashion until target range is achieved.
