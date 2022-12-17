@@ -50,6 +50,6 @@
 		<Connection pin="SL_3" siteNumber="0" instrument="PXI1Slot9" channel="31" />
 		<Connection pin="WL_1" siteNumber="0" instrument="PXI1Slot9" channel="18" />
 		<Connection pin="WL_2" siteNumber="0" instrument="PXI1Slot9" channel="28" />
-		<Connection pin="WL_3" siteNumber="0" instrument="PXI1Slot9" channel="29" />
+		<Connection pin="WL_3" siteNumber="0" instrument="PXI1Slot9" channel="19" />
 	</Connections>
 </PinMap>

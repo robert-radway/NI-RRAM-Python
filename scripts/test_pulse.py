@@ -13,7 +13,7 @@ parser.add_argument("device", help="device name for logging")
 args = parser.parse_args()
 
 # Initialize NI system
-nisys = NIRRAM(args.chip, args.device, settings="settings/DEC3.json", polarity="PMOS")
+nisys = NIRRAM(args.chip, args.device, settings="settings/DEC3_ProbeCard_2x2.json", polarity="PMOS")
 
 nisys.read(record=True)
 # input("Dynamic Form")

@@ -1,1 +1,1 @@
-from .nirram import NIRRAM
+from .nirram import NIRRAM,RRAMArrayMask

@@ -1,19 +1,19 @@
 {
     "NIDigital": {
-        "deviceID": "PXI1Slot9",
+        "deviceID": "PXI1Slot7",
         "pinmap": "settings/DEC3_ProbeCard_Full_SiFET.pinmap",
         "specs": [
             "settings/DEC3.specs",
-            "settings/DEC3_Full.digilevels",
+            "settings/DEC3_Full_SiFET.digilevels",
             "settings/DEC3.digitiming"
         ],
-        "patterns": "settings/patterns/*DEC3_Full.digipat"
+        "patterns": "settings/patterns/*DEC3_Full_SiFET_2x2.digipat"
     },
 
     "WLS": ["A2_WL_0"],
-    "BLS": ["A2_BL_0"],
-    "SLS": ["A2_SL_0"],
-    "BODY": ["A2_PMOS_BODY"],
+    "BLS": ["A2_BL_1"],
+    "SLS": ["A2_SL_1"],
+    "BODY": ["A2_PMOS_BODY","A2_NMOS_BODY"],
 
     "all_WLS": ["A2_WL_0", "A2_WL_1"],
     "all_BLS": ["A2_BL_0", "A2_BL_1"],
@@ -148,11 +148,11 @@
             "PW": 1200,
 
             "VWL_SET_start": 1,
-            "VWL_SET_step": -0.1,
+            "VWL_SET_step": -0.25,
             "VWL_SET_stop": -0.5,
 
             "VBL_start": 1,
-            "VBL_step": -0.1,
+            "VBL_step": -0.5,
             "VBL_stop": -2,
 
             "PW_start": 1,

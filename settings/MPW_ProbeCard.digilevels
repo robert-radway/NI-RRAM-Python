@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
+  <PinLevelsSheet>
+    <DigitalPinLevelSets>
+      <DigitalPinLevelSet pin="BL_8">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_9">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_10">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_11">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_12">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_13">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_14">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="BL_15">
+        <Vil>0</Vil>
+        <Vih>1.8</Vih>
+        <Vol>0</Vol>
+        <Voh>1.8</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_8">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_9">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_10">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_11">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_12">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_13">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_14">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="SL_15">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_0">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_2">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_4">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_6">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_8">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_10">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_12">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_14">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_UNSEL">
+        <Vil>0</Vil>
+        <Vih>0</Vih>
+        <Vol>0</Vol>
+        <Voh>0</Voh>
+      </DigitalPinLevelSet>
+    </DigitalPinLevelSets>
+    <PpmuPinLevelSets>
+      <PpmuPinLevelSet pin="BL_8">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_9">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_10">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_11">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_12">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_13">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_14">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_15">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_8">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_9">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_10">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_11">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_12">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_13">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_14">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="SL_15">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_0">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_2">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_4">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_6">
+        <Vf>-0.2</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_8">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_10">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_12">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_14">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_UNSEL">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+    </PpmuPinLevelSets>
+  </PinLevelsSheet>
+</PinLevelsFile>

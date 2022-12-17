@@ -6,6 +6,7 @@ import time
 import warnings
 from os.path import abspath
 import nidigital
+import niswitch
 import numpy as np
 import pandas as pd
 import csv
@@ -141,15 +142,38 @@ class NIRRAM:
         for sl in self.sls: self.set_vsl(sl,0)
         for wl in self.wls: self.set_vwl(wl,0)
 
+    """
+    def set_relay_position(self, index, closed=True):
+        with niswitch.Session("2571_2") as session:
+            relay_name=session.get_relay_name(index=index+1) #one-indexed
+            count=session.get_relay_count(relay_name=relay_name)
+            position=session.get_relay_position(relay_name=relay_name)
+            if position==niswitch.RelayPosition.CLOSED:
+                if closed:
+                    return 0
+                else:
+                    try: session.disconnect(channel1=f"no{index}", channel2=f"com{index}")
+                    except: pass
+                    session.connect(channel1=f"nc{index}", channel2=f"com{index}")
+                    return 1
+            else:
+                if not closed:
+                    return 0
+                else:
+                    try: session.disconnect(channel1=f"nc{index}", channel2=f"com{index}")    
+                    except: pass
+                    session.connect(channel1=f"no{index}", channel2=f"com{index}")
+                    return 1
+    """
 
 
-    def read(self, vbl=None, vsl=None, vwl=None, vb=None, record=False):
+    def read(self, vbl=None, vsl=None, vwl=None, vwl_unsel=None, vb=None, record=False):
         """Perform a READ operation. This operation works for single 1T1R devices and 
         arrays of devices, where each device has its own WL/BL.
         Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
         # Increment the number of READs
         # Let the cell relax after programming to get an accurate read 
-        #self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
+        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
         
         # Set the read voltage levels
         vbl = self.settings["READ"][self.polarity]["VBL"] if vbl is None else vbl
@@ -178,7 +202,7 @@ class NIRRAM:
         if self.settings["READ"]["mode"] == "digital":
             # Measure with NI-Digital
             for wl in self.wls:
-                for wl_i in self.wls:
+                for wl_i in self.all_wls:
                     if wl_i == wl: self.ppmu_set_vwl(wl,vwl)
                     else: self.ppmu_set_vwl(wl,vsl)
                     self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
@@ -210,7 +234,7 @@ class NIRRAM:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
         # Disable READ, make sure all the supplies in off state for any subsequent operations
-        #self.digital_all_off(10)
+        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
 
         # Log operation to master file
         # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
@@ -313,7 +337,7 @@ class NIRRAM:
         # Return measurement results
         return res_array, cond_array, meas_i_array, meas_v_array
 
-    def form_pulse(self, mask, vwl=None, vbl=None, vsl=None, pulse_len=None):
+    def form_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
         """Perform a FORM operation."""
         # Get parameters
         vwl = self.settings["FORM"][self.polarity]["VWL"] if vwl is None else vwl
@@ -321,10 +345,7 @@ class NIRRAM:
         vsl = self.settings["FORM"][self.polarity]["VBL"] if vsl is None else vsl
         pulse_len = self.settings["FORM"][self.polarity]["PW"] if pulse_len is None else pulse_len
 
-        # Operation is equivalent to SET but with different parameters
-        self.set_pulse(mask, vwl, vbl, vsl, pulse_len)
-
-    def set_pulse(self, mask, vwl=None, vbl=None, vsl=None, pulse_len=None):
+    def set_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
         """Perform a SET operation."""
         # Get parameters
         vwl = self.settings["SET"][self.polarity]["VWL"] if vwl is None else vwl
@@ -342,7 +363,7 @@ class NIRRAM:
             if self.polarity == "PMOS":
                 self.set_vwl(wl, vsl, vwl_lo=vwl)
             else:
-                self.set_vwl(wl, vwl)        
+                self.set_vwl(wl, vwl)    
         # Pulse WL
         self.pulse(mask, pulse_len=pulse_len)
         # Log the pulse
@@ -368,7 +389,7 @@ class NIRRAM:
                 #self.set_vwl(wl, vsl, vwl_lo=vwl)
                 self.set_vwl(wl, vwl)
             else:
-                self.set_vwl(wl, vwl)
+                self.set_vwl(wl, vwl) 
 
         self.pulse(mask, pulse_len=pulse_len)
 
@@ -407,24 +428,42 @@ class NIRRAM:
         """Set VSL using NI-Digital driver"""
         assert(vsl <= 6)
         assert(vsl >= -2)
-        assert(vsl_chan in self.sls)
+        assert(vsl_chan in self.all_sls)
         self.digital.channels[vsl_chan].ppmu_voltage_level = vsl
+        self.digital.channels[vsl_chan].ppmu_source()
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
+    
+    def ppmu_set_isl(self, isl_chan, isl):
+        """Set ISL using NI-Digital driver"""
+        assert(isl_chan in self.all_sls)
+        self.digital.channels[isl_chan].ppmu_current_level = isl
+        self.digital.channels[isl_chan].ppmu_source()
 
     def ppmu_set_vbl(self, vbl_chan, vbl):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
         assert(vbl <= 6)
         assert(vbl >= -2)
-        assert(vbl_chan in self.bls)
+        assert(vbl_chan in self.all_bls)
         self.digital.channels[vbl_chan].ppmu_voltage_level = vbl
+        self.digital.channels[vbl_chan].ppmu_source()
 
     def ppmu_set_vwl(self, vwl_chan, vwl):
-        """Set (active) VWL using NI-Digital driver (inactive disabled)"""
-        # Assertions
+        """Set VSL using NI-Digital driver"""
         assert(vwl <= 6)
         assert(vwl >= -2)
-        assert(vwl_chan in self.wls)
+        assert(vwl_chan in self.all_wls)
         self.digital.channels[vwl_chan].ppmu_voltage_level = vwl
+        self.digital.channels[vwl_chan].ppmu_source()
+        #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
+
+    def ppmu_set_vbody(self, vbody_chan, vbody):
+        """Set VBODY using NI-Digital driver"""
+        assert(vbody <= 3)
+        assert(vbody >= -1)
+        assert(vbody_chan in self.body)
+        self.digital.channels[vbody_chan].ppmu_voltage_level = vbody
+        self.digital.channels[vbody_chan].ppmu_source()
+        #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
     def digital_all_off(self, pulse_len=1, prepulse_len=0, postpulse_len=0, max_pulse_len=1200):
         waveform = [0 for i in range(max_pulse_len*len(self.all_wls))]
@@ -435,7 +474,7 @@ class NIRRAM:
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(pulse_len+prepulse_len+postpulse_len)
-        self.digital.burst_pattern("PULSE_MPW_ProbeCard") #WL_PULSE_DEC3
+        self.digital.burst_pattern("PULSE_DEC3") #PULSE_MPW_ProbeCard
 
     def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200):
         """Create pulse train"""
@@ -466,7 +505,7 @@ class NIRRAM:
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(pulse_len+prepulse_len+postpulse_len)
-        self.digital.burst_pattern("PULSE_MPW_ProbeCard")
+        self.digital.burst_pattern("PULSE_DEC3")
 
     def set_pw(self, pulse_width):
         """Set pulse width"""

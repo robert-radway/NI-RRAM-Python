@@ -12,12 +12,18 @@
 		<DUTPin name="A2_WL_1" />
 		<DUTPin name="A2_BL_1" />
 		<DUTPin name="A2_BL_0" />
-		<DUTPin name="A2_PMOS_BODY" />
-		<DUTPin name="A8_PMOS_BODY" />
-		<DUTPin name="A16_PMOS_BODY" />
-		<DUTPin name="A16_NMOS_BODY" />
-		<DUTPin name="A8_NMOS_BODY" />
-		<DUTPin name="A2_NMOS_BODY" />
+		<DUTPin name="A4_SL_0" />
+		<DUTPin name="A4_SL_1" />
+		<DUTPin name="A4_SL_2" />
+		<DUTPin name="A4_SL_3" />
+		<DUTPin name="A4_WL_0" />
+		<DUTPin name="A4_WL_2" />
+		<DUTPin name="A4_WL_3" />
+		<DUTPin name="A4_WL_1" />
+		<DUTPin name="A4_BL_3" />
+		<DUTPin name="A4_BL_2" />
+		<DUTPin name="A4_BL_1" />
+		<DUTPin name="A4_BL_0" />
 		<DUTPin name="A8_SL_0" />
 		<DUTPin name="A8_SL_1" />
 		<DUTPin name="A8_SL_2" />
@@ -99,12 +105,18 @@
 			<PinReference pin="A2_WL_1" />
 			<PinReference pin="A2_BL_1" />
 			<PinReference pin="A2_BL_0" />
-			<PinReference pin="A2_PMOS_BODY" />
-			<PinReference pin="A8_PMOS_BODY" />
-			<PinReference pin="A16_PMOS_BODY" />
-			<PinReference pin="A16_NMOS_BODY" />
-			<PinReference pin="A8_NMOS_BODY" />
-			<PinReference pin="A2_NMOS_BODY" />
+			<PinReference pin="A4_SL_0" />
+			<PinReference pin="A4_SL_1" />
+			<PinReference pin="A4_SL_2" />
+			<PinReference pin="A4_SL_3" />
+			<PinReference pin="A4_WL_0" />
+			<PinReference pin="A4_WL_2" />
+			<PinReference pin="A4_WL_3" />
+			<PinReference pin="A4_WL_1" />
+			<PinReference pin="A4_BL_3" />
+			<PinReference pin="A4_BL_2" />
+			<PinReference pin="A4_BL_1" />
+			<PinReference pin="A4_BL_0" />
 			<PinReference pin="A8_SL_0" />
 			<PinReference pin="A8_SL_1" />
 			<PinReference pin="A8_SL_2" />
@@ -189,12 +201,18 @@
 		<Connection pin="A2_WL_1" siteNumber="0" instrument="PXI1Slot7" channel="27" />
 		<Connection pin="A2_BL_0" siteNumber="0" instrument="PXI1Slot7" channel="29" />
 		<Connection pin="A2_BL_1" siteNumber="0" instrument="PXI1Slot7" channel="28" />
-		<Connection pin="A2_PMOS_BODY" siteNumber="0" instrument="PXI1Slot7" channel="3" />
-		<Connection pin="A8_PMOS_BODY" siteNumber="0" instrument="PXI1Slot7" channel="7" />
-		<Connection pin="A8_NMOS_BODY" siteNumber="0" instrument="PXI1Slot7" channel="22" />
-		<Connection pin="A16_PMOS_BODY" siteNumber="0" instrument="PXI1Slot7" channel="8" />
-		<Connection pin="A16_NMOS_BODY" siteNumber="0" instrument="PXI1Slot7" channel="21" />
-		<Connection pin="A2_NMOS_BODY" siteNumber="0" instrument="PXI1Slot7" channel="26" />
+		<Connection pin="A4_SL_0" siteNumber="0" instrument="PXI1Slot7" channel="3" />
+		<Connection pin="A4_SL_1" siteNumber="0" instrument="PXI1Slot7" channel="4" />
+		<Connection pin="A4_SL_2" siteNumber="0" instrument="PXI1Slot7" channel="5" />
+		<Connection pin="A4_SL_3" siteNumber="0" instrument="PXI1Slot7" channel="6" />
+		<Connection pin="A4_WL_0" siteNumber="0" instrument="PXI1Slot7" channel="7" />
+		<Connection pin="A4_WL_1" siteNumber="0" instrument="PXI1Slot7" channel="22" />
+		<Connection pin="A4_WL_2" siteNumber="0" instrument="PXI1Slot7" channel="8" />
+		<Connection pin="A4_WL_3" siteNumber="0" instrument="PXI1Slot7" channel="21" />
+		<Connection pin="A4_BL_0" siteNumber="0" instrument="PXI1Slot7" channel="26" />
+		<Connection pin="A4_BL_1" siteNumber="0" instrument="PXI1Slot7" channel="25" />
+		<Connection pin="A4_BL_2" siteNumber="0" instrument="PXI1Slot7" channel="24" />
+		<Connection pin="A4_BL_3" siteNumber="0" instrument="PXI1Slot7" channel="23" />
 		<Connection pin="A8_SL_0" siteNumber="0" instrument="PXI1Slot9" channel="0" />
 		<Connection pin="A8_SL_1" siteNumber="0" instrument="PXI1Slot9" channel="1" />
 		<Connection pin="A8_SL_2" siteNumber="0" instrument="PXI1Slot9" channel="2" />

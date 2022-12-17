@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.5">
+	<Instruments>
+		<NIDigitalPatternInstrument name="PXI1Slot9" numberOfChannels="32" group="Digital" />
+	</Instruments>
+	<Pins>
+		<DUTPin name="BL_8" />
+		<DUTPin name="BL_9" />
+		<DUTPin name="BL_10" />
+		<DUTPin name="BL_11" />
+		<DUTPin name="BL_12" />
+		<DUTPin name="BL_13" />
+		<DUTPin name="BL_14" />
+		<DUTPin name="BL_15" />
+		<DUTPin name="SL_8" />
+		<DUTPin name="SL_9" />
+		<DUTPin name="SL_10" />
+		<DUTPin name="SL_11" />
+		<DUTPin name="SL_12" />
+		<DUTPin name="SL_13" />
+		<DUTPin name="SL_14" />
+		<DUTPin name="SL_15" />
+		<DUTPin name="WL_0" />
+		<DUTPin name="WL_2" />
+		<DUTPin name="WL_4" />
+		<DUTPin name="WL_6" />
+		<DUTPin name="WL_8" />
+		<DUTPin name="WL_10" />
+		<DUTPin name="WL_12" />
+		<DUTPin name="WL_14" />
+		<DUTPin name="WL_UNSEL" />
+		<DUTPin name="Body" />
+	</Pins>
+	<PinGroups>
+		<PinGroup name="BLSLWLS">
+			<PinReference pin="BL_8" />
+			<PinReference pin="BL_9" />
+			<PinReference pin="BL_10" />
+			<PinReference pin="BL_11" />
+			<PinReference pin="BL_12" />
+			<PinReference pin="BL_13" />
+			<PinReference pin="BL_14" />
+			<PinReference pin="BL_15" />
+			<PinReference pin="SL_8" />
+			<PinReference pin="SL_9" />
+			<PinReference pin="SL_10" />
+			<PinReference pin="SL_11" />
+			<PinReference pin="SL_12" />
+			<PinReference pin="SL_13" />
+			<PinReference pin="SL_14" />
+			<PinReference pin="SL_15" />
+			<PinReference pin="WL_0" />
+			<PinReference pin="WL_2" />
+			<PinReference pin="WL_4" />
+			<PinReference pin="WL_6" />
+			<PinReference pin="WL_8" />
+			<PinReference pin="WL_10" />
+			<PinReference pin="WL_12" />
+			<PinReference pin="WL_14" />
+		</PinGroup>
+	</PinGroups>
+	<Sites>
+		<Site siteNumber="0" />
+	</Sites>
+	<Connections>
+		<Connection pin="BL_8" siteNumber="0" instrument="PXI1Slot9" channel="7" />
+		<Connection pin="BL_9" siteNumber="0" instrument="PXI1Slot9" channel="6" />
+		<Connection pin="BL_10" siteNumber="0" instrument="PXI1Slot9" channel="5" />
+		<Connection pin="BL_11" siteNumber="0" instrument="PXI1Slot9" channel="4" />
+		<Connection pin="BL_12" siteNumber="0" instrument="PXI1Slot9" channel="3" />
+		<Connection pin="BL_13" siteNumber="0" instrument="PXI1Slot9" channel="2" />
+		<Connection pin="BL_14" siteNumber="0" instrument="PXI1Slot9" channel="1" />
+		<Connection pin="BL_15" siteNumber="0" instrument="PXI1Slot9" channel="0" />
+		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="31" />
+		<Connection pin="WL_14" siteNumber="0" instrument="PXI1Slot9" channel="16" />
+		<Connection pin="WL_UNSEL" siteNumber="0" instrument="PXI1Slot9" channel="17" />
+		<Connection pin="SL_8" siteNumber="0" instrument="PXI1Slot9" channel="15" />
+		<Connection pin="SL_9" siteNumber="0" instrument="PXI1Slot9" channel="14" />
+		<Connection pin="SL_10" siteNumber="0" instrument="PXI1Slot9" channel="13" />
+		<Connection pin="SL_11" siteNumber="0" instrument="PXI1Slot9" channel="12" />
+		<Connection pin="SL_12" siteNumber="0" instrument="PXI1Slot9" channel="11" />
+		<Connection pin="SL_13" siteNumber="0" instrument="PXI1Slot9" channel="10" />
+		<Connection pin="SL_14" siteNumber="0" instrument="PXI1Slot9" channel="9" />
+		<Connection pin="SL_15" siteNumber="0" instrument="PXI1Slot9" channel="8" />
+		<Connection pin="WL_0" siteNumber="0" instrument="PXI1Slot9" channel="26" />
+		<Connection pin="WL_10" siteNumber="0" instrument="PXI1Slot9" channel="19" />
+		<Connection pin="WL_12" siteNumber="0" instrument="PXI1Slot9" channel="18" />
+		<Connection pin="WL_2" siteNumber="0" instrument="PXI1Slot9" channel="23" />
+		<Connection pin="WL_4" siteNumber="0" instrument="PXI1Slot9" channel="22" />
+		<Connection pin="WL_6" siteNumber="0" instrument="PXI1Slot9" channel="21" />
+		<Connection pin="WL_8" siteNumber="0" instrument="PXI1Slot9" channel="20" />
+	</Connections>
+</PinMap>
