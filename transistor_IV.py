@@ -5,12 +5,11 @@ from digitalpattern import NIRRAM
 import nidigital
 import matplotlib.pyplot as plt
 
-
 # Get arguments
 parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("device_no", help="chip name for logging")
 parser.add_argument("--start-vds", type=float, default=0, help="start vds")
-parser.add_argument("--end-vds", type=float, default=-0.3, help="end vds")
+parser.add_argument("--end-vds", type=float, default=-0.5, help="end vds")
 parser.add_argument("--step-vds", type=float, default=20, help="step vds")
 parser.add_argument("--start-vgs", type=float, default=0, help="start vgs")
 parser.add_argument("--end-vgs", type=float, default=-1.5, help="end vgs")
@@ -29,8 +28,8 @@ def iv_curve(wl_ind,bl_sl_ind,args):
     for bl_i in nisys.all_bls: nisys.ppmu_set_vbl(bl_i,0)
     for sl_i in nisys.all_sls: nisys.ppmu_set_vsl(sl_i,0)
     for wl_i in nisys.all_wls: nisys.ppmu_set_vwl(wl_i,0)
-    #nisys.ppmu_set_vbody("A2_PMOS_BODY",1.5)
-    #nisys.ppmu_set_vbody("A2_NMOS_BODY",0)
+    nisys.ppmu_set_vbody("A2_PMOS_BODY",1.5)
+    nisys.ppmu_set_vbody("A2_NMOS_BODY",0)
 
     results_bl=[]
     results_wl=[]
@@ -38,8 +37,6 @@ def iv_curve(wl_ind,bl_sl_ind,args):
     results_vwl=[]
     labels = np.linspace(args.start_vds, args.end_vds, args.step_vds)
     x = np.linspace(args.start_vgs, args.end_vgs, args.step_vgs)
-    vds_range = np.amax(labels) - np.amin(labels)
-    vsl = vds_range
     # Do operation across cells
     i=0
     nisys.digital.channels[bl].ppmu_aperture_time = nisys.settings["READ"]["aperture_time"]
@@ -51,7 +48,6 @@ def iv_curve(wl_ind,bl_sl_ind,args):
     nisys.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
     nisys.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
     nisys.digital.channels[sl].ppmu_current_limit_range = 32e-6
-    nisys.ppmu_set_vsl(sl, vsl)
 
     nisys.digital.channels[wl].ppmu_aperture_time = nisys.settings["READ"]["aperture_time"]
     nisys.digital.channels[wl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS

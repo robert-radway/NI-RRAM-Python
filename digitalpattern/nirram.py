@@ -187,11 +187,12 @@ class NIRRAM:
         for sl in self.sls: 
             self.ppmu_set_vsl(sl,vsl)
             self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
+        """
         for b in self.body: 
             assert( -2 <= vb <= 6)
             self.digital.channels[b].ppmu_voltage_level = vb
             self.digital.channels[b].selected_function = nidigital.SelectedFunction.PPMU
-
+        """
         time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
         
         # Measure
@@ -462,6 +463,7 @@ class NIRRAM:
         assert(vbody >= -1)
         assert(vbody_chan in self.body)
         self.digital.channels[vbody_chan].ppmu_voltage_level = vbody
+        self.digital.channels[vbody_chan].ppmu_current_limit_range = 32e-6
         self.digital.channels[vbody_chan].ppmu_source()
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 

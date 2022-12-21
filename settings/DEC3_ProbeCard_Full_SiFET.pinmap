@@ -6,12 +6,12 @@
 		<NIDigitalPatternInstrument name="PXI1Slot7" numberOfChannels="32" group="Digital" />
 	</Instruments>
 	<Pins>
+		<DUTPin name="A2_BL_0" />
+		<DUTPin name="A2_BL_1" />
 		<DUTPin name="A2_SL_0" />
 		<DUTPin name="A2_SL_1" />
 		<DUTPin name="A2_WL_0" />
 		<DUTPin name="A2_WL_1" />
-		<DUTPin name="A2_BL_1" />
-		<DUTPin name="A2_BL_0" />
 		<DUTPin name="A2_PMOS_BODY" />
 		<DUTPin name="A8_PMOS_BODY" />
 		<DUTPin name="A16_PMOS_BODY" />
@@ -93,18 +93,12 @@
 	</Pins>
 	<PinGroups>
 		<PinGroup name="BLSLWLS">
+			<PinReference pin="A2_BL_0" />
+			<PinReference pin="A2_BL_1" />
 			<PinReference pin="A2_SL_0" />
 			<PinReference pin="A2_SL_1" />
 			<PinReference pin="A2_WL_0" />
 			<PinReference pin="A2_WL_1" />
-			<PinReference pin="A2_BL_1" />
-			<PinReference pin="A2_BL_0" />
-			<PinReference pin="A2_PMOS_BODY" />
-			<PinReference pin="A2_NMOS_BODY" />
-			<PinReference pin="A16_BL_12" />
-			<PinReference pin="A16_BL_13" />
-			<PinReference pin="A16_BL_14" />
-			<PinReference pin="A16_BL_15" />
 		</PinGroup>
 	</PinGroups>
 	<Sites>
