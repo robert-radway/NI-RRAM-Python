@@ -241,12 +241,14 @@ class NIRRAM:
         if self.op["READ"]["mode"] == "digital":
             # Measure with NI-Digital
             for wl in self.wls:
+                # sets all WL voltages in the array: read WL is VWL, all others are VSL
                 for wl_i in self.all_wls:
-                    if wl_i == wl: self.ppmu_set_vwl(wl,vwl)
-                    else: self.ppmu_set_vwl(wl,vsl)
-                    self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
+                    if wl_i == wl: self.ppmu_set_vwl(wl_i,vwl)
+                    else: self.ppmu_set_vwl(wl_i,vsl)
+                    self.digital.channels[wl_i].selected_function = nidigital.SelectedFunction.PPMU
                 self.digital.ppmu_source()
                 time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                
                 for bl in self.bls:
                     # DEBUGGING: test each bitline 
                     # for bl in self.bls:
@@ -387,10 +389,10 @@ class NIRRAM:
     def set_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
         """Perform a SET operation."""
         # Get parameters
-        vwl = self.op["SET"][self.polarity]["VWL"] if vwl is None else vwl
-        vbl = self.op["SET"][self.polarity]["VBL"] if vbl is None else vbl
-        vsl = self.op["SET"][self.polarity]["VSL"] if vsl is None else vsl
-        pulse_len = self.op["SET"][self.polarity]["PW"] if pulse_len is None else pulse_len
+        vwl = vwl if vwl is not None else self.op["SET"][self.polarity]["VWL"] 
+        vbl = vbl if vbl is not None else self.op["SET"][self.polarity]["VBL"] 
+        vsl = vsl if vsl is not None else self.op["SET"][self.polarity]["VSL"] 
+        pulse_len = pulse_len if pulse_len is not None else self.op["SET"][self.polarity]["PW"] 
 
         # Increment the number of SETs
         #self.prof["SETs"] += 1
@@ -412,12 +414,12 @@ class NIRRAM:
     def reset_pulse(self, mask, vwl=None, vbl=None, vsl=None, pulse_len=None):
         """Perform a RESET operation."""
         # Get parameters
-        vwl = self.op["RESET"][self.polarity]["VWL"] if vwl is None else vwl
-        vbl = self.op["RESET"][self.polarity]["VBL"] if vbl is None else vbl
-        vsl = self.op["RESET"][self.polarity]["VSL"] if vsl is None else vsl
-        pulse_len = self.op["RESET"][self.polarity]["PW"] if pulse_len is None else pulse_len
+        vwl = vwl if vwl is None else self.op["RESET"][self.polarity]["VWL"] 
+        vbl = vbl if vbl is None else self.op["RESET"][self.polarity]["VBL"] 
+        vsl = vsl if vsl is None else self.op["RESET"][self.polarity]["VSL"] 
+        pulse_len = pulse_len if pulse_len is None else self.op["RESET"][self.polarity]["PW"] 
 
-        # Increment the number of SETs
+        # Increment the number of RESETs
         #self.prof["RESETs"] += 1
 
         # Set voltages
@@ -425,8 +427,8 @@ class NIRRAM:
         for sl in self.sls: self.set_vsl(sl, vsl)
         for wl in self.wls: 
             if self.polarity == "PMOS":
-                #self.set_vwl(wl, vsl, vwl_lo=vwl)
-                self.set_vwl(wl, vwl)
+                self.set_vwl(wl, vsl, vwl_lo=vwl)
+                # self.set_vwl(wl, vwl)
             else:
                 self.set_vwl(wl, vwl) 
 
@@ -442,7 +444,7 @@ class NIRRAM:
         #     assert(vsl <= 4)
         #     assert(vsl >= 0)
         # if self.polarity == "PMOS":
-        assert(vsl_chan in self.sls)
+        assert(vsl_chan in self.all_sls)
         self.digital.channels[vsl_chan].configure_voltage_levels(vsl_lo, vsl, vsl_lo, vsl, 0)
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
@@ -450,7 +452,7 @@ class NIRRAM:
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
         # assert(vbl <= 3.5)
         # assert(vbl >= 0)
-        assert(vbl_chan in self.bls)
+        assert(vbl_chan in self.all_bls)
         self.digital.channels[vbl_chan].configure_voltage_levels(vbl_lo, vbl, vbl_lo, vbl, 0)
 
     def set_vwl(self, vwl_chan, vwl_hi, vwl_lo=0):
@@ -460,7 +462,7 @@ class NIRRAM:
         # assert(vwl_hi >= 0)
         # assert(vwl_lo <= 2.5)
         # assert(vwl_lo >= 0)
-        assert(vwl_chan in self.wls)
+        assert(vwl_chan in self.all_wls)
         self.digital.channels[vwl_chan].configure_voltage_levels(vwl_lo, vwl_hi, vwl_lo, vwl_hi, 0)
 
     def ppmu_set_vsl(self, vsl_chan, vsl):
@@ -520,31 +522,45 @@ class NIRRAM:
         """Create pulse train"""
         waveform = []
         for (wl_mask, bl_mask, sl_mask) in mask.get_pulse_masks():
-            #print(wl_mask, bl_mask, sl_mask)
-            if self.polarity=="NMOS":
+            ### Print masks for debugging
+            # print(f"wl_mask = {wl_mask}")
+            # print(f"bl_mask = {bl_mask}")
+            # print(f"sl_mask = {sl_mask}")
+
+            if self.polarity =="NMOS":
                 wl_prepost_bits = BitVector(bitlist=(wl_mask & False)).int_val()
                 wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
                 sl_mask_bits = BitVector(bitlist=sl_mask).int_val()
-            elif self.polarity=="PMOS":
+            elif self.polarity =="PMOS":
                 wl_prepost_bits = BitVector(bitlist=(wl_mask | True)).int_val()
                 wl_mask_bits = BitVector(bitlist=~wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
                 sl_mask_bits = BitVector(bitlist=~sl_mask).int_val()
             
+            # print(f"wl_mask_bits: {wl_mask_bits}")
+
             data_prepulse = (bl_mask_bits << (len(self.all_wls) + len(self.all_sls))) + (sl_mask_bits << (len(self.all_wls))) + wl_prepost_bits
             data = (bl_mask_bits << (len(self.all_wls) + len(self.all_sls))) + (sl_mask_bits << (len(self.all_wls))) + wl_mask_bits
             data_postpulse = (bl_mask_bits << (len(self.all_wls) + len(self.all_sls))) + (sl_mask_bits << (len(self.all_wls)))  + wl_prepost_bits
+
+            ### print bits for debugging
+            # print(f"data_prepulse = {data_prepulse:b}")
+            # print(f"data = {data:b}")
+            # print(f"data_postpulse = {data_postpulse:b}")
+
             waveform += [data_prepulse for i in range(prepulse_len)] + [data for i in range(pulse_len)] + [data_postpulse for i in range(postpulse_len)]
         
+        # zero-pad rest of waveform
         waveform += [0 for i in range(max_pulse_len*len(self.all_wls) - len(waveform))]
+
         # print(waveform)
         
         # Configure and send pulse waveform
         broadcast = nidigital.SourceDataMapping.BROADCAST
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
-        self.set_pw(pulse_len+prepulse_len+postpulse_len)
+        self.set_pw(pulse_len + prepulse_len + postpulse_len)
         self.digital.burst_pattern("PULSE_DEC3")
 
     def set_pw(self, pulse_width):
@@ -585,6 +601,11 @@ class NIRRAM:
                 for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                     #print(pw, vwl, vbl, vsl)
                     self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                    
+                    # use settling if parameter present, to discharge parasitic cap
+                    if "settling_time" in self.op[mode]:
+                        time.sleep(self.op[mode]["settling_time"])
+
                     res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
                     #print(res_array)
                     for wl in self.wls:
@@ -627,7 +648,12 @@ class NIRRAM:
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
             for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
                 for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
-                    self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                    self.reset_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                    
+                    # use settling if parameter present, to discharge parasitic cap
+                    if "settling_time" in self.op[mode]:
+                        time.sleep(self.op[mode]["settling_time"])
+
                     res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
                     for wl in self.wls:
                         for bl in self.bls:
