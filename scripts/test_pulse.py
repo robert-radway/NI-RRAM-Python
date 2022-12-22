@@ -13,18 +13,16 @@ parser.add_argument("device", help="device name for logging")
 args = parser.parse_args()
 
 # Initialize NI system
-nisys = NIRRAM(args.chip, args.device, settings="settings/DEC3_ProbeCard_2x2.json", polarity="PMOS")
-nisys.ppmu_set_vbody("A2_PMOS_BODY",1.5)
-nisys.ppmu_set_vbody("A2_NMOS_BODY",0)
+nisys = NIRRAM(args.chip, args.device, settings="settings/DEC3_ProbeCard_SiFET_2x2.toml", polarity="PMOS")
+
 nisys.read(record=True)
 # input("Dynamic Form")
 nisys.dynamic_form()
 nisys.dynamic_reset()
-# for i in range(1):
-#     nisys.dynamic_reset()
-#     nisys.dynamic_set()
-#     pass
-nisys.ppmu_set_vbody("A2_PMOS_BODY",0)
+for i in range(1):
+    nisys.dynamic_reset()
+    nisys.dynamic_set()
+    pass
 nisys.close()
 
 # for autoprobing cnfet, addd polarity = pmos

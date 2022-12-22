@@ -1,6 +1,6 @@
 """Defines the NI RRAM controller class"""
 import glob
-import json
+import tomli
 import math
 import time
 import warnings
@@ -12,6 +12,7 @@ import pandas as pd
 import csv
 from datetime import datetime
 from BitVector import BitVector
+from . import env
 
 # Warnings become errors
 warnings.filterwarnings("error")
@@ -53,13 +54,23 @@ class RRAMArrayMask:
     def update_mask(self, failing):
         self.mask = failing
 
+
 class NIRRAM:
     """The NI RRAM controller class that controls the instrument drivers."""
-    def __init__(self, chip, device, polarity = "NMOS", settings="settings/default.json"):
-        # If settings is a string, load as JSON file
+    def __init__(
+        self,
+        chip,
+        device,
+        polarity = "NMOS",
+        settings = "settings/default.toml",
+    ):
+        # flag for indicating if connection to ni session is open
+        self.closed = True
+
+        # If settings is a string, load as TOML file
         if isinstance(settings, str):
-            with open(settings) as settings_file:
-                settings = json.load(settings_file)
+            with open(settings, "rb") as settings_file:
+                settings = tomli.load(settings_file)
 
         # Ensure settings is a dict
         if not isinstance(settings, dict):
@@ -69,9 +80,9 @@ class NIRRAM:
         settings["NIDigital"]["specs"] = [abspath(path) for path in settings["NIDigital"]["specs"]]
 
         # Initialize RRAM logging
-        self.mlogfile = open(settings["master_log_file"], "a")
-        self.plogfile = open(settings["prog_log_file"], "a")
-        self.datafile_path = settings["data_header"] + datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + str(chip) + "_" + str(device) + ".csv"
+        self.mlogfile = open(settings["path"]["master_log_file"], "a")
+        self.plogfile = open(settings["path"]["prog_log_file"], "a")
+        self.datafile_path = settings["path"]["data_header"] + datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + str(chip) + "_" + str(device) + ".csv"
         self.datafile = csv.writer(open(self.datafile_path, "a", newline=''))
 
         self.datafile.writerow(["Chip_ID", "Device_ID", "OP", "Row", "Col", "Res", "Cond", "Meas_I", "Meas_V", "Prog_VBL", "Prog_VSL", "Prog_VWL", "Prog_Pulse", "Success"])
@@ -80,17 +91,20 @@ class NIRRAM:
         self.settings = settings
         self.chip = chip
         self.device = device
-
+        self.target_res = settings["target_res"]
+        self.op = settings["op"] # operations
         self.polarity = polarity
         
-        self.wls = settings["WLS"]
-        self.bls = settings["BLS"]
-        self.sls = settings["SLS"]
-        self.body = settings["BODY"]
+        # body voltages, str name => body voltage
+        self.body = settings["device"]["body"]
+        
+        self.all_wls = settings["device"]["all_WLS"]
+        self.all_bls = settings["device"]["all_BLS"]
+        self.all_sls = settings["device"]["all_SLS"]
 
-        self.all_wls = settings["all_WLS"]
-        self.all_bls = settings["all_BLS"]
-        self.all_sls = settings["all_SLS"]
+        self.wls = settings["device"]["WLS"]
+        self.bls = settings["device"]["BLS"]
+        self.sls = settings["device"]["SLS"]
 
         self.all_off_mask = RRAMArrayMask(self.all_wls, [], [], self.all_wls, self.all_bls, self.all_sls, self.polarity)
 
@@ -115,33 +129,57 @@ class NIRRAM:
         for pattern in glob.glob(settings["NIDigital"]["patterns"]):
             print(pattern)
             self.digital.load_pattern(abspath(pattern))
+        self.closed = False
 
         # Configure READ measurements
-        if settings["READ"]["mode"] == "digital":
+        if self.op["READ"]["mode"] == "digital":
             for bl in self.bls:
                 # Configure NI-Digital current read measurements
-                self.digital.channels[bl].ppmu_aperture_time = settings["READ"]["aperture_time"]
+                self.digital.channels[bl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
                 self.digital.channels[bl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
                 self.digital.channels[bl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-                self.digital.channels[bl].ppmu_current_limit_range = settings["READ"]["current_limit_range"]
+                self.digital.channels[bl].ppmu_current_limit_range = self.op["READ"]["current_limit_range"]
                 self.digital.channels[bl].ppmu_voltage_level = 0
                 self.digital.channels[bl].ppmu_source()
             for sl in self.sls:
                 # Configure NI-Digital current read measurements
-                self.digital.channels[sl].ppmu_aperture_time = settings["READ"]["aperture_time"]
+                self.digital.channels[sl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
                 self.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
                 self.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-                self.digital.channels[sl].ppmu_current_limit_range = settings["READ"]["current_limit_range"]
+                self.digital.channels[sl].ppmu_current_limit_range = self.op["READ"]["current_limit_range"]
                 self.digital.channels[sl].ppmu_voltage_level = 0
                 self.digital.channels[sl].ppmu_source()
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
-        # Set address and all voltages to 0
-        for bl in self.bls: self.set_vbl(bl,0)
-        for sl in self.sls: self.set_vsl(sl,0)
-        for wl in self.wls: self.set_vwl(wl,0)
+        # set body voltages
+        for body_i, vbody_i in self.body.items(): self.ppmu_set_vbody(body_i, vbody_i)
 
+        # Set address and all voltages to 0
+        for bl in self.all_bls: self.set_vbl(bl, 0.0)
+        for sl in self.all_sls: self.set_vsl(sl, 0.0)
+        for wl in self.all_wls: self.set_vwl(wl, 0.0)
+
+    def close(self):
+        """Do cleanup and then close all NI sessions"""
+        if not self.closed:
+            # set all body voltages back to zero
+            for body_i in self.body.keys(): self.ppmu_set_vbody(body_i, 0.0)
+            
+            # Close NI-Digital
+            self.digital.close()
+
+            # Close log files
+            self.mlogfile.close()
+            self.plogfile.close()
+            # self.datafile.close()
+
+            self.closed = True
+    
+    def __del__(self):
+        """Make sure to automatically close connection in destructor."""
+        self.close()
+        
     """
     def set_relay_position(self, index, closed=True):
         with niswitch.Session("2571_2") as session:
@@ -173,13 +211,13 @@ class NIRRAM:
         Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
         # Increment the number of READs
         # Let the cell relax after programming to get an accurate read 
-        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
+        self.digital_all_off(self.op["READ"]["relaxation_cycles"])
         
         # Set the read voltage levels
-        vbl = self.settings["READ"][self.polarity]["VBL"] if vbl is None else vbl
-        vwl = self.settings["READ"][self.polarity]["VWL"] if vwl is None else vwl
-        vsl = self.settings["READ"][self.polarity]["VSL"] if vsl is None else vsl
-        vb = self.settings["READ"][self.polarity]["VB"] if vb is None else vb
+        vbl = self.op["READ"][self.polarity]["VBL"] if vbl is None else vbl
+        vwl = self.op["READ"][self.polarity]["VWL"] if vwl is None else vwl
+        vsl = self.op["READ"][self.polarity]["VSL"] if vsl is None else vsl
+        vb = self.op["READ"][self.polarity]["VB"] if vb is None else vb
 
         for bl in self.bls: 
             self.ppmu_set_vbl(bl,vbl)
@@ -193,14 +231,14 @@ class NIRRAM:
             self.digital.channels[b].ppmu_voltage_level = vb
             self.digital.channels[b].selected_function = nidigital.SelectedFunction.PPMU
         """
-        time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+        time.sleep(self.op["READ"]["settling_time"]) # let the supplies settle for accurate measurement
         
         # Measure
         res_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         cond_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         meas_i_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         meas_v_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
-        if self.settings["READ"]["mode"] == "digital":
+        if self.op["READ"]["mode"] == "digital":
             # Measure with NI-Digital
             for wl in self.wls:
                 for wl_i in self.all_wls:
@@ -208,7 +246,7 @@ class NIRRAM:
                     else: self.ppmu_set_vwl(wl,vsl)
                     self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
                 self.digital.ppmu_source()
-                time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 for bl in self.bls:
                     # DEBUGGING: test each bitline 
                     # for bl in self.bls:
@@ -222,7 +260,7 @@ class NIRRAM:
                     #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
                     self.addr_prof[wl][bl]["READs"] +=1
                     # Compute values
-                    res = np.abs((self.settings["READ"][self.polarity]["VBL"] - self.settings["READ"][self.polarity]["VSL"])/meas_i - self.settings["READ"]["shunt_res_value"])
+                    res = np.abs((self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"])/meas_i - self.op["READ"]["shunt_res_value"])
                     cond = 1/res
                     meas_i_array.loc[wl,bl] = meas_i
                     meas_v_array.loc[wl,bl] = meas_v
@@ -235,7 +273,7 @@ class NIRRAM:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
         # Disable READ, make sure all the supplies in off state for any subsequent operations
-        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
+        self.digital_all_off(self.op["READ"]["relaxation_cycles"])
 
         # Log operation to master file
         # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
@@ -254,13 +292,13 @@ class NIRRAM:
         """
         # Increment the number of READs
         # Let the cell relax after programming to get an accurate read 
-        self.digital_all_off(self.settings["READ"]["relaxation_cycles"])
+        self.digital_all_off(self.op["READ"]["relaxation_cycles"])
         
         # Set the read voltage levels
-        vbl = self.settings["READ"][self.polarity]["VBL"] if vbl is None else vbl
-        vwl = self.settings["READ"][self.polarity]["VWL"] if vwl is None else vwl
-        vsl = self.settings["READ"][self.polarity]["VSL"] if vsl is None else vsl
-        vb = self.settings["READ"][self.polarity]["VB"] if vb is None else vb
+        vbl = self.op["READ"][self.polarity]["VBL"] if vbl is None else vbl
+        vwl = self.op["READ"][self.polarity]["VWL"] if vwl is None else vwl
+        vsl = self.op["READ"][self.polarity]["VSL"] if vsl is None else vsl
+        vb = self.op["READ"][self.polarity]["VB"] if vb is None else vb
         # print(f"READ @ vbl: {vbl}, vwl: {vwl}, vsl: {vsl}, vb: {vb}")
 
         # initially set both BLs and SLs to VSL
@@ -275,14 +313,14 @@ class NIRRAM:
             self.digital.channels[b].ppmu_voltage_level = vb
             self.digital.channels[b].selected_function = nidigital.SelectedFunction.PPMU
 
-        time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+        time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
 
         # Measure
         res_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         cond_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         meas_i_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         meas_v_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
-        if self.settings["READ"]["mode"] == "digital":
+        if self.op["READ"]["mode"] == "digital":
             # Measure with NI-Digital
             for wl in self.wls:
                 for wl_i in self.wls:
@@ -290,13 +328,13 @@ class NIRRAM:
                     else: self.ppmu_set_vwl(wl,vsl)
                     self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
                 self.digital.ppmu_source()
-                time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 
                 for bl in self.bls:
                     # set specific bl and measure
                     self.ppmu_set_vbl(bl, vbl)
                     self.digital.channels[bl].ppmu_source()
-                    time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                    time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
 
                     # test each bitline
                     # for x in self.bls:
@@ -312,12 +350,12 @@ class NIRRAM:
                     # reset bl back to vsl
                     self.ppmu_set_vbl(bl, vsl)
                     self.digital.channels[bl].ppmu_source()
-                    time.sleep(self.settings["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                    time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
 
                     #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
                     self.addr_prof[wl][bl]["READs"] +=1
                     # Compute values
-                    res = np.abs((self.settings["READ"][self.polarity]["VBL"] - self.settings["READ"][self.polarity]["VSL"])/meas_i - self.settings["READ"]["shunt_res_value"])
+                    res = np.abs((self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"])/meas_i - self.op["READ"]["shunt_res_value"])
                     cond = 1/res
                     meas_i_array.loc[wl,bl] = meas_i
                     meas_v_array.loc[wl,bl] = meas_v
@@ -341,18 +379,18 @@ class NIRRAM:
     def form_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
         """Perform a FORM operation."""
         # Get parameters
-        vwl = self.settings["FORM"][self.polarity]["VWL"] if vwl is None else vwl
-        vbl = self.settings["FORM"][self.polarity]["VBL"] if vbl is None else vbl
-        vsl = self.settings["FORM"][self.polarity]["VBL"] if vsl is None else vsl
-        pulse_len = self.settings["FORM"][self.polarity]["PW"] if pulse_len is None else pulse_len
+        vwl = self.op["FORM"][self.polarity]["VWL"] if vwl is None else vwl
+        vbl = self.op["FORM"][self.polarity]["VBL"] if vbl is None else vbl
+        vsl = self.op["FORM"][self.polarity]["VBL"] if vsl is None else vsl
+        pulse_len = self.op["FORM"][self.polarity]["PW"] if pulse_len is None else pulse_len
 
     def set_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
         """Perform a SET operation."""
         # Get parameters
-        vwl = self.settings["SET"][self.polarity]["VWL"] if vwl is None else vwl
-        vbl = self.settings["SET"][self.polarity]["VBL"] if vbl is None else vbl
-        vsl = self.settings["SET"][self.polarity]["VSL"] if vsl is None else vsl
-        pulse_len = self.settings["SET"][self.polarity]["PW"] if pulse_len is None else pulse_len
+        vwl = self.op["SET"][self.polarity]["VWL"] if vwl is None else vwl
+        vbl = self.op["SET"][self.polarity]["VBL"] if vbl is None else vbl
+        vsl = self.op["SET"][self.polarity]["VSL"] if vsl is None else vsl
+        pulse_len = self.op["SET"][self.polarity]["PW"] if pulse_len is None else pulse_len
 
         # Increment the number of SETs
         #self.prof["SETs"] += 1
@@ -374,10 +412,10 @@ class NIRRAM:
     def reset_pulse(self, mask, vwl=None, vbl=None, vsl=None, pulse_len=None):
         """Perform a RESET operation."""
         # Get parameters
-        vwl = self.settings["RESET"][self.polarity]["VWL"] if vwl is None else vwl
-        vbl = self.settings["RESET"][self.polarity]["VBL"] if vbl is None else vbl
-        vsl = self.settings["RESET"][self.polarity]["VSL"] if vsl is None else vsl
-        pulse_len = self.settings["RESET"][self.polarity]["PW"] if pulse_len is None else pulse_len
+        vwl = self.op["RESET"][self.polarity]["VWL"] if vwl is None else vwl
+        vbl = self.op["RESET"][self.polarity]["VBL"] if vbl is None else vbl
+        vsl = self.op["RESET"][self.polarity]["VSL"] if vsl is None else vsl
+        pulse_len = self.op["RESET"][self.polarity]["PW"] if pulse_len is None else pulse_len
 
         # Increment the number of SETs
         #self.prof["RESETs"] += 1
@@ -534,8 +572,8 @@ class NIRRAM:
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         # Get settings
-        cfg = self.settings[mode][self.polarity]
-        target_res = target_res if target_res is not None else self.settings["TARGETS"][mode]
+        cfg = self.op[mode][self.polarity]
+        target_res = target_res if target_res is not None else self.target_res[mode]
         vsl = cfg["VSL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
         # select read method
@@ -578,8 +616,8 @@ class NIRRAM:
         """Performs RESET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         # Get settings
-        cfg = self.settings[mode][self.polarity]
-        target_res = target_res if target_res is not None else self.settings["TARGETS"][mode]
+        cfg = self.op[mode][self.polarity]
+        target_res = target_res if target_res is not None else self.target_res[mode]
         vbl = cfg["VBL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
         # select read method
@@ -656,7 +694,7 @@ class NIRRAM:
         to measure one cycle (default: never READ)"""
         # Configure pulse width and cycle counts
         read_cycs = int(min(read_cycs if read_cycs is not None else 1e15, cycs))
-        pulse_width = self.settings["SET"]["PW"] if pulse_width is None else pulse_width
+        pulse_width = self.op["SET"]["PW"] if pulse_width is None else pulse_width
         self.set_pw(pulse_width)
         self.set_endurance_cycles(read_cycs)
 
@@ -666,9 +704,9 @@ class NIRRAM:
         # Iterate to do cycles
         for cyc in range(int(math.ceil(cycs/read_cycs))):
             # Configure endurance voltages
-            vbl = self.settings["SET"]["VBL"]
-            vwl = self.settings["RESET"]["VWL"], self.settings["SET"]["VWL"]
-            vsl = self.settings["RESET"]["VSL"]
+            vbl = self.op["SET"]["VBL"]
+            vwl = self.op["RESET"]["VWL"], self.op["SET"]["VWL"]
+            vsl = self.op["RESET"]["VSL"]
             self.set_vbl(vbl)
             self.set_vwl(*vwl)
             self.set_vsl(vsl)
@@ -723,7 +761,7 @@ class NIRRAM:
         self.dynamic_set(target_res=res_low)
 
         # get settings for this
-        cfg = self.settings[mode][self.polarity]
+        cfg = self.op[mode][self.polarity]
         vbl = cfg["VBL"]
         vwl = cfg["VWL"]
         pw = cfg["PW"]
@@ -773,7 +811,7 @@ class NIRRAM:
         self.dynamic_reset(target_res=res_high)
 
         # get settings for this
-        cfg = self.settings[mode][self.polarity]
+        cfg = self.op[mode][self.polarity]
         vsl = cfg["VSL"]
         vwl = cfg["VWL"]
         pw = cfg["PW"]
@@ -803,17 +841,7 @@ class NIRRAM:
             if success:
                 print(f"REACHED TARGET {res_high}, BREAKING.")
                 break
-        
-
-    def close(self):
-        """Close all NI sessions"""
-        # Close NI-Digital
-        self.digital.close()
-
-        # Close log files
-        self.mlogfile.close()
-        self.plogfile.close()
-        # self.datafile.close()
+    
 
 
 if __name__ == "__main__":

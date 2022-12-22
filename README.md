@@ -7,6 +7,11 @@ Install: jupyter and pylint
 ## Pip environment
 Install: nidaqmx, nidigital, numpy, (matplotlib, pandas, stats for analysis notebook)
 
+## Project environment config
+In settings there is a sample `settings/_env.toml` file. This contains
+local paths for storing data. Copy+paste the file into `settings/env.toml`
+and customize these paths as needed.
+
 ## Scripts
 - form_chip.py: FORM a chip
 - program_chip.py: Program a bitstream to a chip

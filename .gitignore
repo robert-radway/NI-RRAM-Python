@@ -131,8 +131,10 @@ dmypy.json
 # VSCode
 .vscode
 
-# Data
+# example environment toml file
+settings/env.toml
 
+# Data
 data
 log
 logs
