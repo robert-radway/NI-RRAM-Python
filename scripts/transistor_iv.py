@@ -18,17 +18,19 @@ parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("settings", help="path to settings file")
 parser.add_argument("device_no", help="chip name for logging")
 parser.add_argument("--start-vds", type=float, default=0.0, help="start vds")
-parser.add_argument("--end-vds", type=float, default=-1.0, help="end vds")
+parser.add_argument("--end-vds", type=float, default=-2.0, help="end vds")
 parser.add_argument("--step-vds", type=float, default=10, help="step vds")
 parser.add_argument("--start-vgs", type=float, default=2.0, help="start vgs")
 parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
 parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
 args = parser.parse_args()
 
-def iv_curve(wl_ind,bl_sl_ind,args):
-    wl = f"A2_WL_{wl_ind}"
-    bl = f"A2_BL_{bl_sl_ind}"
-    sl = f"A2_SL_{bl_sl_ind}"
+def iv_curve(
+    args,
+    wl: str, # wl pin name 
+    bl: str, # bl pin name
+    sl: str, # sl pin name
+):
     # Initialize NI system
     nisys = NIRRAM(args.device_no, args.device_no, settings=args.settings)
     # nisys.digital.channels["Body"].selected_function = nidigital.SelectedFunction.PPMU
@@ -138,14 +140,29 @@ def iv_curve(wl_ind,bl_sl_ind,args):
     # save fig
     path_fig_dir = os.path.join(env.path_data, args.device_no)
     os.makedirs(path_fig_dir, exist_ok=True)
-    fig.savefig(os.path.join(path_fig_dir, f"WL_{wl_ind}_BL_{bl_sl_ind}.png"))
+    fig.savefig(os.path.join(path_fig_dir, f"{wl}_{bl}_{sl}.png"))
     #plt.show()
     plt.close()
 
     nisys.close()
 
 #iv_curve(wl_ind=0,bl_sl_ind=0,args=args)
-for wl_ind in [0,1]:
-    for bl_sl_ind in [0,1]:
-        iv_curve(wl_ind, bl_sl_ind, args)
-        pass
+
+# TODO: abstract this out for array vs single FET
+iv_curve(
+    args,
+    wl=f"WL_0",
+    bl=f"BL_0",
+    sl=f"SL_0",
+)
+
+# FOR DEC3 ARRAYS
+# for wl_ind in [0,1]:
+#     for bl_sl_ind in [0,1]:
+#         iv_curve(
+#             args,
+#             wl=f"A2_WL_{wl_ind}",
+#             bl=f"A2_BL_{bl_sl_ind}",
+#             sl=f"A2_SL_{bl_sl_ind}",
+#         )
+#         pass
