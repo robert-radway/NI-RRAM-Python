@@ -29,12 +29,25 @@ class NIRRAMException(Exception):
         super().__init__(f"NIRRAM: {msg}")
 
 class RRAMArrayMask:
-    def __init__(self, wls, bls, sls, all_wls, all_bls, all_sls, polarity, init_state=None):
-        #Indicates Mask of bits that need further programming
+    def __init__(
+        self,
+        wls,
+        bls,
+        sls,
+        all_wls,
+        all_bls,
+        all_sls,
+        polarity,
+        init_state=None,
+    ):
+        # Indicates Mask of bits that need further programming
         if len(bls) == len(sls):
             if init_state is None:
                 self.mask = pd.DataFrame(np.array([[(bl in bls) and (wl in wls) for bl in all_bls] for wl in all_wls]), all_wls, all_bls)
-            else: self.mask = init_state
+            else:
+                self.mask = init_state
+            # print("Mask: ")
+            # print(self.mask)
             self.wls = wls
             self.bls = bls
             self.sls = sls
@@ -49,6 +62,7 @@ class RRAMArrayMask:
             bl_mask = pd.Series.to_numpy(needed_wls.loc[wl])
             sl_mask = bl_mask & False
             masks.append((wl_mask, bl_mask, sl_mask))
+        # print(f"pulse masks {masks}")
         return masks
 
     def update_mask(self, failing):
@@ -519,7 +533,24 @@ class NIRRAM:
         self.digital.burst_pattern("WL_PULSE_DEC3") #PULSE_MPW_ProbeCard
 
     def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200):
-        """Create pulse train"""
+        """Create pulse train. Format of bits is [BL SL WL]. For an array
+        with 2 BLs, 2 SLs, and 2 WLs, the bits are ordered:
+            [ BL0 BL1 SL0 SL1 WL0 WL1]
+        To allow for BL/SL settling before pulsing the WL, pre-pend
+        and post-pend pulses where WLs are 0. For example, if we are
+        pulsing both WLs, with all BLs and SLs enabled, our pulses will be:
+            [ 1 1 1 1 0 0 ]   } Pre-pulse (WL zero'd, BL/SL active)
+            [ 1 1 1 1 0 0 ]
+                 ...
+            [ 1 1 1 1 1 1 ]   } Main pulse (WL active, BL/SL active)
+            [ 1 1 1 1 1 1 ]
+                 ...
+            [ 1 1 1 1 0 0 ]   } Post-pulse (WL zero'd, BL/SL active)
+            [ 1 1 1 1 0 0 ]
+        """
+        bl_bits_offset = len(self.all_wls) + len(self.all_sls)
+        sl_bits_offset = len(self.all_wls)
+
         waveform = []
         for (wl_mask, bl_mask, sl_mask) in mask.get_pulse_masks():
             ### Print masks for debugging
@@ -528,21 +559,23 @@ class NIRRAM:
             # print(f"sl_mask = {sl_mask}")
 
             if self.polarity =="NMOS":
-                wl_prepost_bits = BitVector(bitlist=(wl_mask & False)).int_val()
+                wl_pre_post_bits = BitVector(bitlist=(wl_mask & False)).int_val()
                 wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
                 sl_mask_bits = BitVector(bitlist=sl_mask).int_val()
             elif self.polarity =="PMOS":
-                wl_prepost_bits = BitVector(bitlist=(wl_mask | True)).int_val()
+                wl_pre_post_bits = BitVector(bitlist=(wl_mask | True)).int_val()
                 wl_mask_bits = BitVector(bitlist=~wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
                 sl_mask_bits = BitVector(bitlist=~sl_mask).int_val()
+            else:
+                raise ValueError(f"Invalid polarity: {self.polarity}. Must be 'NMOS' or 'PMOS'.")
             
             # print(f"wl_mask_bits: {wl_mask_bits}")
 
-            data_prepulse = (bl_mask_bits << (len(self.all_wls) + len(self.all_sls))) + (sl_mask_bits << (len(self.all_wls))) + wl_prepost_bits
-            data = (bl_mask_bits << (len(self.all_wls) + len(self.all_sls))) + (sl_mask_bits << (len(self.all_wls))) + wl_mask_bits
-            data_postpulse = (bl_mask_bits << (len(self.all_wls) + len(self.all_sls))) + (sl_mask_bits << (len(self.all_wls)))  + wl_prepost_bits
+            data_prepulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_pre_post_bits
+            data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
+            data_postpulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset)  + wl_pre_post_bits
 
             ### print bits for debugging
             # print(f"data_prepulse = {data_prepulse:b}")
@@ -560,7 +593,7 @@ class NIRRAM:
         broadcast = nidigital.SourceDataMapping.BROADCAST
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
-        self.set_pw(pulse_len + prepulse_len + postpulse_len)
+        self.set_pw(prepulse_len + pulse_len + postpulse_len)
         self.digital.burst_pattern("WL_PULSE_DEC3")
 
     def set_pw(self, pulse_width):
