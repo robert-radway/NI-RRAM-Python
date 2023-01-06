@@ -2,7 +2,7 @@
 import argparse
 import logging
 import numpy as np
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 from autoprobe import CascadeAutoProbe
 import matplotlib.pyplot as plt
 

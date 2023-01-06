@@ -1,7 +1,7 @@
 """Script to perform a read voltage sweep on a chip"""
 import argparse
 import numpy as np
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 import matplotlib.pyplot as plt
 
 
@@ -14,16 +14,16 @@ args = parser.parse_args()
 
 # Initialize NI system
 # For CNFET: make sure polarity is PMOS
-nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1TNR.toml", polarity="PMOS") # FOR CNFET RRAM
+nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1T1R.toml", polarity="PMOS") # FOR CNFET RRAM
 
 nisys.read(record=True)
 # input("Dynamic Form")
-# nisys.dynamic_form()
-nisys.dynamic_reset()
+#nisys.dynamic_form()
+#nisys.dynamic_reset()
 
-# for i in range(20):
-#     nisys.dynamic_reset()
-#     nisys.dynamic_set()
-#     pass
+for i in range(4):
+    nisys.dynamic_reset()
+    nisys.dynamic_set()
+    pass
 
 nisys.close()

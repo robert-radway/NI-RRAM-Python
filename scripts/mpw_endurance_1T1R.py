@@ -1,7 +1,7 @@
 """Script to perform a read voltage sweep on a chip"""
 import argparse
 import numpy as np
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 import matplotlib.pyplot as plt
 
 
@@ -20,7 +20,7 @@ sweep_schedule = [
     ( 100, 10),
     (1000, 1000),
 ]
-max_cycles = 1e4
+max_cycles = 1e7
 next_read_cycles = NIRRAM.get_read_cycles(max_cycles, sweep_schedule)
 print(next_read_cycles)
 
@@ -31,8 +31,8 @@ nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1TNR.toml", polari
 # DO FORM PART MANUALLY, COMMENT OUT AS NEEDED
 nisys.read(record=True)
 # input("Dynamic Form")
-nisys.dynamic_form()
-nisys.dynamic_reset()
+#nisys.dynamic_form()
+#nisys.dynamic_reset()
 
 # main endurance sweep
 nisys.endurance_dynamic_set_reset(

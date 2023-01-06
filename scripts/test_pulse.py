@@ -1,7 +1,7 @@
 """Script to perform a read voltage sweep on a chip"""
 import argparse
 import numpy as np
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 import matplotlib.pyplot as plt
 
 

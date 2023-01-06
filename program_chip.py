@@ -1,6 +1,6 @@
 """Script to program a bitstream to a chip"""
 import argparse
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="Program a bitstream to a chip.")

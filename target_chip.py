@@ -1,6 +1,6 @@
 """Script to target a chip"""
 import argparse
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="Target a chip.")

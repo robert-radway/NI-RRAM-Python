@@ -2,7 +2,7 @@
 import argparse
 import time
 import numpy as np
-from digitalpattern import NIRRAM
+from digitalpattern.nirram import NIRRAM
 
 # Get arguments
 parser = argparse.ArgumentParser(description="Program multiple levels to RRAM cells in a chip.")
