@@ -614,6 +614,7 @@ class NIRRAM:
     def dynamic_set(
         self,
         mode="SET",
+        print_data=True,
         record=True,
         target_res=None, # target res, if None will use value in settings
         is_1tnr=False,
@@ -652,18 +653,23 @@ class NIRRAM:
                     break
             if success:
                 break
-        # report final results
+        
+        # report final cell results
+        all_data = []
         for wl in self.wls:
             for bl in self.bls:
                 cell_success = res_array.loc[wl,bl] <= target_res
-                data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
-                print(data)
-                if record: self.datafile.writerow(data)
+                cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                if print_data: print(cell_data)
+                if record: self.datafile.writerow(cell_data)
+                all_data.append(cell_data)
+        return all_data
 
     def dynamic_reset(
         self,
         mode="RESET",
         record=True,
+        print_data=True, # print data to console
         target_res=None, # target res, if None will use value in settings
         is_1tnr=False,   # if 1TNR device, do different type of read
     ):
@@ -701,12 +707,17 @@ class NIRRAM:
                 break
         
         # record final cell results
+        all_data = []
         for wl in self.wls:
             for bl in self.bls:
                 cell_success = res_array.loc[wl,bl] >= target_res
-                data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
-                print(data)
-                if record: self.datafile.writerow(data)
+                cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                if print_data: print(cell_data)
+                if record: self.datafile.writerow(cell_data)
+                all_data.append(cell_data)
+        
+        return all_data
+
 
     def target(self, target_res_lo, target_res_hi, scheme="PINGPONG", max_attempts=25, debug=True):
         """Performs SET/RESET pulses in increasing fashion until target range is achieved.
@@ -748,7 +759,7 @@ class NIRRAM:
         Returns tuple (res, cond, meas_i, meas_v, attempt, success)."""
         self.target(1/target_g_hi, 1/target_g_lo, scheme, max_attempts, debug)
 
-    def endurance(self, cycs=1000, read_cycs=None, pulse_width=None, reset_first=True, debug=True):
+    def endurance_old(self, cycs=1000, read_cycs=None, pulse_width=None, reset_first=True, debug=True):
         """Do endurance cycle testing. Parameter read_cycs is number of cycles after which
         to measure one cycle (default: never READ)"""
         # Configure pulse width and cycle counts
@@ -801,6 +812,142 @@ class NIRRAM:
         # Return endurance results
         return data
     
+    @staticmethod
+    def get_read_cycles(
+        max_cycles: int,
+        sweep_schedule: list[tuple],
+    ) -> list[int]:
+        """
+        Generates list of integer cycle numbers where the measurement should
+        read and print output data. Based on input sweep schedule which allows
+        unevenly spaced reads across max cycle count. Used for endurance
+        measurement, where we want to do some form of logarithmic spaced
+        reads to reduce the time of measurement, e.g. read on cycle:
+
+            0 1 2 3 4 5 ... 10 20 ... 100 200 300 ... 1000 2000 ...
+
+        This would be a sweep schedule defined in format:
+
+            [(0, 1), (10, 10), (100, 100), (1000, 1000)]
+
+        Each tuple element is (start_cycle, read_step_size), e.g. 
+            (0, 1): after cycle 0, read every 1x cycle
+            (10, 10): after cycle 10, read every 10x cycle
+            (100, 100): after cycle 100, read every 100x cycle
+            ...
+        """
+        next_read_cycles = []
+        num_schedule_steps = len(sweep_schedule)
+
+        n = 0
+        schedule_idx = 0
+        next_schedule_idx = min(schedule_idx + 1, num_schedule_steps - 1)
+        schedule_step_cycle, step_count = sweep_schedule[schedule_idx]
+        next_step_cycle, next_step_count = sweep_schedule[next_schedule_idx]
+
+        while n <= max_cycles:
+            next_read_cycles.append(n)
+
+            n += step_count
+
+            # update schedule step size
+            if schedule_idx < len(sweep_schedule) - 1 and n >= next_step_cycle:
+                schedule_idx += 1
+                next_schedule_idx = min(schedule_idx + 1, num_schedule_steps - 1)
+                schedule_step_cycle, step_count = sweep_schedule[schedule_idx]
+                next_step_cycle, next_step_count = sweep_schedule[next_schedule_idx]
+
+        return next_read_cycles
+    
+    def endurance_dynamic_set_reset(
+        self,
+        max_cycles: int,
+        sweep_schedule: list[tuple],
+        max_failures: int = 100,
+        record: bool = True,
+        print_data: bool = True,
+        target_res_reset: float = None, # target res for reset, if None will use value in settings
+        target_res_set: float = None,   # target res for set, if None will use value in settings
+        is_1tnr: bool = False,          # if 1TNR device, do different type of read
+        fail_on_all: bool = True,       # if True, will record failure if ALL devices in an array fail
+    ):
+        """Run endurance measurement with dynamic set/reset to hit target res.
+        This runs series of set/reset cycles, then periodically reads based
+        on input sweep schedule. After `max_failures` to hit a target res
+        in a row, the sweep will stop.
+        """
+        # keep in reverse order so we can pop off the end
+        next_record_cycles = NIRRAM.get_read_cycles(max_cycles, sweep_schedule)[::-1]
+
+        cycle = 0
+        next_record_cycle = next_record_cycles.pop()
+
+        total_failures = 0 # total number of failures detected
+        sequential_failures = 0 # number of failures in a row
+
+        while cycle <= max_cycles:
+            data_reset = self.dynamic_reset(target_res=target_res_reset, print_data=False, record=False, is_1tnr=is_1tnr)
+            data_set = self.dynamic_set(target_res=target_res_set, print_data=False, record=False, is_1tnr=is_1tnr)
+
+            if cycle >= next_record_cycle:
+                # print and record measured data (append cycle number in front)
+                for d in data_reset:
+                    d_with_cycle = [cycle] + d
+                    if print_data: print(d_with_cycle)
+                    if record: self.datafile.writerow(d_with_cycle)
+                for d in data_set:
+                    d_with_cycle = [cycle] + d
+                    if print_data: print(d_with_cycle)
+                    if record: self.datafile.writerow(d_with_cycle)
+                
+                next_record_cycle = next_record_cycles.pop()
+            
+            # check and accumulate failures
+            if fail_on_all:
+                failed_reset = True
+                failed_set = True
+                for d in data_reset:
+                    success = d[-1]
+                    if success == True:
+                        failed_reset = False
+                        break
+                for d in data_set:
+                    success = d[-1]
+                    if success == True:
+                        failed_set = False
+                        break
+                if failed_reset or failed_set:
+                    total_failures += 1
+                    sequential_failures += 1
+                else:
+                    sequential_failures = 0 # reset failures in row, ignore random errors
+            else: # fail on any error in any device
+                failed_reset = False
+                failed_set = False
+                for d in data_reset:
+                    success = d[-1]
+                    if success == False:
+                        failed_reset = True
+                        break
+                if failed_reset == False:
+                    for d in data_set:
+                        success = d[-1]
+                        if success == False:
+                            failed_set = True
+                            break
+                if failed_reset or failed_set:
+                    total_failures += 1
+                    sequential_failures += 1
+                else:
+                    sequential_failures = 0 # reset failures in row, ignore random errors
+            
+            if sequential_failures >= max_failures:
+                print(f"Endurance sweep reached max failures (sequential failures = {sequential_failures}, total failures = {total_failures})")
+                break
+
+            cycle += 1
+
+        print(f"Endurance sweep ended at cycle = {cycle}, total failures = {total_failures}")
 
     def sweep_gradual_reset_in_range(
         self,
