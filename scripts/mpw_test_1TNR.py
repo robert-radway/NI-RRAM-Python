@@ -24,14 +24,34 @@ nisys.read(record=True)
 print("1TNR READ:")
 nisys.read_1tnr(record=True)
 
+# for selecting specific bitlines
+BLS = ["BL_0", "BL_1",] # 1T2R
+# BLS = ["BL_0", "BL_1", "BL_2", "BL_3"] # 1T4R
 
-# nisys.read_1tnr(record=True)
-# input("Dynamic Form")
-# nisys.dynamic_form(is_1tnr=True)
-# # nisys.dynamic_set(mode="SET")
-# nisys.dynamic_reset(mode="RESET", is_1tnr=True)
+
+### 1TNR DYNAMIC FORM BLOCK
+### for each selected, form then reset
+### internal script will set non-selected bitlines to V/4
+for bl in BLS:
+    nisys.dynamic_form(bl=bl, is_1tnr=True)
+    nisys.dynamic_reset(bl=bl, is_1tnr=True)
+
+nisys.read_1tnr(record=True)
+
+
+### 1TNR DYNAMIC SET/RESET BLOCK: TEST SET 1 AT A TIME
+### This block will reset then set each cell sequentially
 # for i in range(4):
-#     nisys.dynamic_set(mode="SET", is_1tnr=True)
-#     nisys.dynamic_reset(mode="RESET", is_1tnr=True)
+#     for bl in BLS:
+#         nisys.dynamic_reset(mode="RESET", bl=bl, is_1tnr=True)
+#         nisys.dynamic_set(mode="SET", bl=bl, is_1tnr=True)
+
+### 1TNR DYNAMIC SET/RESET BLOCK: TEST SET ALL THEN RESET ALL
+### This block will reset all cells then set all cells
+# for i in range(4):
+#     for bl in BLS:
+#         nisys.dynamic_reset(mode="RESET", bl=bl, is_1tnr=True)
+#     for bl in BLS:
+#         nisys.dynamic_set(mode="SET", bl=bl, is_1tnr=True)
 
 nisys.close()

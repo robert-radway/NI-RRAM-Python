@@ -12,61 +12,16 @@ import pandas as pd
 import csv
 from datetime import datetime
 from BitVector import BitVector
-from . import env
+from .mask import RRAMArrayMask
 
 # Warnings become errors
 warnings.filterwarnings("error")
 
 
-class RRAMArrayMaskException(Exception):
-    """Exception produced by the ArrayMask class"""
-    def __init__(self, msg):
-        super().__init__(f"ArrayMask: {msg}")
-
 class NIRRAMException(Exception):
     """Exception produced by the NIRRAM class"""
     def __init__(self, msg):
         super().__init__(f"NIRRAM: {msg}")
-
-class RRAMArrayMask:
-    def __init__(
-        self,
-        wls,
-        bls,
-        sls,
-        all_wls,
-        all_bls,
-        all_sls,
-        polarity,
-        init_state=None,
-    ):
-        # Indicates Mask of bits that need further programming
-        if len(bls) == len(sls):
-            if init_state is None:
-                self.mask = pd.DataFrame(np.array([[(bl in bls) and (wl in wls) for bl in all_bls] for wl in all_wls]), all_wls, all_bls)
-            else:
-                self.mask = init_state
-            # print("Mask: ")
-            # print(self.mask)
-            self.wls = wls
-            self.bls = bls
-            self.sls = sls
-            self.polarity = polarity
-        else: raise RRAMArrayMaskException("1TNR Operations Not Supported")
-    
-    def get_pulse_masks(self):
-        masks = []
-        needed_wls = self.mask[self.mask.apply(np.sum,axis=1).ge(1)]
-        for wl in needed_wls.index:
-            wl_mask = self.mask.index == wl
-            bl_mask = pd.Series.to_numpy(needed_wls.loc[wl])
-            sl_mask = bl_mask & False
-            masks.append((wl_mask, bl_mask, sl_mask))
-        # print(f"pulse masks {masks}")
-        return masks
-
-    def update_mask(self, failing):
-        self.mask = failing
 
 
 class NIRRAM:
@@ -340,9 +295,9 @@ class NIRRAM:
             # Measure with NI-Digital
             for wl in self.wls:
                 for wl_i in self.wls:
-                    if wl_i == wl: self.ppmu_set_vwl(wl,vwl)
-                    else: self.ppmu_set_vwl(wl,vsl)
-                    self.digital.channels[wl].selected_function = nidigital.SelectedFunction.PPMU
+                    if wl_i == wl: self.ppmu_set_vwl(wl_i, vwl)
+                    else: self.ppmu_set_vwl(wl_i, vsl)
+                    self.digital.channels[wl_i].selected_function = nidigital.SelectedFunction.PPMU
                 self.digital.ppmu_source()
                 time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 
@@ -392,66 +347,103 @@ class NIRRAM:
         # Return measurement results
         return res_array, cond_array, meas_i_array, meas_v_array
 
-    def form_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
-        """Perform a FORM operation."""
+    def set_pulse(
+        self,
+        mask,
+        bl=None, # selected BL
+        vwl=None,
+        vbl=None,
+        vsl=None,
+        vbl_unsel=None,
+        pulse_len=None,
+    ):
+        """Perform a SET operation.
+        To support 1TNR devices (1 WL, 1 SL, multiple BLs), have input
+        "bl" selection parameter. If "bl" is not None, this specifies the
+        selected "bl". For all other unselected BLs, by default set their
+        value to an intermediate voltage V/4 (based on Hsieh et al, IEDM 2019)
+        to reduce impact of oversetting/overreseting unselected devices. 
+        """
         # Get parameters
-        vwl = self.op["FORM"][self.polarity]["VWL"] if vwl is None else vwl
-        vbl = self.op["FORM"][self.polarity]["VBL"] if vbl is None else vbl
-        vsl = self.op["FORM"][self.polarity]["VBL"] if vsl is None else vsl
-        pulse_len = self.op["FORM"][self.polarity]["PW"] if pulse_len is None else pulse_len
-
-    def set_pulse(self, mask, vwl=None, vbl=None, vsl=None, vwl_unsel=None, pulse_len=None):
-        """Perform a SET operation."""
-        # Get parameters
-        vwl = vwl if vwl is not None else self.op["SET"][self.polarity]["VWL"] 
-        vbl = vbl if vbl is not None else self.op["SET"][self.polarity]["VBL"] 
-        vsl = vsl if vsl is not None else self.op["SET"][self.polarity]["VSL"] 
+        vwl = vwl if vwl is not None else self.op["SET"][self.polarity]["VWL"]
+        vbl = vbl if vbl is not None else self.op["SET"][self.polarity]["VBL"]
+        vsl = vsl if vsl is not None else self.op["SET"][self.polarity]["VSL"]
+        vbl_unsel = vbl_unsel if vbl_unsel is not None else vbl / 4.0
         pulse_len = pulse_len if pulse_len is not None else self.op["SET"][self.polarity]["PW"] 
-
-        # Increment the number of SETs
-        #self.prof["SETs"] += 1
-
-        # Set voltages
-        for bl in self.bls: self.set_vbl(bl, vbl)
-        for sl in self.sls: self.set_vsl(sl, vsl)
-        for wl in self.wls: 
-            if self.polarity == "PMOS":
-                self.set_vwl(wl, vsl, vwl_lo=vwl)
+        
+        # set voltages
+        for bl_i in self.bls:
+            if bl is not None: # selecting specific bl, unselecting others
+                vbl_i = vbl if bl_i == bl else vbl_unsel
             else:
-                self.set_vwl(wl, vwl)    
-        # Pulse WL
+                vbl_i = vbl
+            self.set_vbl(bl_i, vbl_i)
+        
+        for sl_i in self.sls:
+            self.set_vsl(sl_i, vsl)
+        
+        for wl_i in self.wls: 
+            if self.polarity == "PMOS":
+                self.set_vwl(wl_i, vsl, vwl_lo=vwl)
+            else:
+                self.set_vwl(wl_i, vwl)   
+         
+        # pulse WL
         self.pulse(mask, pulse_len=pulse_len)
+
         # Log the pulse
         #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
         #self.mlogfile.write(f"SET,{vwl},{vbl},0,{pulse_width}\n")
 
-    def reset_pulse(self, mask, vwl=None, vbl=None, vsl=None, pulse_len=None):
-        """Perform a RESET operation."""
+    def reset_pulse(
+        self,
+        mask,
+        bl=None, # selected BL
+        vwl=None,
+        vbl=None,
+        vsl=None,
+        vbl_unsel=None,
+        pulse_len=None,
+    ):
+        """Perform a RESET operation.
+        To support 1TNR devices (1 WL, 1 SL, multiple BLs), have input
+        "bl" selection parameter. If "bl" is not None, this specifies the
+        selected "bl". For all other unselected BLs, by default set their
+        value to an intermediate voltage V/4 (based on Hsieh et al, IEDM 2019)
+        to reduce impact of oversetting/overreseting unselected devices. 
+        """
         # Get parameters
-        vwl = vwl if vwl is None else self.op["RESET"][self.polarity]["VWL"] 
-        vbl = vbl if vbl is None else self.op["RESET"][self.polarity]["VBL"] 
-        vsl = vsl if vsl is None else self.op["RESET"][self.polarity]["VSL"] 
+        vwl = vwl if vwl is None else self.op["RESET"][self.polarity]["VWL"]
+        vbl = vbl if vbl is None else self.op["RESET"][self.polarity]["VBL"]
+        vsl = vsl if vsl is None else self.op["RESET"][self.polarity]["VSL"]
+        vbl_unsel = vbl_unsel if vbl_unsel is not None else vbl / 4.0
         pulse_len = pulse_len if pulse_len is None else self.op["RESET"][self.polarity]["PW"] 
 
-        # Increment the number of RESETs
-        #self.prof["RESETs"] += 1
+        # set voltages
+        for bl_i in self.bls:
+            if bl is not None: # selecting specific bl, unselecting others
+                vbl_i = vbl if bl_i == bl else vbl_unsel
+            else:
+                vbl_i = vbl
+            self.set_vbl(bl_i, vbl_i)
+        
+        for sl_i in self.sls:
+            self.set_vsl(sl_i, vsl)
 
-        # Set voltages
-        for bl in self.bls: self.set_vbl(bl, vbl)
-        for sl in self.sls: self.set_vsl(sl, vsl)
-        for wl in self.wls: 
+        for wl_i in self.wls: 
             if self.polarity == "PMOS":
-                self.set_vwl(wl, vsl, vwl_lo=vwl)
+                self.set_vwl(wl_i, vsl, vwl_lo=vwl)
                 # self.set_vwl(wl, vwl)
             else:
-                self.set_vwl(wl, vwl) 
+                self.set_vwl(wl_i, vwl) 
 
+        # pulse WL
         self.pulse(mask, pulse_len=pulse_len)
 
         # Log the pulse
         #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
         #self.mlogfile.write(f"RESET,{vwl},0,{vsl},{pulse_width}\n")
-
+    
     def set_vsl(self, vsl_chan, vsl, vsl_lo=0):
         """Set VSL using NI-Digital driver"""
         # if self.polarity == "NMOS":
@@ -606,10 +598,18 @@ class NIRRAM:
         cycle_register = nidigital.SequencerRegister.REGISTER1
         self.digital.write_sequencer_register(cycle_register, cycles)
 
-    def dynamic_form(self, is_1tnr=False):
+    def dynamic_form(
+        self,
+        is_1tnr=False,
+        bl=None, # select specific bl for 1TNR measurements
+    ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
-        return self.dynamic_set(mode="FORM", is_1tnr=is_1tnr)
+        return self.dynamic_set(
+            mode="FORM",
+            is_1tnr=is_1tnr,
+            bl=bl,
+        )
 
     def dynamic_set(
         self,
@@ -618,6 +618,7 @@ class NIRRAM:
         record=True,
         target_res=None, # target res, if None will use value in settings
         is_1tnr=False,
+        bl=None, # select specific bl for 1TNR measurements
     ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -634,7 +635,14 @@ class NIRRAM:
             for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
                 for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                     #print(pw, vwl, vbl, vsl)
-                    self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                    self.set_pulse(
+                        mask,
+                        bl=bl, # specific selected BL for 1TNR
+                        vbl=vbl,
+                        vsl=vsl,
+                        vwl=vwl,
+                        pulse_len=int(pw),
+                    )
                     
                     # use settling if parameter present, to discharge parasitic cap
                     if "settling_time" in self.op[mode]:
@@ -672,6 +680,7 @@ class NIRRAM:
         print_data=True, # print data to console
         target_res=None, # target res, if None will use value in settings
         is_1tnr=False,   # if 1TNR device, do different type of read
+        bl=None,         # select specific bl for 1TNR measurements
     ):
         """Performs RESET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -687,7 +696,14 @@ class NIRRAM:
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
             for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
                 for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
-                    self.reset_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                    self.reset_pulse(
+                        mask,
+                        bl=bl, # specific selected BL for 1TNR
+                        vbl=vbl,
+                        vsl=vsl,
+                        vwl=vwl,
+                        pulse_len=int(pw),
+                    )
                     
                     # use settling if parameter present, to discharge parasitic cap
                     if "settling_time" in self.op[mode]:
@@ -1048,7 +1064,59 @@ class NIRRAM:
                 print(f"REACHED TARGET {res_high}, BREAKING.")
                 break
     
+    def targeted_intermediate_set(
+        self,
+        target_res: float,  # target resistance
+        res_high: float,    # resistance high bound for stopping reset before setting
+    ):
+        """
+        Perform set that targets an intermediate value, for multi-bit programming.
+        Based on RADAR method by
 
+        This combines two passes:
+        1. Coarse targeting pass:
+            Goal is to enter a coarse resistance range near target
+            (in max number of iterations before failing).
+
+        2. Fine targeting pass:
+            Goal is to enter a fine resistance range near target
+            (in max number of iterations before failing). 
+        
+        """
+        # initialization: do built in set to get into res_low target
+        self.dynamic_reset(target_res=res_high)
+
+        # get settings for this
+        cfg = self.op[mode][self.polarity]
+        vsl = cfg["VSL"]
+        vwl = cfg["VWL"]
+        pw = cfg["PW"]
+        pcount = cfg["PCOUNT"]
+        mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+
+        # iterative reset pulse, save resistance after each pulse regardless of outcome
+        success = False
+        for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
+            # do "pcount" pulses
+            for i in range(pcount):
+                self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
+                res_array, cond_array, meas_i_array, meas_v_array = self.read()
+
+                # save data
+                for wl in self.wls:
+                    for bl in self.bls:
+                        cell_success = False
+                        if (res_array.loc[wl,bl] <= res_low) & mask.mask.loc[wl,bl]:
+                            cell_success = True
+                            mask.mask.loc[wl,bl] = False
+                        data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                        print(f"{i}. {data}")
+                        if record: self.datafile.writerow(data)
+            
+            success = (mask.mask.to_numpy().sum()==0)
+            if success:
+                print(f"REACHED TARGET {res_high}, BREAKING.")
+                break
 
 if __name__ == "__main__":
     # Basic test

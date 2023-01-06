@@ -1,7 +1,9 @@
+BitVector==3.5.0 
+matplotlib
 nidaqmx
 nidigital
+niswitch==1.4.3
 numpy
-matplotlib
 pandas
 pyvisa
 scipy
