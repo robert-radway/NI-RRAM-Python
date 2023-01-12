@@ -4,6 +4,7 @@ import tomli
 import math
 import time
 import warnings
+from dataclasses import dataclass
 from os.path import abspath
 import nidigital
 import niswitch
@@ -13,9 +14,30 @@ import csv
 from datetime import datetime
 from BitVector import BitVector
 from .mask import RRAMArrayMask
+from . import util
 
 # Warnings become errors
 warnings.filterwarnings("error")
+
+@dataclass
+class RRAMOperationResult:
+    """Data class to store measured parameters from an RRAM operation
+    (e.g. set, reset, form, etc.)
+    """
+    chip: str
+    device: str
+    mode: str
+    wl: str
+    bl: str
+    res: float
+    cond: float
+    i: float
+    v: float
+    vwl: float
+    vsl: float
+    vbl: float
+    pw: float
+    success: bool
 
 
 class NIRRAMException(Exception):
@@ -1117,58 +1139,285 @@ class NIRRAM:
     
     def targeted_intermediate_set(
         self,
-        target_res: float,  # target resistance
-        res_high: float,    # resistance high bound for stopping reset before setting
+        res_high: float = None,       # resistance high bound for stopping reset before setting
+        res_coarse_min: float = None, # coarse resistance window min
+        res_coarse_max: float = None, # coarse resistance window max
+        res_fine_min: float = None,   # fine resistance window min, final resistance target
+        res_fine_max: float = None,   # fine resistance window max, final resistance target
+        max_coarse_steps: int = 10,   # max number of coarse steps before failing and exiting
+        max_fine_steps: int = 10,     # max number of fine steps before failing and exiting
+        is_1tnr=False,                # if True, use 1TNR methods
+        bl_selected=None,             # for 1TNR: if not None, use this selected bl
     ):
         """
         Perform set that targets an intermediate value, for multi-bit programming.
-        Based on RADAR method by
+        Based on RADAR method by 
 
         This combines two passes:
         1. Coarse targeting pass:
             Goal is to enter a coarse resistance range near target
-            (in max number of iterations before failing).
+            (with max iterations `max_course_steps` before failing and exiting).
 
         2. Fine targeting pass:
             Goal is to enter a fine resistance range near target
-            (in max number of iterations before failing). 
+            (with max iterations `max_fine_steps` before failing and exiting). 
         
         """
+        # select read method based on array or 1TNR device
+        read_pulse = self.read_1tnr if is_1tnr else self.read
+
         # initialization: do built in set to get into res_low target
         self.dynamic_reset(target_res=res_high)
 
-        # get settings for this
+        # get initial resistance
+        res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
+
+        # temporarily have additional dict to store each cells resistances
+        # after each operation (need to interface between old read pulse
+        # format and new RRAMOperationResult data format)
+        cell_res = {}
+        for wl in self.wls:
+            for bl in self.bls:
+                cell_res[wl, bl] = res_array.loc[wl, bl]
+        
+        # =====================================================================
+        # COARSE SET/RESET PASS:
+        # goal is to get within res range [res_coarse_min, res_coarse_max]
+        # =====================================================================
+        need_to_set = False
+        need_to_reset = False
+        # first check if coarse steps needed
+        for wl in self.wls:
+            for bl in self.bls:
+                if cell_res[wl, bl] < res_coarse_min:
+                    need_to_reset = True
+                elif cell_res[wl, bl] > res_coarse_max:
+                    need_to_set = True
+
+        if need_to_set or need_to_reset:
+            n_coarse = 0
+            while n_coarse < max_coarse_steps:
+                n_coarse += 1
+
+                # run coarse set/reset pulses (note: INTERNALLY these functions
+                # will mask off completed cells that already hit target)
+                if need_to_set:
+                    result = self.dynamic_pulse_for_multibit(
+                        mode="SET_COARSE",
+                        res_compare_op=util.Comparison.LESS_OR_EQUALS,
+                        target_res=res_coarse_max,
+                        is_1tnr=is_1tnr,
+                        bl_selected=bl_selected,
+                    )
+                    # update cell resistances and `need_to_set` and `need_to_reset`
+                    need_to_set = False
+                    need_to_reset = False
+                    for wl in self.wls:
+                        for bl in self.bls:
+                            res = result[wl, bl].res
+                            cell_res[wl, bl] = res
+                            if res < res_coarse_min:
+                                need_to_reset = True
+                            elif res > res_coarse_max:
+                                need_to_set = True
+                
+                if need_to_reset:
+                    result = self.dynamic_pulse_for_multibit(
+                        mode="RESET_COARSE",
+                        res_compare_op=util.Comparison.GREATER_OR_EQUALS,
+                        target_res=res_coarse_min,
+                        is_1tnr=is_1tnr,
+                        bl_selected=bl_selected,
+                    )
+                    # update cell resistances and `need_to_set` and `need_to_reset`
+                    need_to_set = False
+                    need_to_reset = False
+                    for wl in self.wls:
+                        for bl in self.bls:
+                            res = result[wl, bl].res
+                            cell_res[wl, bl] = res
+                            if res < res_coarse_min:
+                                need_to_reset = True
+                            elif res > res_coarse_max:
+                                need_to_set = True
+        
+        # =====================================================================
+        # FINE SET/RESET PASS:
+        # goal is to get within res range [res_fine_min, res_fine_max]
+        # =====================================================================
+        need_to_set = False
+        need_to_reset = False
+        # first check if fine steps needed
+        for wl in self.wls:
+            for bl in self.bls:
+                if cell_res[wl, bl] < res_fine_min:
+                    need_to_reset = True
+                elif cell_res[wl, bl] > res_fine_max:
+                    need_to_set = True
+        
+        if need_to_set or need_to_reset:
+            n_fine = 0
+            for n_fine in range(max_fine_steps):
+                n_fine += 1
+
+                # run fine set/reset pulses (note: INTERNALLY these functions
+                # will mask off completed cells that already hit target)
+                if need_to_set:
+                    result = self.dynamic_pulse_for_multibit(
+                        mode="SET_FINE",
+                        res_compare_op=util.Comparison.LESS_OR_EQUALS,
+                        target_res=res_fine_max,
+                        is_1tnr=is_1tnr,
+                        bl_selected=bl_selected,
+                    )
+                    # update cell resistances and `need_to_set` and `need_to_reset`
+                    need_to_set = False
+                    need_to_reset = False
+                    for wl in self.wls:
+                        for bl in self.bls:
+                            res = result[wl, bl].res
+                            cell_res[wl, bl] = res
+                            if res < res_fine_min:
+                                need_to_reset = True
+                            elif res > res_fine_max:
+                                need_to_set = True
+                
+                if need_to_reset:
+                    result = self.dynamic_pulse_for_multibit(
+                        mode="RESET_FINE",
+                        res_compare_op=util.Comparison.GREATER_OR_EQUALS,
+                        target_res=res_fine_min,
+                        is_1tnr=is_1tnr,
+                        bl_selected=bl_selected,
+                    )
+                    # update cell resistances and `need_to_set` and `need_to_reset`
+                    need_to_set = False
+                    need_to_reset = False
+                    for wl in self.wls:
+                        for bl in self.bls:
+                            res = result[wl, bl].res
+                            cell_res[wl, bl] = res
+                            if res < res_fine_min:
+                                need_to_reset = True
+                            elif res > res_fine_max:
+                                need_to_set = True
+
+
+    def dynamic_pulse_for_multibit(
+        self,
+        mode,
+        res_compare_op: util.Comparison, # comparison enum type indicating <=, >=, == operator to compare to target_res
+        target_res=None,                 # target res, if None will use value in settings
+        record=True,                     # if True, record data to file
+        print_data=True,                 # print data to console
+        is_1tnr=False,                   # if 1TNR device, do different type of read
+        bl_selected=None,                # select specific bl for 1TNR measurements
+        debug=True,                      # if True, print additional debug info
+    ) -> dict[tuple[str, str], RRAMOperationResult]:
+        """Performs BL pulses in increasing fashion until resistance meets
+        `target_res` goal based on `res_compare_op` (e.g. `res <= target_res`
+        or `res >= target_res`).
+
+        Input has a `res_compare_op` enum which is also a callable function that
+        does `res_compare_op(a, b)` ---> `a CMP b`, where CMP becomes an
+        operator like <= or >=. Typically use:
+        - reset: Comparison.GREATER_OR_EQUALS ---> `res >= target_res`
+        - set: Comparison.LESS_OR_EQUALS ---> `res <= target_res`
+
+        Returns a dict mapping WL, BL locations to a RRAMOperationResult 
+        with operation results: `result[WL, BL] -> RRAMOperationResult`
+        """
+        # Get settings
         cfg = self.op[mode][self.polarity]
-        vsl = cfg["VSL"]
-        vwl = cfg["VWL"]
-        pw = cfg["PW"]
-        pcount = cfg["PCOUNT"]
+        target_res = target_res if target_res is not None else self.target_res[mode]
+        vbl = cfg["VBL"]
+
+        # select read method
+        read_pulse = self.read_1tnr if is_1tnr else self.read
+
+        # get initial resistance
+        res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
+
+        # create cell pulse mask, indicates cells to send pulses to
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        for wl in self.wls:
+            for bl in self.bls:
+                if mask.mask.loc[wl,bl] & res_compare_op(res_array.loc[wl,bl], target_res):
+                    mask.mask.loc[wl,bl] = False
+            # if all cells meet target, we can skip running
+            success = (mask.mask.to_numpy().sum() == 0)
+        
+        if success == False:
+            # sweep value lists
+            vwl_sweep = util.linear_sweep({"start": cfg[f"VWL_start"], "stop": cfg[f"VWL_stop"], "step": cfg[f"VWL_step"]})
+            vsl_sweep = util.linear_sweep({"start": cfg["VSL_start"], "stop": cfg["VSL_stop"], "step": cfg["VSL_step"]})
+            pw_sweep = util.log10_sweep({"start": cfg["PW_start"], "stop": cfg["PW_stop"], "steps": cfg["PW_steps"]})
+            if debug:
+                print(f"vwl_sweep: {vwl_sweep}")
+                print(f"vsl_sweep: {vsl_sweep}")
+                print(f"pw_sweep: {pw_sweep}")
 
-        # iterative reset pulse, save resistance after each pulse regardless of outcome
-        success = False
-        for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
-            # do "pcount" pulses
-            for i in range(pcount):
-                self.set_pulse(mask, vbl=vbl, vsl=vsl, vwl=vwl, pulse_len=int(pw))
-                res_array, cond_array, meas_i_array, meas_v_array = self.read()
+            # Iterative pulse-verify
+            # order is try increase PW, then increase VSL, then try increase VWL 
+            for vwl in vwl_sweep:
+                for vsl in vsl_sweep:
+                    for pw in pw_sweep:
+                        self.reset_pulse( # TODO: MAKE THIS A GENERALIZED PULSE FOR THIS OP
+                            mask,
+                            bl_selected=bl_selected, # specific selected BL for 1TNR
+                            vbl=vbl,
+                            vsl=vsl,
+                            vwl=vwl,
+                            pulse_len=int(pw),
+                        )
+                        
+                        # use settling if parameter present, to discharge parasitic cap
+                        if "settling_time" in self.op[mode]:
+                            time.sleep(self.op[mode]["settling_time"])
 
-                # save data
-                for wl in self.wls:
-                    for bl in self.bls:
-                        cell_success = False
-                        if (res_array.loc[wl,bl] <= res_low) & mask.mask.loc[wl,bl]:
-                            cell_success = True
-                            mask.mask.loc[wl,bl] = False
-                        data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
-                        print(f"{i}. {data}")
-                        if record: self.datafile.writerow(data)
-            
-            success = (mask.mask.to_numpy().sum()==0)
-            if success:
-                print(f"REACHED TARGET {res_high}, BREAKING.")
-                break
+                        res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
+                        for wl in self.wls:
+                            for bl in self.bls:
+                                if mask.mask.loc[wl,bl] & res_compare_op(res_array.loc[wl,bl], target_res):
+                                    mask.mask.loc[wl,bl] = False
+                        success = (mask.mask.to_numpy().sum() == 0)
+                        if success:
+                            break
+                    if success:
+                        break
+                if success:
+                    break
+        
+        # record final cell results
+        all_data = {} # dict with all cell results
+        for wl in self.wls:
+            for bl in self.bls:
+                cell_success = res_compare_op(res_array.loc[wl,bl], target_res)
+                cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                
+                if print_data: print(cell_data)
+                if record: self.datafile.writerow(cell_data)
 
+                all_data[wl, bl] = RRAMOperationResult(
+                    chip=self.chip,
+                    device=self.device,
+                    mode=mode,
+                    wl=wl,
+                    bl=bl,
+                    res=res_array.loc[wl, bl],
+                    cond=cond_array.loc[wl, bl],
+                    i=meas_i_array.loc[wl, bl],
+                    v=meas_v_array.loc[wl, bl],
+                    vwl=vwl,
+                    vsl=vsl,
+                    vbl=vbl,
+                    pw=pw,
+                    success=cell_success,
+                )
+        
+        return all_data
+
+    
 if __name__ == "__main__":
     # Basic test
     nirram = NIRRAM("C4")
