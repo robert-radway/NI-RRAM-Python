@@ -6,7 +6,7 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/MPW.pinmap"
+pinmap = "settings/MPW_1TNR.pinmap" # used to be MPW.pinmap
 specs = [
   "settings/DEC3.specs",
   "settings/DEC3.digilevels",
@@ -34,16 +34,18 @@ SLS = [ "SL_0" ]
 # RRAM resistance target level corresponding to each operation defined below
 [target_res]
 FORM = 20_000
-SET = 20_000
-RESET_0 = 60_000
-RESET_1 = 120_000
-RESET_2 = 190_000
-RESET_3 = 170_000
-RESET_4 = 210_000
-RESET_5 = 250_000
-RESET_6 = 290_000
-RESET_7 = 330_000
-RESET = 100_000
+SET_2 = 15_000
+SET_1 = 30_000
+SET_0 = 60_000
+# RESET_0 = 40_000
+# RESET_1 = 80_000
+# RESET_2 = 160_000
+# RESET_3 = 170_000
+# RESET_4 = 210_000
+# RESET_5 = 250_000
+# RESET_6 = 290_000
+# RESET_7 = 330_000
+RESET = 120_000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -97,18 +99,35 @@ PW_stop = 100
 PW_steps = 3
 
 [op.FORM.PMOS]
-VWL = 0.5
-VBL = 0
-VSL = 0.5
+# VWL = 0.5
+# VBL = 0
+# VSL = 0.5
+# PW = 1200
+# VWL_SET_start = 0.5
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -1.2
+# VBL_start = 2
+# VBL_step = -0.1
+# VBL_stop = -2
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 1.5
+VBL = 0.5
+VSL = 2.5
 PW = 1200
-VWL_SET_start = 0.5
+
+VWL_SET_start = 1.5
 VWL_SET_step = -0.1
-VWL_SET_stop = -1.2
-VBL_start = 2
+VWL_SET_stop = 0.5
+
+VBL_start = 0
 VBL_step = -0.1
-VBL_stop = -2
+VBL_stop = -1.0
+
 PW_start = 1
-PW_stop = 100
+PW_stop = 1000
 PW_steps = 3
 
 # =============================================================================
@@ -130,16 +149,174 @@ PW_stop = 100
 PW_steps = 3
 
 [op.SET.PMOS]
-VWL = 0.5
-VBL = 0
-VSL = 0.5
-PW = 1000
-VWL_SET_start = 0
-VWL_SET_step = -0.1
-VWL_SET_stop = -0.7
-VBL_start = 0
-VBL_step = -0.1
-VBL_stop = -1.3
+# VWL = 0.5
+# VBL = 0
+# VSL = 0.5
+# PW = 1000
+# VWL_SET_start = 0
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -0.7
+# VBL_start = 0
+# VBL_step = -0.1
+# VBL_stop = -1.3
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 2.0
+VBL = 1.5
+VSL = 2.5
+PW = 100
+
+VWL_SET_start = 1.6
+VWL_SET_step = -0.4
+VWL_SET_stop = 1.2
+
+VBL_start = 1.0
+VBL_step = -0.4
+VBL_stop = -0.2
+
+PW_start = 1
+PW_stop = 100
+PW_steps = 3
+
+[op.SET_0.NMOS]
+VWL = 0
+VBL = 4
+VSL = 2
+PW = 100
+VWL_SET_start = 1.2
+VWL_SET_step = 0.1
+VWL_SET_stop = 2.2
+VBL_start = 1.5
+VBL_step = 0.1
+VBL_stop = 2.5
+PW_start = 1
+PW_stop = 100
+PW_steps = 3
+
+[op.SET_0.PMOS]
+# VWL = 0.5
+# VBL = 0
+# VSL = 0.5
+# PW = 1000
+# VWL_SET_start = 0
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -0.7
+# VBL_start = 0
+# VBL_step = -0.1
+# VBL_stop = -1.3
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 2.0
+VBL = 1.5
+VSL = 2.5
+PW = 100
+
+VWL_SET_start = 2.0
+VWL_SET_step = -0.05
+VWL_SET_stop = 1.2
+
+VBL_start = 1.0
+VBL_step = -0.05
+VBL_stop = -0.2
+
+PW_start = 1
+PW_stop = 100
+PW_steps = 3
+
+[op.SET_1.NMOS]
+VWL = 0
+VBL = 4
+VSL = 2
+PW = 100
+VWL_SET_start = 1.2
+VWL_SET_step = 0.1
+VWL_SET_stop = 2.2
+VBL_start = 1.5
+VBL_step = 0.1
+VBL_stop = 2.5
+PW_start = 1
+PW_stop = 100
+PW_steps = 3
+
+[op.SET_1.PMOS]
+# VWL = 0.5
+# VBL = 0
+# VSL = 0.5
+# PW = 1000
+# VWL_SET_start = 0
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -0.7
+# VBL_start = 0
+# VBL_step = -0.1
+# VBL_stop = -1.3
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 2.0
+VBL = 1.5
+VSL = 2.5
+PW = 100
+
+VWL_SET_start = 2.0
+VWL_SET_step = -0.05
+VWL_SET_stop = 1.2
+
+VBL_start = 1.0
+VBL_step = -0.05
+VBL_stop = -0.2
+
+PW_start = 1
+PW_stop = 100
+PW_steps = 3
+
+[op.SET_2.NMOS]
+VWL = 0
+VBL = 4
+VSL = 2
+PW = 100
+VWL_SET_start = 1.2
+VWL_SET_step = 0.1
+VWL_SET_stop = 2.2
+VBL_start = 1.5
+VBL_step = 0.1
+VBL_stop = 2.5
+PW_start = 1
+PW_stop = 100
+PW_steps = 3
+
+[op.SET_2.PMOS]
+# VWL = 0.5
+# VBL = 0
+# VSL = 0.5
+# PW = 1000
+# VWL_SET_start = 0
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -0.7
+# VBL_start = 0
+# VBL_step = -0.1
+# VBL_stop = -1.3
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 2.0
+VBL = 1.5
+VSL = 2.5
+PW = 100
+
+VWL_SET_start = 2.0
+VWL_SET_step = -0.05
+VWL_SET_stop = 1.2
+
+VBL_start = 1.0
+VBL_step = -0.05
+VBL_stop = -0.2
+
 PW_start = 1
 PW_stop = 100
 PW_steps = 3
@@ -160,16 +337,19 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
-VSL_start = 2
-VSL_step = -0.1
-VSL_stop = 0
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
+VSL_start = 1.5
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
 PW_stop = 100
 PW_steps = 3
@@ -190,16 +370,33 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_0.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
 PW_stop = 100
 PW_steps = 3
@@ -220,16 +417,33 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_1.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
 PW_stop = 100
 PW_steps = 3
@@ -250,16 +464,33 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_2.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
 PW_stop = 100
 PW_steps = 3
@@ -280,19 +511,36 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_3.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
-PW_stop = 100
-PW_steps = 3
+PW_stop = 1000
+PW_steps = 4
 
 [op.RESET_4.NMOS]
 VWL = 2.5
@@ -310,19 +558,36 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_4.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
-PW_stop = 100
-PW_steps = 3
+PW_stop = 1000
+PW_steps = 4
 
 [op.RESET_5.NMOS]
 VWL = 2.5
@@ -340,19 +605,36 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_5.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
-PW_stop = 100
-PW_steps = 3
+PW_stop = 1000
+PW_steps = 4
 
 [op.RESET_6.NMOS]
 VWL = 2.5
@@ -370,19 +652,36 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_6.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
-PW_stop = 100
-PW_steps = 3
+PW_stop = 1000
+PW_steps = 4
 
 [op.RESET_7.NMOS]
 VWL = 2.5
@@ -400,19 +699,36 @@ PW_stop = 100
 PW_steps = 3
 
 [op.RESET_7.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.5
+# VWL = -1
+# VSL = 0
+# VBL = 2.5
+# PW = 100
+# VWL_RESET_start = -1
+# VWL_RESET_step = -0.1
+# VWL_RESET_stop = -1.8
+# VSL_start = 1.5
+# VSL_step = -0.1
+# VSL_stop = 0
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 3
+
+VWL = 0.8
+VSL = 1.5
+VBL = 3.5
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.8
+
+VWL_RESET_start = 0.3
+VWL_RESET_step = -0.05
+VWL_RESET_stop = -0.5
+
 VSL_start = 1.5
-VSL_step = -0.1
-VSL_stop = 0
+VSL_step = -0.05
+VSL_stop = 0.0
+
 PW_start = 1
-PW_stop = 100
-PW_steps = 3
+PW_stop = 1000
+PW_steps = 4
 
 [op.RESET_SWEEP.NMOS]
 VWL = 2.5

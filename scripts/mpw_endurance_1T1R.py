@@ -16,9 +16,9 @@ args = parser.parse_args()
 # define sweep read schedule, each tuple format is:
 # (cycle number, step size after that cycle)
 sweep_schedule = [
-    (   0, 1),
-    ( 100, 10),
-    (1000, 1000),
+    (   0, 10),
+    ( 100, 100),
+    (1000, 3000),
 ]
 max_cycles = 1e7
 next_read_cycles = NIRRAM.get_read_cycles(max_cycles, sweep_schedule)
@@ -26,13 +26,13 @@ print(next_read_cycles)
 
 # Initialize NI system
 # For CNFET: make sure polarity is PMOS
-nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1TNR.toml", polarity="PMOS") # FOR CNFET RRAM
+nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1T1R.toml", polarity="PMOS") # FOR CNFET RRAM PMOS & Si RRAM NMOS
 
 # DO FORM PART MANUALLY, COMMENT OUT AS NEEDED
 nisys.read(record=True)
 # input("Dynamic Form")
-#nisys.dynamic_form()
-#nisys.dynamic_reset()
+# nisys.dynamic_form()
+# nisys.dynamic_reset()
 
 # main endurance sweep
 nisys.endurance_dynamic_set_reset(

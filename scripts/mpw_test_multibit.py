@@ -13,17 +13,27 @@ parser.add_argument("device", help="device name for logging")
 args = parser.parse_args()
 
 # Initialize NI system
-nisys = NIRRAM(args.chip, args.device, settings="settings/MPW.json", polarity="PMOS") # FOR CNFET RRAM
+nisys = NIRRAM(args.chip, args.device, settings="settings/MPW.toml", polarity="PMOS") # FOR CNFET RRAM
 # nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_silicon.json", polarity="NMOS") # FOR Si NMOS RRAM
 
 nisys.read(record=True)
-# input("Dynamic Form")
+input("Dynamic Form")
 nisys.dynamic_form()
-for i in range(1000000):
-    nisys.dynamic_set(mode="SET")
-    nisys.dynamic_reset(mode="RESET_0") # increasing soft reset levels, comment out as needed
-    nisys.dynamic_reset(mode="RESET_1")
-    nisys.dynamic_reset(mode="RESET_2")
+for i in range(100000):
+    
+    nisys.dynamic_reset(mode="RESET")
+    nisys.dynamic_set(mode="SET_0") # increasing soft reset levels, comment out as needed
+    nisys.dynamic_reset(mode="RESET")
+    nisys.dynamic_set(mode="SET_1")
+    nisys.dynamic_reset(mode="RESET")
+    nisys.dynamic_set(mode="SET_2")
+    #  nisys.dynamic_set(mode="SET")
+    # nisys.dynamic_reset(mode="RESET_0") # increasing soft reset levels, comment out as needed
+    # nisys.dynamic_set(mode="SET")
+    # nisys.dynamic_reset(mode="RESET_1")
+    # nisys.dynamic_set(mode="SET")
+    # nisys.dynamic_reset(mode="RESET_2")
+    
     # nisys.dynamic_reset(mode="RESET_3")
 
     # IF YOU HAVE ENOUGH WINDOW, CAN TRY WITH MORE LEVELS!

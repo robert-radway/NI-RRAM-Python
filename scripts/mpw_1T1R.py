@@ -18,8 +18,8 @@ nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_1T1R.toml", polari
 
 nisys.read(record=True)
 # input("Dynamic Form")
-#nisys.dynamic_form()
-#nisys.dynamic_reset()
+nisys.dynamic_form()
+nisys.dynamic_reset()
 
 for i in range(4):
     nisys.dynamic_reset()

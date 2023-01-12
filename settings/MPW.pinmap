@@ -38,13 +38,13 @@
 		<Site siteNumber="0" />
 	</Sites>
 	<Connections>
-		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="1" />
-		<Connection pin="BL_0" siteNumber="0" instrument="PXI1Slot9" channel="2" />
-		<Connection pin="BL_1" siteNumber="0" instrument="PXI1Slot9" channel="5" />
+		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="2" />
+		<Connection pin="BL_0" siteNumber="0" instrument="PXI1Slot9" channel="1" />
+		<Connection pin="BL_1" siteNumber="0" instrument="PXI1Slot9" channel="3" />
 		<Connection pin="BL_2" siteNumber="0" instrument="PXI1Slot9" channel="9" />
 		<Connection pin="BL_3" siteNumber="0" instrument="PXI1Slot9" channel="13" />
 		<Connection pin="WL_0" siteNumber="0" instrument="PXI1Slot9" channel="0" />
-		<Connection pin="SL_0" siteNumber="0" instrument="PXI1Slot9" channel="3" />
+		<Connection pin="SL_0" siteNumber="0" instrument="PXI1Slot9" channel="5" />
 		<Connection pin="SL_1" siteNumber="0" instrument="PXI1Slot9" channel="7" />
 		<Connection pin="SL_2" siteNumber="0" instrument="PXI1Slot9" channel="11" />
 		<Connection pin="SL_3" siteNumber="0" instrument="PXI1Slot9" channel="15" />

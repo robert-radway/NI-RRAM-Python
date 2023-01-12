@@ -28,14 +28,14 @@ all_BLS = [ "BL_0", "BL_1", "BL_2", "BL_3" ]
 # subset of WL, BL, SL that will be pulsed for measurement
 WLS = [ "WL_0", ]
 SLS = [ "SL_0", ]
-BLS = [ "BL_0", ]
+BLS = [ "BL_0", "BL_1", "BL_2", "BL_3" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
 [target_res]
 FORM = 20_000
 SET = 20_000
-RESET = 100_000
+RESET = 50_000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -97,9 +97,9 @@ VBL = 0.5
 VSL = 2.5
 PW = 1200
 
-VWL_SET_start = 1.5
+VWL_SET_start = 1.9
 VWL_SET_step = -0.1
-VWL_SET_stop = 0.5
+VWL_SET_stop = 0.9
 
 VBL_start = 0
 VBL_step = -0.1
@@ -138,7 +138,7 @@ PW = 100
 
 VWL_SET_start = 2.0
 VWL_SET_step = -0.1
-VWL_SET_stop = 0.9
+VWL_SET_stop = 1.5
 
 VBL_start = 1.5
 VBL_step = -0.1
@@ -175,9 +175,9 @@ VSL = 1.5
 VBL = 3.5
 PW = 100
 
-VWL_RESET_start = 0.8
+VWL_RESET_start = 1.0
 VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.0
+VWL_RESET_stop = 0.0
 
 VSL_start = 1.5
 VSL_step = -0.1

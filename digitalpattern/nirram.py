@@ -77,7 +77,7 @@ class NIRRAM:
 
         self.all_off_mask = RRAMArrayMask(self.all_wls, [], [], self.all_wls, self.all_bls, self.all_sls, self.polarity)
 
-        # Only works for 1T1R arrays
+        # Only works for 1T1R arrays, sets addr idx and prof
         self.addr_idxs = {}
         self.addr_prof = {}
         for wl in self.wls:
@@ -85,7 +85,11 @@ class NIRRAM:
             self.addr_prof[wl] = {}
             for i in range(len(self.bls)):
                 bl = self.bls[i]
-                sl = self.sls[i]
+                # temporary fix for 1TNR: if bls and sls len not equal, just use sl0
+                if len(self.sls) == len(self.bls):
+                    sl = self.sls[i]
+                else:
+                    sl = self.sls[0]
                 self.addr_idxs[wl][bl] = (bl, sl, wl)
                 self.addr_prof[wl][bl] = {"FORMs": 0, "READs": 0, "SETs": 0, "RESETs": 0} 
 
@@ -264,7 +268,7 @@ class NIRRAM:
         # Increment the number of READs
         # Let the cell relax after programming to get an accurate read 
         self.digital_all_off(self.op["READ"]["relaxation_cycles"])
-        
+
         # Set the read voltage levels
         vbl = self.op["READ"][self.polarity]["VBL"] if vbl is None else vbl
         vwl = self.op["READ"][self.polarity]["VWL"] if vwl is None else vwl
@@ -325,6 +329,7 @@ class NIRRAM:
 
                     #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
                     self.addr_prof[wl][bl]["READs"] +=1
+
                     # Compute values
                     res = np.abs((self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"])/meas_i - self.op["READ"]["shunt_res_value"])
                     cond = 1/res
@@ -350,7 +355,7 @@ class NIRRAM:
     def set_pulse(
         self,
         mask,
-        bl=None, # selected BL
+        bl_selected=None, # selected BL
         vwl=None,
         vbl=None,
         vsl=None,
@@ -362,27 +367,39 @@ class NIRRAM:
         "bl" selection parameter. If "bl" is not None, this specifies the
         selected "bl". For all other unselected BLs, by default set their
         value to an intermediate voltage V/4 (based on Hsieh et al, IEDM 2019)
-        to reduce impact of oversetting/overreseting unselected devices. 
+        to reduce impact of oversetting/overreseting unselected devices.
+
+        This voltage must be relative to value between VSL and VBL,
+        not just VBL/4 because VSL is not necessarily 0 V, so just taking
+        VBL/4 can increase voltage when VSL > VBL and VBL is stepped down
+        (e.g. in the case of PMOS). So we want `VSL + (VBL - VSL)/4.0`
+        Example for SET (VSL fixed, sweep VBL):
+            VSL     VBL     VBL/4     VSL + (VBL - VSL)/4
+            2.0     1.4      0.35          1.85      
+            2.0     1.2      0.30          1.8
+            2.0     1.0      0.25          1.75
         """
         # Get parameters
         vwl = vwl if vwl is not None else self.op["SET"][self.polarity]["VWL"]
         vbl = vbl if vbl is not None else self.op["SET"][self.polarity]["VBL"]
         vsl = vsl if vsl is not None else self.op["SET"][self.polarity]["VSL"]
-        vbl_unsel = vbl_unsel if vbl_unsel is not None else vbl / 4.0
+        vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
         pulse_len = pulse_len if pulse_len is not None else self.op["SET"][self.polarity]["PW"] 
         
         # set voltages
         for bl_i in self.bls:
-            if bl is not None: # selecting specific bl, unselecting others
-                vbl_i = vbl if bl_i == bl else vbl_unsel
+            if bl_selected is not None: # selecting specific bl, unselecting others
+                vbl_i = vbl if bl_i == bl_selected else vbl_unsel
             else:
                 vbl_i = vbl
+            # print(f"Setting BL {bl_i} to {vbl_i} V")
             self.set_vbl(bl_i, vbl_i)
         
         for sl_i in self.sls:
+            # print(f"Setting SL {sl_i} to {vsl} V")
             self.set_vsl(sl_i, vsl)
         
-        for wl_i in self.wls: 
+        for wl_i in self.wls:
             if self.polarity == "PMOS":
                 self.set_vwl(wl_i, vsl, vwl_lo=vwl)
             else:
@@ -398,7 +415,7 @@ class NIRRAM:
     def reset_pulse(
         self,
         mask,
-        bl=None, # selected BL
+        bl_selected=None, # selected BL
         vwl=None,
         vbl=None,
         vsl=None,
@@ -411,23 +428,35 @@ class NIRRAM:
         selected "bl". For all other unselected BLs, by default set their
         value to an intermediate voltage V/4 (based on Hsieh et al, IEDM 2019)
         to reduce impact of oversetting/overreseting unselected devices. 
+
+        This voltage must be relative to value between VSL and VBL,
+        not just VBL/4 because VSL is not necessarily 0 V, so just taking
+        VBL/4 can increase voltage when VSL > VBL and VBL is stepped down
+        (e.g. in the case of PMOS). So we want `VSL + (VBL - VSL)/4.0`
+        Example for RESET (VBL fixed, sweep VSL):
+            VSL     VBL     VBL/4     VSL + (VBL - VSL)/4
+            1.4     2.0      0.5           1.55
+            1.2     2.0      0.5           1.40
+            1.0     2.0      0.5           1.25
         """
         # Get parameters
         vwl = vwl if vwl is None else self.op["RESET"][self.polarity]["VWL"]
         vbl = vbl if vbl is None else self.op["RESET"][self.polarity]["VBL"]
         vsl = vsl if vsl is None else self.op["RESET"][self.polarity]["VSL"]
-        vbl_unsel = vbl_unsel if vbl_unsel is not None else vbl / 4.0
+        vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
         pulse_len = pulse_len if pulse_len is None else self.op["RESET"][self.polarity]["PW"] 
 
         # set voltages
         for bl_i in self.bls:
-            if bl is not None: # selecting specific bl, unselecting others
-                vbl_i = vbl if bl_i == bl else vbl_unsel
+            if bl_selected is not None: # selecting specific bl, unselecting others
+                vbl_i = vbl if bl_i == bl_selected else vbl_unsel
             else:
                 vbl_i = vbl
+            # print(f"Setting BL {bl_i} to {vbl_i} V")
             self.set_vbl(bl_i, vbl_i)
         
         for sl_i in self.sls:
+            # print(f"Setting SL {sl_i} to {vsl} V")
             self.set_vsl(sl_i, vsl)
 
         for wl_i in self.wls: 
@@ -601,14 +630,14 @@ class NIRRAM:
     def dynamic_form(
         self,
         is_1tnr=False,
-        bl=None, # select specific bl for 1TNR measurements
+        bl_selected=None, # select specific bl for 1TNR measurements
     ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
         return self.dynamic_set(
             mode="FORM",
             is_1tnr=is_1tnr,
-            bl=bl,
+            bl_selected=bl_selected,
         )
 
     def dynamic_set(
@@ -618,7 +647,7 @@ class NIRRAM:
         record=True,
         target_res=None, # target res, if None will use value in settings
         is_1tnr=False,
-        bl=None, # select specific bl for 1TNR measurements
+        bl_selected=None, # select specific bl for 1TNR measurements
     ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -627,8 +656,10 @@ class NIRRAM:
         target_res = target_res if target_res is not None else self.target_res[mode]
         vsl = cfg["VSL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        
         # select read method
         read_pulse = self.read_1tnr if is_1tnr else self.read
+
         # Iterative pulse-verify
         success = False
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
@@ -637,7 +668,7 @@ class NIRRAM:
                     #print(pw, vwl, vbl, vsl)
                     self.set_pulse(
                         mask,
-                        bl=bl, # specific selected BL for 1TNR
+                        bl_selected=bl_selected, # specific selected BL for 1TNR
                         vbl=vbl,
                         vsl=vsl,
                         vwl=vwl,
@@ -648,13 +679,23 @@ class NIRRAM:
                     if "settling_time" in self.op[mode]:
                         time.sleep(self.op[mode]["settling_time"])
 
+                    # read result resistance
                     res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
                     #print(res_array)
-                    for wl in self.wls:
-                        for bl in self.bls:
-                            if (res_array.loc[wl,bl] <= target_res) & mask.mask.loc[wl,bl]:
-                                mask.mask.loc[wl,bl] = False
-                    success = (mask.mask.to_numpy().sum()==0)
+                    
+                    if bl_selected is None: # use array success condition: all in array must hit target
+                        for wl_i in self.wls:
+                            for bl_i in self.bls:
+                                if (res_array.loc[wl_i, bl_i] <= target_res) & mask.mask.loc[wl_i, bl_i]:
+                                    mask.mask.loc[wl_i, bl_i] = False
+                        success = (mask.mask.to_numpy().sum()==0)
+                    else: # 1TNR success condition: check if selected 1tnr cell hit target
+                        success = True
+                        for wl_i in self.wls:
+                            if (res_array.loc[wl_i, bl_selected] > target_res) & mask.mask.loc[wl_i, bl_selected]:
+                                success = False
+                                break
+                    
                     if success:
                         break
                 if success:
@@ -677,10 +718,10 @@ class NIRRAM:
         self,
         mode="RESET",
         record=True,
-        print_data=True, # print data to console
-        target_res=None, # target res, if None will use value in settings
-        is_1tnr=False,   # if 1TNR device, do different type of read
-        bl=None,         # select specific bl for 1TNR measurements
+        print_data=True,  # print data to console
+        target_res=None,  # target res, if None will use value in settings
+        is_1tnr=False,    # if 1TNR device, do different type of read
+        bl_selected=None, # select specific bl for 1TNR measurements
     ):
         """Performs RESET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -689,6 +730,7 @@ class NIRRAM:
         target_res = target_res if target_res is not None else self.target_res[mode]
         vbl = cfg["VBL"]
         mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        
         # select read method
         read_pulse = self.read_1tnr if is_1tnr else self.read
         # Iterative pulse-verify
@@ -698,7 +740,7 @@ class NIRRAM:
                 for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
                     self.reset_pulse(
                         mask,
-                        bl=bl, # specific selected BL for 1TNR
+                        bl_selected=bl_selected, # specific selected BL for 1TNR
                         vbl=vbl,
                         vsl=vsl,
                         vwl=vwl,
@@ -708,13 +750,22 @@ class NIRRAM:
                     # use settling if parameter present, to discharge parasitic cap
                     if "settling_time" in self.op[mode]:
                         time.sleep(self.op[mode]["settling_time"])
-
+                    
+                    # read result resistance
                     res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
-                    for wl in self.wls:
-                        for bl in self.bls:
-                            if (res_array.loc[wl,bl] >= target_res) & mask.mask.loc[wl,bl]:
-                                mask.mask.loc[wl,bl] = False
-                    success = (mask.mask.to_numpy().sum() == 0)
+                    
+                    if bl_selected is None: # use array success condition: all in array must hit target
+                        for wl_i in self.wls:
+                            for bl_i in self.bls:
+                                if (res_array.loc[wl_i, bl_i] >= target_res) & mask.mask.loc[wl_i, bl_i]:
+                                    mask.mask.loc[wl_i, bl_i] = False
+                        success = (mask.mask.to_numpy().sum() == 0)
+                    else: # 1TNR success condition: check if selected 1tnr cell hit target
+                        success = True
+                        for wl_i in self.wls:
+                            if (res_array.loc[wl_i, bl_selected] < target_res) & mask.mask.loc[wl_i, bl_selected]:
+                                success = False
+                                break
                     if success:
                         break
                 if success:
