@@ -160,13 +160,18 @@ class NIRRAM:
         if not self.closed:
             # set all body voltages back to zero
             for body_i in self.body.keys(): self.ppmu_set_vbody(body_i, 0.0)
-            
+            print("[close] set body")
+
             # Close NI-Digital
-            self.digital.close()
+            # print("[close] TRY digital.close()", self.digital.is_done())
+            # self.digital.close()
+            # print("[close] COMPLETED digital.close()")
 
             # Close log files
             self.mlogfile.close()
+            print("[close] mlogfile.close()")
             self.plogfile.close()
+            print("[close] plogfile.close()")
             # self.datafile.close()
 
             self.closed = True
@@ -462,11 +467,11 @@ class NIRRAM:
             1.0     2.0      0.5           1.25
         """
         # Get parameters
-        vwl = vwl if vwl is None else self.op["RESET"][self.polarity]["VWL"]
-        vbl = vbl if vbl is None else self.op["RESET"][self.polarity]["VBL"]
-        vsl = vsl if vsl is None else self.op["RESET"][self.polarity]["VSL"]
+        vwl = vwl if vwl is not None else self.op["RESET"][self.polarity]["VWL"]
+        vbl = vbl if vbl is not None else self.op["RESET"][self.polarity]["VBL"]
+        vsl = vsl if vsl is not None else self.op["RESET"][self.polarity]["VSL"]
         vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
-        pulse_len = pulse_len if pulse_len is None else self.op["RESET"][self.polarity]["PW"] 
+        pulse_len = pulse_len if pulse_len is not None else self.op["RESET"][self.polarity]["PW"] 
 
         # set voltages
         for bl_i in self.bls:
@@ -1417,7 +1422,141 @@ class NIRRAM:
         
         return all_data
 
-    
+    def cnfet_pulse_cycling(
+        self,
+        cycles: int,
+        pattern: str = "set_reset", # pulse cycling pattern, e.g. "set_reset" or "read"
+        t_set: int = None,   # override t_set pulse width, in [us]
+        t_reset: int = None, # override t_reset pulse width, in [us]
+        t_dwell: int = None, # override t_dwell pulse width, in [us]
+    ):
+        """Runs sequence of pulses for `cycles` on a CNFET.
+        Used for seeing cycling VT stability (e.g. NBTI/PBTI effects).
+        Combine with `cnfet_spot_iv` to read voltage/current after
+        each cycling sequence.
+        """
+        config = self.settings["cnfet"][pattern]
+        pattern = config["pattern"] # ni pattern name string
+        body = list(self.body)[0]
+        bl = self.bls[0]
+        sl = self.sls[0]
+        wl = self.wls[0]
+
+        # pulse widths
+        t_set = int(t_set) if t_set is not None else int(config["t_set"])
+        t_reset = int(t_reset) if t_reset is not None else int(config["t_reset"])
+        t_dwell = int(t_dwell) if t_dwell is not None else int(config["t_dwell"])
+        
+        # unpack voltages from settings file
+        # Body low/high voltage
+        v_body_lo = float(config["v_body_lo"])
+        v_body_hi = float(config["v_body_hi"])
+        # BL low/high voltage
+        v_bl_lo = float(config["v_bl_lo"])
+        v_bl_hi = float(config["v_bl_hi"])
+        # SL low/high voltage
+        v_sl_lo = float(config["v_sl_lo"])
+        v_sl_hi = float(config["v_sl_hi"])
+        # WL low/high voltage
+        v_wl_lo = float(config["v_wl_lo"])
+        v_wl_hi = float(config["v_wl_hi"])
+
+        # write config registers with cycles and pulse widths
+        register_cycles = nidigital.SequencerRegister.REGISTER0   # number of set/reset cycles
+        register_pw_set = nidigital.SequencerRegister.REGISTER1   # set pulse width
+        register_pw_reset = nidigital.SequencerRegister.REGISTER2 # reset pulse width
+        register_pw_dwell = nidigital.SequencerRegister.REGISTER3   # dwell time pulse width
+
+        self.digital.write_sequencer_register(register_cycles, int(cycles))
+        self.digital.write_sequencer_register(register_pw_set, t_set)
+        self.digital.write_sequencer_register(register_pw_reset, t_reset)
+        self.digital.write_sequencer_register(register_pw_dwell, t_dwell)
+
+        # set ppmu hi/lo voltages
+        self.digital.channels[body].configure_voltage_levels(v_body_lo, v_body_hi, v_body_lo, v_body_hi, 0.0)
+        self.digital.channels[bl].configure_voltage_levels(v_bl_lo, v_bl_hi, v_bl_lo, v_bl_hi, 0.0)
+        self.digital.channels[sl].configure_voltage_levels(v_sl_lo, v_sl_hi, v_sl_lo, v_sl_hi, 0.0)
+        self.digital.channels[wl].configure_voltage_levels(v_wl_lo, v_wl_hi, v_wl_lo, v_wl_hi, 0.0)
+        self.digital.ppmu_source()
+
+        # make pattern X states output Vterm = 0 V
+        for pin in (body, bl, sl, wl):
+            self.digital.channels[pin].termination_mode = nidigital.TerminationMode.VTERM
+
+        # pulses pattern for `cycles` (stored in register_cycles)
+        try:
+            self.digital.burst_pattern(
+                pattern, # cnfet_pmos_pulse_cycling.digipat
+                timeout=300.0, # in seconds, enough for ~100,000 cycles with 100 us set , 1000 us dwell
+            ) 
+        except Exception as err:
+            import traceback
+            print(Exception, err)
+            print(traceback.format_exc())
+        
+        # reconfigure pins to zero voltage and reset termination modes to high-z 
+        for pin in (body, bl, sl, wl):
+            self.digital.channels[pin].configure_voltage_levels(0.0, 0.0, 0.0, 0.0, 0.0)
+            self.digital.channels[pin].termination_mode = nidigital.TerminationMode.HIGH_Z
+        self.digital.ppmu_source()
+
+    def cnfet_spot_iv(
+        self,
+        v_wl,
+        v_bl,
+        v_sl,
+        v_body = 0.0,
+        current_limit_range = 32e-6, # for S/D
+    ) -> dict:
+        config = self.settings["cnfet"]
+        body = list(self.body)[0]
+        bl = self.bls[0]
+        sl = self.sls[0]
+        wl = self.wls[0]
+
+        self.digital.channels[bl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
+        self.digital.channels[bl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+        self.digital.channels[bl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+        self.digital.channels[bl].ppmu_current_limit_range = current_limit_range
+
+        self.digital.channels[sl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
+        self.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+        self.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+        self.digital.channels[sl].ppmu_current_limit_range = current_limit_range
+
+        self.digital.channels[wl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
+        self.digital.channels[wl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+        self.digital.channels[wl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+        self.digital.channels[wl].ppmu_current_limit_range = 2e-6
+
+        # set ppmu to measurement levels
+        self.digital.channels[body].ppmu_voltage_level = v_body
+        self.digital.channels[wl].ppmu_voltage_level = v_wl
+        self.digital.channels[bl].ppmu_voltage_level = v_bl
+        self.digital.channels[sl].ppmu_voltage_level = v_sl
+        self.digital.ppmu_source()
+        
+        meas_v_bl = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+        meas_i_bl = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+        meas_v_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+        meas_i_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+        meas_v_wl = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+        meas_i_wl = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+
+        # reset ppmu to measurement levels
+        for pin in (body, wl, bl, sl):
+            self.digital.channels[pin].ppmu_voltage_level = 0.0
+        self.digital.ppmu_source()
+
+        return {
+            "v_bl": meas_v_bl,
+            "i_bl": meas_i_bl,
+            "v_sl": meas_v_sl,
+            "i_sl": meas_i_sl,
+            "v_wl": meas_v_wl,
+            "i_wl": meas_i_wl,
+        }
+
 if __name__ == "__main__":
     # Basic test
     nirram = NIRRAM("C4")

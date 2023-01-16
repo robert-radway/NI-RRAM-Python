@@ -1,0 +1,131 @@
+# Config file for CNFET PMOS cycling
+# This contains settings for pulsed cycling cnfet with voltage
+# levels that mimic the biases during 1T1R operation.
+# Used for "endurance" measurement of CNFET, e.g. see the accumulated
+# NBTI/PBTI effects during pulsed operation.
+
+[path]
+master_log_file = "logs/master.log"
+prog_log_file = "logs/prog.log"
+data_header = "data/"
+
+
+[NIDigital]
+deviceID = "PXI1Slot9"
+pinmap = "settings/MPW_CNFET.pinmap"
+specs = [
+  "settings/DEC3.specs",
+  "settings/DEC3.digilevels",
+  "settings/MPW_CNFET.digitiming"
+]
+patterns = "settings/patterns/cnfet_pulse_*.digipat"
+
+[device]
+# define all body voltage names and map them to their neutral value
+# for PMOS this is typically VDD while for NMOS this is typically GND or VSS
+body = { Body = 0.0 }
+
+# (UNUSED) define all WLs, BLs, SLs names
+all_WLS = [ "WL_0", ]
+all_SLS = [ "SL_0", ]
+all_BLS = [ "BL_0", ]
+
+# (UNUSED) subset of WL, BL, SL that will be pulsed for measurement
+WLS = [ "WL_0", ]
+SLS = [ "SL_0", ]
+BLS = [ "BL_0", ]
+
+# UNUSED KEYS (but hardcoded in nirram)
+[target_res]
+
+# =============================================================================
+# Common read pin settings needed
+# =============================================================================
+[op.READ]
+mode = "digital"
+aperture_time = 0.0005
+current_limit_range = 0.000032
+relaxation_cycles = 100
+settling_time = 0.000001
+shunt_res_value = 0
+
+[op.READ.NMOS]
+VWL = 1.5
+VBL = 0.3
+VSL = 0
+VB = 0
+
+[op.READ.PMOS]
+VWL = -1.2
+VBL = -0.3
+VSL = 0
+VB = 1.5
+
+# =========================================================
+# CNFET pulse cycling settings
+# =========================================================
+[cnfet.set_reset]
+pattern = "cnfet_pulse_cycling_pmos_set_reset"
+t_set = 100    # "set" pulse width in [us]
+t_reset = 100  # "reset" pulse width in [us]
+t_dwell = 1000 # delay dwell time between set/reset pulses
+# Body low/high voltage
+v_body_lo = 0.0
+v_body_hi = 0.0
+# BL low/high voltage
+v_bl_lo = 0.0
+v_bl_hi = 3.0
+# SL low/high voltage
+v_sl_lo = 0.0
+v_sl_hi = 2.8
+# WL low/high voltage
+v_wl_lo = -1.0
+v_wl_hi = 1.5
+# voltage for read sampling
+read_v_wl = -1.4
+read_v_bl = -0.05
+read_v_sl = 0.0
+
+[cnfet.read]
+pattern = "cnfet_pulse_cycling_pmos_read"
+t_set = 10     # re-used set as "read" pulse width in [us]
+t_reset = 10   # UN-USED
+t_dwell = 100  # delay dwell time between read pulses
+# Body low/high voltage
+v_body_lo = 0.0
+v_body_hi = 0.0
+# BL low/high voltage
+v_bl_lo = 0.0
+v_bl_hi = -0.3
+# SL low/high voltage
+v_sl_lo = 0.0
+v_sl_hi = 0.0
+# WL low/high voltage
+v_wl_lo = 0.0
+v_wl_hi = -1.2
+# voltage for read sampling
+read_v_wl = -1.2
+read_v_bl = -0.05
+read_v_sl = 0.0
+
+[cnfet.read_read]
+pattern = "cnfet_pulse_cycling_pmos_read_read"
+t_set = 10     # re-used set as "read" pulse width in [us]
+t_reset = 10   # UN-USED
+t_dwell = 100  # delay dwell time between read pulses
+# Body low/high voltage
+v_body_lo = 0.0
+v_body_hi = 0.0
+# BL low/high voltage
+v_bl_lo = 0.0
+v_bl_hi = -0.3
+# SL low/high voltage
+v_sl_lo = 0.0
+v_sl_hi = 0.0
+# WL low/high voltage
+v_wl_lo = 0.0
+v_wl_hi = -1.2
+# voltage for read sampling
+read_v_wl = -1.2
+read_v_bl = -0.05
+read_v_sl = 0.0

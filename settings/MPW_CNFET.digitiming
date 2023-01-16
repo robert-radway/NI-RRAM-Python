@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TimingFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/Timing">
+  <TimingSheet>
+    <TimeSets>
+      <TimeSet name="test">
+        <Period>1E-06</Period>
+        <PinEdges>
+          <PinEdge pin="BLSLWLS">
+            <DriveNonReturn>
+              <On>0</On>
+              <Data>1E-08</Data>
+              <Off>1E-08</Off>
+            </DriveNonReturn>
+            <CompareStrobe>
+              <Strobe>7.5E-07</Strobe>
+            </CompareStrobe>
+            <DataSource>Pattern</DataSource>
+          </PinEdge>
+        </PinEdges>
+      </TimeSet>
+      <TimeSet name="t_fet_cycle">
+        <Period>1E-06</Period>
+        <PinEdges>
+          <PinEdge pin="Body_BL0_SL0_WL0">
+            <DriveNonReturn>
+              <On>0</On>
+              <Data>1E-08</Data>
+              <Off>1E-08</Off>
+            </DriveNonReturn>
+            <CompareStrobe>
+              <Strobe>7.5E-07</Strobe>
+            </CompareStrobe>
+            <DataSource>Pattern</DataSource>
+          </PinEdge>
+        </PinEdges>
+      </TimeSet>
+    </TimeSets>
+  </TimingSheet>
+</TimingFile>
