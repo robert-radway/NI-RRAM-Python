@@ -4,6 +4,7 @@ nidaqmx
 nidigital
 niswitch==1.4.3
 numpy
+openpyxl==3.0.10
 pandas
 pyvisa
 scipy

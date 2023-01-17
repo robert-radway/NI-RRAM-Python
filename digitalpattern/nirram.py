@@ -1142,6 +1142,168 @@ class NIRRAM:
                 print(f"REACHED TARGET {res_high}, BREAKING.")
                 break
     
+    def sample_resistance_at_bias(
+        self,
+        mode, # used to get config settings
+        initialize_cell_fn, # use bound method, either nisys.dynamic_reset or nisys.dynamic_set
+        pulse_fn, # use bound method, either nisys.reset_pulse or nisys.set_pulse
+        bl = None, # bl to use
+        sl = None, # sl to use
+        wl = None, # wl to use
+        vbl_sweep = None, # vbl sweep
+        vsl_sweep = None, # vsl sweep
+        vwl_sweep = None, # vwl sweep
+        samples: int = 100,
+        pw: int = 1, # pulse width
+        debug: bool = False,
+    ) -> dict:
+        """
+        Use this to create a plot of mean + variance of resistance
+        from setting/resetting rram versus bias conditions vbl, vsl, vwl.
+
+        This function sweeps vbl, vsl, vwl and samples rram resistances
+        measured after applying that bias onto a cleared cell.
+        Basic concept of operation is,
+
+            pw = 10 # some fixed constant pulse width, e.g. 10 us
+
+            for vbl, vsl, vwl in sweeps:
+                res_samples = []
+                for n in range(samples):
+                    initialize_cell_fn() # either reset or set to initial condition
+                    res = pulse_fn(vbl, vsl, vwl, pw)
+                    res_samples.append(res)
+                save(res_samples, vbl, vsl, vwl, pw) 
+
+        With results, we can plot a matrix of mean/variance of resistance
+        from the pulse operation.
+
+        Note: Written only for single 1T1R cell, does not support 1TNR.
+        """
+        from itertools import product
+
+        bl = bl if bl is not None else self.bls[0]
+        sl = sl if sl is not None else self.sls[0]
+        wl = wl if wl is not None else self.wls[0]
+        pw = int(pw) # make sure pulse width is an integer
+
+        # operation config
+        cfg = self.op[mode][self.polarity]
+
+        # settling time
+        settling_time = cfg["settling_time"] if "settling_time" in cfg else None
+
+        # create sweeps if input sweep is None
+        def get_sweep_from_config(
+            var: str,
+            var_start: str,
+            var_stop: str,
+            var_step: str,
+        ):
+            """Create sweep from cfg file. First checks if sweep
+            start/stop/step variables are defined and create linear sweep
+            from those parameters. If not defined, try to make a single
+            sweep point list from the fixed value defined.
+            """
+            if var_start in cfg and var_stop in cfg and var_step in cfg:
+                var_sweep = util.linear_sweep({"start": cfg[var_start], "stop": cfg[var_stop], "step": cfg[var_step]})
+            elif var in cfg:
+                var_sweep = [cfg[var]]
+            else:
+                raise ValueError(f"No {var} sweep specified and no sweep or value in config")
+            return var_sweep
+        
+        if vbl_sweep is None:
+            vbl_sweep = get_sweep_from_config(var="VBL", var_start="VBL_start", var_stop="VBL_stop", var_step="VBL_step")
+        if vsl_sweep is None:
+            vsl_sweep = get_sweep_from_config(var="VSL", var_start="VSL_start", var_stop="VSL_stop", var_step="VSL_step")
+        if vwl_sweep is None:
+            vwl_sweep = get_sweep_from_config(var="VWL", var_start="VWL_start", var_stop="VWL_stop", var_step="VWL_step")
+
+        if debug:
+            print(f"vbl_sweep: {vbl_sweep}")
+            print(f"vsl_sweep: {vsl_sweep}")
+            print(f"vwl_sweep: {vwl_sweep}")
+        
+        # data to save:
+        # - bias sweeps and pw configs
+        # - res sample dict mapping each sweep point tuple (vbl, vsl, vwl) => list of sample resistances
+        res_samples_at_bias = {
+            "mode": mode,
+            "samples": samples,
+            "target_res_hrs": self.target_res.get("RESET", 0),
+            "target_res_lrs": self.target_res.get("SET", 0),
+            "vbl_sweep": vbl_sweep,
+            "vsl_sweep": vsl_sweep,
+            "vwl_sweep": vwl_sweep,
+            "pw": pw,
+            "settling_time": settling_time,
+            "res": {}, # map (vbl, vsl, vwl) => list of sample resistances
+        }
+
+        failed = False # flag to indicate cell initialization failed
+
+        mask = RRAMArrayMask([wl], [bl], [sl], self.all_wls, self.all_bls, self.all_sls, self.polarity)
+
+        for vbl, vsl, vwl in product(vbl_sweep, vsl_sweep, vwl_sweep):
+            # print current sample bias point
+            print(f"sampling @ vbl={vbl}, vsl={vsl}, vwl={vwl}, pw={pw}")
+            res_samples = []
+            for _n in range(samples):
+                # initialize cell (dynamic reset or dynamic set), if failed exit
+                self.dynamic_reset() # do set/reset cycle, otherwise we can end up in overset or overform state which messes up sampling
+                self.dynamic_set()
+                response = initialize_cell_fn()
+                
+                success = response[0][-1] # "cell_success" variable
+                if not success:
+                    print("FAILED TO INITIALIZE CELL...BREAKING SWEEP...")
+                    failed = True
+                    break
+                
+                # use settling if present
+                if settling_time is not None:
+                    time.sleep(settling_time)
+                
+                pulse_fn(
+                    mask,
+                    vbl=vbl,
+                    vsl=vsl,
+                    vwl=vwl,
+                    pulse_len=pw,
+                )
+
+                # use settling if present
+                if settling_time is not None:
+                    time.sleep(settling_time)
+                
+                # read result resistance
+                res_array, cond_array, meas_i_array, meas_v_array = self.read(record=True)
+                res = res_array.loc[wl, bl]
+                res_samples.append(res)
+            
+            # do mean/variance statistics
+            if len(res_samples) > 1:
+                res_samples = np.array(res_samples)
+                res_mean = np.mean(res_samples)
+                res_median = np.median(res_samples)
+                res_std = np.std(res_samples)
+
+                # save res_samples and statistics
+                res_samples_at_bias["res"][vbl, vsl, vwl] = {
+                    "mean": res_mean,
+                    "median": res_median,
+                    "std": res_std,
+                    "values": res_samples,
+                }
+
+            # if failed to initialize cell, early exit
+            if failed:
+                break
+
+        return res_samples_at_bias
+    
+
     def targeted_intermediate_set(
         self,
         res_high: float = None,       # resistance high bound for stopping reset before setting

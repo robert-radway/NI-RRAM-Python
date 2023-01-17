@@ -6,7 +6,7 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/MPW_GAX1_Si.pinmap"
+pinmap = "settings/MPW_GAX1_CNFET.pinmap"
 specs = [
   "settings/DEC3.specs",
   "settings/DEC3.digilevels",
@@ -18,7 +18,7 @@ patterns = "settings/patterns/*DEC3.digipat"
 [device]
 # define all body voltage names and map them to their neutral value
 # for PMOS this is typically VDD while for NMOS this is typically GND or VSS
-body = { Body = 0.0 }
+body = { }
 
 # define all WLs, BLs, SLs names
 all_WLS = [ "WL_0", "WL_1", "WL_2", "WL_3" ]
@@ -35,7 +35,7 @@ BLS = [ "BL_0", ]
 [target_res]
 FORM = 20_000
 SET = 20_000
-RESET = 200_000
+RESET = 100_000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -85,7 +85,7 @@ VWL_SET_stop = 2.5
 
 VBL_start = 1
 VBL_step = 0.1
-VBL_stop = 3.2
+VBL_stop = 3.5
 
 PW_start = 1
 PW_stop = 1000
@@ -119,7 +119,7 @@ VWL_SET_start = 1.5
 VWL_SET_step = -0.1
 VWL_SET_stop = 0.5
 
-VBL_start = 0
+VBL_start = 2.0
 VBL_step = -0.1
 VBL_stop = -1.0
 
@@ -130,22 +130,19 @@ PW_steps = 3
 # =============================================================================
 # SET PULSE
 # =============================================================================
-[op.SET]
-settling_time = 0.001
-
 [op.SET.NMOS]
 VWL = 0
-VBL = 0
+VBL = 4
 VSL = 0
 PW = 100
 
-VWL_SET_start = 1.4
+VWL_SET_start = 1.2
 VWL_SET_step = 0.1
-VWL_SET_stop = 2.0
+VWL_SET_stop = 2.4
 
-VBL_start = 1.4
+VBL_start = 1.5
 VBL_step = 0.1
-VBL_stop = 2.6
+VBL_stop = 3
 
 PW_start = 1
 PW_stop = 100
@@ -176,16 +173,40 @@ VSL = 2.5
 PW = 100
 
 VWL_SET_start = 1.6
-VWL_SET_step = -0.4
+VWL_SET_step = -0.1
 VWL_SET_stop = 1.2
 
-VBL_start = 0.0
-VBL_step = -0.2
+VBL_start = 1.8
+VBL_step = -0.1
 VBL_stop = -0.2
 
 PW_start = 1
 PW_stop = 100
 PW_steps = 3
+
+[op.SET_SAMPLE.PMOS]
+settling_time = 0.001
+VSL = 2.5
+
+VWL_start = 2.0
+VWL_step = -0.5
+VWL_stop = 0.0
+
+VBL_start = 1.8
+VBL_step = -0.02
+VBL_stop = 1.4
+
+[op.SET_SAMPLE_SMALL.PMOS]
+settling_time = 0.001
+VSL = 2.5
+
+VWL_start = 2.5
+VWL_step = -0.2
+VWL_stop = 1.9
+
+VBL_start = 1.9
+VBL_step = -0.2
+VBL_stop = 1.5
 
 # =============================================================================
 # RESET PULSE
@@ -196,13 +217,13 @@ VSL = 3
 VBL = 0
 PW = 100
 
-VWL_RESET_start = 3.5
+VWL_RESET_start = 1.8
 VWL_RESET_step = 0.1
-VWL_RESET_stop = 4.2
+VWL_RESET_stop = 4
 
-VSL_start = 1.5
-VSL_step = 0.1
-VSL_stop = 2.4
+VSL_start = 4
+VSL_step = 0.2
+VSL_stop = 6
 
 PW_start = 1
 PW_stop = 100
@@ -232,17 +253,30 @@ VSL = 1.5
 VBL = 3.5
 PW = 100
 
-VWL_RESET_start = 0.1
-VWL_RESET_step = -0.5
-VWL_RESET_stop = -0.5
+VWL_RESET_start = 0.5
+VWL_RESET_step = -0.2
+VWL_RESET_stop = -0.6
 
-VSL_start = 0.9
-VSL_step = -0.9
-VSL_stop = 0.0
+VSL_start = 2.0
+VSL_step = -0.2
+VSL_stop = -0.2
 
 PW_start = 1
 PW_stop = 1000
 PW_steps = 3
+
+# sampling sweep values
+[op.RESET_SAMPLE.PMOS]
+settling_time = 0.001
+VBL = 3.5
+
+VWL_start = 2.5
+VWL_step = -0.2
+VWL_stop = 0.7
+
+VSL_start = 2.4
+VSL_step = -0.1
+VSL_stop = 1.5
 
 # =============================================================================
 # MULTIPLE RESET LEVELS
