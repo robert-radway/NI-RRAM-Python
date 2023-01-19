@@ -1303,8 +1303,211 @@ class NIRRAM:
 
         return res_samples_at_bias
     
+    def targeted_dynamic_set(
+        self,
+        mode,
+        record=True,
+        print_data=True,        # print data to console
+        max_attempts: int = 10, # max number of attempts before failing and exiting
+        is_1tnr = False,        # if True, use 1TNR methods
+        bl_selected = None,     # for 1TNR: if not None, use this selected bl
+        debug=True,             # print additional debugging lines
+    ):
+        """
+        Coarse/fine set within a resistance window
+        """
+        from itertools import product
 
-    def targeted_intermediate_set(
+        # unpack operation config
+        cfg = self.op[mode][self.polarity]
+        pw = int(cfg["PW"])
+        res_high_coarse = cfg["res_high_coarse"]
+        res_high_fine = cfg["res_high_fine"]
+        res_low = cfg["res_low"]
+        vsl = cfg["VSL"]
+
+        # coarse sweep params
+        vwl_coarse_start = cfg["VWL_coarse_start"]
+        vwl_coarse_stop = cfg["VWL_coarse_stop"]
+        vwl_coarse_step = cfg["VWL_coarse_step"]
+        vbl_coarse_start = cfg["VBL_coarse_start"]
+        vbl_coarse_stop = cfg["VBL_coarse_stop"]
+        vbl_coarse_step = cfg["VBL_coarse_step"]
+        vwl_coarse_sweep = util.linear_sweep({"start": vwl_coarse_start, "stop": vwl_coarse_stop, "step": vwl_coarse_step})
+        vbl_coarse_sweep = util.linear_sweep({"start": vbl_coarse_start, "stop": vbl_coarse_stop, "step": vbl_coarse_step})
+        
+        # fine window
+        vwl_fine_window_high = cfg["VWL_fine_window_high"]
+        vwl_fine_window_low = cfg["VWL_fine_window_low"]
+        vwl_fine_step = cfg["VWL_fine_step"]
+        vwl_fine_limit = cfg["VWL_fine_limit"]
+        vbl_fine_window_high = cfg["VBL_fine_window_high"]
+        vbl_fine_window_low = cfg["VBL_fine_window_low"]
+        vbl_fine_step = cfg["VBL_fine_step"]
+        vbl_fine_limit = cfg["VBL_fine_limit"]
+
+        # settling time function
+        settling_time = cfg["settling_time"] if "settling_time" in cfg else None
+        if settling_time is not None:
+            def settling_delay(): time.sleep(settling_time)
+        else:
+            def settling_delay(): pass
+            
+        # select read method based on array or 1TNR device
+        read_pulse = self.read_1tnr if is_1tnr else self.read
+
+        # perform coarse/fine multibit steps
+        for _n in range(max_attempts):
+            if debug: print(f"{mode} STEP {_n}")
+
+            # run initialization sequence: do reset/set/reset cycle
+            self.dynamic_reset(record=True, print_data=debug)
+            settling_delay()
+            self.dynamic_set(record=True, print_data=debug)
+            settling_delay()
+            self.dynamic_reset(record=True, print_data=debug)
+            settling_delay()
+
+            # flag that any cell over-set past `res_low` threshold
+            failed_res_too_low = False
+
+            # COARSE SET SWEEP
+            # bl/wl mask
+            mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+            coarse_success = False
+            for vwl, vbl in product(vwl_coarse_sweep, vbl_coarse_sweep):
+                #print(pw, vwl, vbl, vsl)
+                self.set_pulse(
+                    mask,
+                    bl_selected=bl_selected, # specific selected BL for 1TNR
+                    vbl=vbl,
+                    vsl=vsl,
+                    vwl=vwl,
+                    pulse_len=pw,
+                )
+                
+                # use settling if parameter present, to discharge parasitic cap and FET NBTI
+                settling_delay()
+
+                # read result resistance
+                res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
+                #print(res_array)
+                
+                # success condition: each cell res in range [res_low, res_high_coarse]
+                # TODO: we can abstract this out
+                if bl_selected is None:
+                    for wl_i in self.wls:
+                        for bl_i in self.bls:
+                            if res_array.loc[wl_i, bl_i] <= res_low:
+                                failed_res_too_low = True
+                            if (res_array.loc[wl_i, bl_i] <= res_high_coarse) & mask.mask.loc[wl_i, bl_i]:
+                                mask.mask.loc[wl_i, bl_i] = False
+                    coarse_success = (mask.mask.to_numpy().sum()==0)
+                else: # 1TNR success condition: check if selected 1tnr cell hit target
+                    coarse_success = True
+                    for wl_i in self.wls:
+                        if res_array.loc[wl_i, bl_selected] <= res_low:
+                            failed_res_too_low = True
+                        if (res_array.loc[wl_i, bl_selected] > res_high_coarse) & mask.mask.loc[wl_i, bl_selected]:
+                            coarse_success = False
+                            break
+                
+                if coarse_success or failed_res_too_low:
+                    break
+            
+            if failed_res_too_low:
+                if debug: print(f"FAILED COARSE: cell res <= {res_low}...")
+                continue # try again from beginning
+            elif not coarse_success:
+                if debug: print(f"FAILED COARSE: not all cells in coarse range res <= {res_high_coarse}")
+                continue # try again from beginning
+            
+            # use successful coarse conditions as "center" point to
+            # create a window for new fine voltage sweep
+            # clamp these values using "fine_limit" so our window
+            # does not overset device
+            vwl_fine_start = vwl + vwl_fine_window_high
+            vwl_fine_stop = vwl + vwl_fine_window_low
+            if vwl_fine_step < 0:
+                vwl_fine_stop = max(vwl_fine_stop, vwl_fine_limit)
+            else:
+                vwl_fine_stop = min(vwl_fine_stop, vwl_fine_limit)
+            
+            vbl_fine_start = vbl + vbl_fine_window_high
+            vbl_fine_stop = vbl + vbl_fine_window_low
+            if vbl_fine_step < 0:
+                vbl_fine_stop = max(vbl_fine_stop, vbl_fine_limit)
+            else:
+                vbl_fine_stop = min(vbl_fine_stop, vbl_fine_limit)
+
+            vwl_fine_sweep = util.linear_sweep({"start": vwl_fine_start, "stop": vwl_fine_stop, "step": vwl_fine_step})
+            vbl_fine_sweep = util.linear_sweep({"start": vbl_fine_start, "stop": vbl_fine_stop, "step": vbl_fine_step})
+
+            # FINE SET SWEEP
+            # bl/wl mask
+            mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+            fine_success = False
+            for vwl, vbl in product(vwl_fine_sweep, vbl_fine_sweep):
+                #print(pw, vwl, vbl, vsl)
+                self.set_pulse(
+                    mask,
+                    bl_selected=bl_selected, # specific selected BL for 1TNR
+                    vbl=vbl,
+                    vsl=vsl,
+                    vwl=vwl,
+                    pulse_len=pw,
+                )
+                
+                # use settling if parameter present, to discharge parasitic cap and FET NBTI
+                settling_delay()
+
+                # read result resistance
+                res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
+                #print(res_array)
+                
+                # success condition: each cell res in range [res_low, res_high_fine]
+                # TODO: we can abstract this out
+                if bl_selected is None:
+                    for wl_i in self.wls:
+                        for bl_i in self.bls:
+                            if res_array.loc[wl_i, bl_i] <= res_low:
+                                failed_res_too_low = True
+                            if (res_array.loc[wl_i, bl_i] <= res_high_fine) & mask.mask.loc[wl_i, bl_i]:
+                                mask.mask.loc[wl_i, bl_i] = False
+                    fine_success = (mask.mask.to_numpy().sum()==0)
+                else: # 1TNR success condition: check if selected 1tnr cell hit target
+                    fine_success = True
+                    for wl_i in self.wls:
+                        if res_array.loc[wl_i, bl_selected] <= res_low:
+                            failed_res_too_low = True
+                        if (res_array.loc[wl_i, bl_selected] > res_high_fine) & mask.mask.loc[wl_i, bl_selected]:
+                            fine_success = False
+                            break
+                
+                if fine_success or failed_res_too_low:
+                    break
+            
+            if failed_res_too_low:
+                if debug: print(f"FAILED FINE: cell res <= {res_low}...")
+                continue # try again from beginning
+            
+            if fine_success:
+                break # SUCCESS!!!
+        
+        # report final cell results
+        all_data = []
+        for wl in self.wls:
+            for bl in self.bls:
+                cell_success = res_array.loc[wl,bl] <= res_high_fine and res_array.loc[wl,bl] >= res_low
+                cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                if print_data: print(cell_data)
+                if record: self.datafile.writerow(cell_data)
+                all_data.append(cell_data)
+
+        return all_data
+
+
+    def targeted_intermediate_set_radar_method(
         self,
         res_high: float = None,       # resistance high bound for stopping reset before setting
         res_coarse_min: float = None, # coarse resistance window min
@@ -1328,7 +1531,9 @@ class NIRRAM:
         2. Fine targeting pass:
             Goal is to enter a fine resistance range near target
             (with max iterations `max_fine_steps` before failing and exiting). 
-        
+
+        Currently NOT using this because I dont believe in fine resets
+        -acyu
         """
         # select read method based on array or 1TNR device
         read_pulse = self.read_1tnr if is_1tnr else self.read

@@ -24,7 +24,7 @@ os.makedirs(path_data_folder, exist_ok=True)
 
 # Initialize NI system
 # For CNFET: make sure polarity is PMOS
-nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R.toml", polarity="PMOS") # FOR CNFET RRAM
+nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R_LCH160.toml", polarity="PMOS") # FOR CNFET RRAM
 
 
 nisys.read(record=True)
@@ -36,7 +36,7 @@ res_samples = nisys.sample_resistance_at_bias(
     mode = "SET_SAMPLE",
     initialize_cell_fn = nisys.dynamic_reset, # use bound method, either nisys.dynamic_reset or nisys.dynamic_set
     pulse_fn = nisys.set_pulse, # use bound method, either nisys.reset_pulse or nisys.set_pulse
-    samples = 100,
+    samples = 20,
     pw = 1,
     debug = True,
 )

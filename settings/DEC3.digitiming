@@ -3,7 +3,7 @@
   <TimingSheet>
     <TimeSets>
       <TimeSet name="test">
-        <Period>1E-06</Period>
+        <Period>5E-07</Period>
         <PinEdges>
           <PinEdge pin="BLSLWLS">
             <DriveNonReturn>
@@ -12,7 +12,7 @@
               <Off>1E-08</Off>
             </DriveNonReturn>
             <CompareStrobe>
-              <Strobe>7.5E-07</Strobe>
+              <Strobe>0.5E-07</Strobe>
             </CompareStrobe>
             <DataSource>Pattern</DataSource>
           </PinEdge>

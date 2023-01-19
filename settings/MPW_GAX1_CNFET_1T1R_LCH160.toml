@@ -33,9 +33,9 @@ BLS = [ "BL_0", ]
 
 # RRAM resistance target level corresponding to each operation defined below
 [target_res]
-FORM = 15_000
-SET = 12_000
-RESET = 120_000
+FORM = 20_000
+SET = 8_000
+RESET = 50_000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -115,16 +115,16 @@ VBL = 0.5
 VSL = 2.5
 PW = 1200
 
-VWL_SET_start = 1.5
-VWL_SET_step = -0.1
-VWL_SET_stop = 0.5
+VWL_SET_start = 3.5
+VWL_SET_step = -0.2
+VWL_SET_stop = 1.5
 
-VBL_start = 2.0
-VBL_step = -0.1
-VBL_stop = -1.0
+VBL_start = 2.5
+VBL_step = -0.2
+VBL_stop = -0.5
 
 PW_start = 1
-PW_stop = 1000
+PW_stop = 10
 PW_steps = 3
 
 # =============================================================================
@@ -172,16 +172,16 @@ VBL = 1.5
 VSL = 2.5
 PW = 100
 
-VWL_SET_start = 1.6
+VWL_SET_start = 3.0
 VWL_SET_step = -0.1
-VWL_SET_stop = 0.6
+VWL_SET_stop = 2.5
 
-VBL_start = 1.8
+VBL_start = 2.0
 VBL_step = -0.1
-VBL_stop = -0.4
+VBL_stop = 0.0
 
 PW_start = 1
-PW_stop = 100
+PW_stop = 10
 PW_steps = 3
 
 # [op.SET_TARGET_WINDOW_1.PMOS]
@@ -245,25 +245,25 @@ VWL_fine_limit = 2.5 # clamp so fine window vwl does not go past this
 
 VBL_coarse_start = 1.5
 VBL_coarse_stop = 1.36
-VBL_coarse_step = -0.01
+VBL_coarse_step = -0.02
 VBL_fine_window_high = 0.05
 VBL_fine_window_low = -0.1
-VBL_fine_step = -0.005
+VBL_fine_step = -0.01
 VBL_fine_limit = 1.36 # clamp so fine window vwl does not go past this
 
 [op.SET_SAMPLE.PMOS]
 settling_time = 0.001
 VSL = 2.5
 
-VWL_start = 2.0
-VWL_step = -0.5
-VWL_stop = 0.0
+VWL_start = 3.2
+VWL_step = -0.2
+VWL_stop = 2.4
 
-VBL_start = 1.8
+VBL_start = 2.0
 VBL_step = -0.02
-VBL_stop = 1.2
+VBL_stop = 1.5
 
-[op.SET_SAMPLE_SMALL.PMOS]
+[op.SET_SAMPLE_DEBUG.PMOS]
 settling_time = 0.001
 VSL = 2.5
 
@@ -315,22 +315,22 @@ PW_steps = 3
 # PW_steps = 3
 
 [op.RESET.PMOS]
-VWL = 0.8
+VWL = 1.1
 VSL = 1.5
-VBL = 3.5
+VBL = 2.5
 PW = 100
 
-VWL_RESET_start = 0.5
-VWL_RESET_step = -0.2
-VWL_RESET_stop = -0.6
+VWL_RESET_start = 3.5
+VWL_RESET_step = -0.1
+VWL_RESET_stop = 2.0
 
-VSL_start = 2.0
-VSL_step = -0.2
-VSL_stop = -0.2
+VSL_start = 1.5
+VSL_step = -0.1
+VSL_stop = -0.5
 
 PW_start = 1
 PW_stop = 10
-PW_steps = 3
+PW_steps = 2
 
 # sampling sweep values
 [op.RESET_SAMPLE.PMOS]
