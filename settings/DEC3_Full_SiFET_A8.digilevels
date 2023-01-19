@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
+  <PinLevelsSheet>
+    <DigitalPinLevelSets>
+      <DigitalPinLevelSet pin="A8_SL_0">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_1">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_2">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_3">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_4">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_5">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_6">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_SL_7">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_0">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_1">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_2">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_3">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_4">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_5">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_6">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_WL_7">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_0">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_1">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_2">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_3">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_4">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_5">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_6">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A8_BL_7">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+    </DigitalPinLevelSets>
+    <PpmuPinLevelSets>
+      <PpmuPinLevelSet pin="A8_SL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_1">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_2">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_3">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_4">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_5">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_6">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_SL_7">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_1">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_2">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_3">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_4">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_5">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_6">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_WL_7">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_1">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_2">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_3">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_4">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_5">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_6">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A8_BL_7">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+    </PpmuPinLevelSets>
+  </PinLevelsSheet>
+</PinLevelsFile>

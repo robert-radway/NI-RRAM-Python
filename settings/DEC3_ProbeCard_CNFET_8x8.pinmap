@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.5">
+	<Instruments>
+		<NIDigitalPatternInstrument name="PXI1Slot8" numberOfChannels="32" group="Digital" />
+	</Instruments>
+	<Pins>
+		<DUTPin name="A8_SL_0" />
+		<DUTPin name="A8_SL_1" />
+		<DUTPin name="A8_SL_2" />
+		<DUTPin name="A8_SL_3" />
+		<DUTPin name="A8_SL_4" />
+		<DUTPin name="A8_SL_5" />
+		<DUTPin name="A8_SL_6" />
+		<DUTPin name="A8_SL_7" />
+		<DUTPin name="A8_WL_0" />
+		<DUTPin name="A8_WL_1" />
+		<DUTPin name="A8_WL_2" />
+		<DUTPin name="A8_WL_3" />
+		<DUTPin name="A8_WL_4" />
+		<DUTPin name="A8_WL_5" />
+		<DUTPin name="A8_WL_6" />
+		<DUTPin name="A8_WL_7" />
+		<DUTPin name="A8_BL_0" />
+		<DUTPin name="A8_BL_1" />
+		<DUTPin name="A8_BL_2" />
+		<DUTPin name="A8_BL_3" />
+		<DUTPin name="A8_BL_4" />
+		<DUTPin name="A8_BL_5" />
+		<DUTPin name="A8_BL_6" />
+		<DUTPin name="A8_BL_7" />
+	</Pins>
+	<PinGroups>
+		<PinGroup name="BLSLWLS">
+			<PinReference pin="A8_SL_0" />
+			<PinReference pin="A8_SL_1" />
+			<PinReference pin="A8_SL_2" />
+			<PinReference pin="A8_SL_3" />
+			<PinReference pin="A8_SL_4" />
+			<PinReference pin="A8_SL_5" />
+			<PinReference pin="A8_SL_6" />
+			<PinReference pin="A8_SL_7" />
+			<PinReference pin="A8_WL_0" />
+			<PinReference pin="A8_WL_1" />
+			<PinReference pin="A8_WL_2" />
+			<PinReference pin="A8_WL_3" />
+			<PinReference pin="A8_WL_4" />
+			<PinReference pin="A8_WL_5" />
+			<PinReference pin="A8_WL_6" />
+			<PinReference pin="A8_WL_7" />
+			<PinReference pin="A8_BL_0" />
+			<PinReference pin="A8_BL_1" />
+			<PinReference pin="A8_BL_2" />
+			<PinReference pin="A8_BL_3" />
+			<PinReference pin="A8_BL_4" />
+			<PinReference pin="A8_BL_5" />
+			<PinReference pin="A8_BL_6" />
+			<PinReference pin="A8_BL_7" />
+		</PinGroup>
+	</PinGroups>
+	<Sites>
+		<Site siteNumber="0" />
+	</Sites>
+	<Connections>
+		<Connection pin="A8_BL_0" siteNumber="0" instrument="PXI1Slot8" channel="27" />
+		<Connection pin="A8_BL_1" siteNumber="0" instrument="PXI1Slot8" channel="26" />
+		<Connection pin="A8_BL_2" siteNumber="0" instrument="PXI1Slot8" channel="25" />
+		<Connection pin="A8_BL_3" siteNumber="0" instrument="PXI1Slot8" channel="24" />
+		<Connection pin="A8_BL_4" siteNumber="0" instrument="PXI1Slot8" channel="23" />
+		<Connection pin="A8_BL_5" siteNumber="0" instrument="PXI1Slot8" channel="22" />
+		<Connection pin="A8_BL_6" siteNumber="0" instrument="PXI1Slot8" channel="21" />
+		<Connection pin="A8_BL_7" siteNumber="0" instrument="PXI1Slot8" channel="20" />
+
+		<Connection pin="A8_WL_0" siteNumber="0" instrument="PXI1Slot8" channel="8" />
+		<Connection pin="A8_WL_1" siteNumber="0" instrument="PXI1Slot8" channel="19" />
+		<Connection pin="A8_WL_2" siteNumber="0" instrument="PXI1Slot8" channel="9" />
+		<Connection pin="A8_WL_3" siteNumber="0" instrument="PXI1Slot8" channel="18" />
+		<Connection pin="A8_WL_4" siteNumber="0" instrument="PXI1Slot8" channel="10" />
+		<Connection pin="A8_WL_5" siteNumber="0" instrument="PXI1Slot8" channel="17" />
+		<Connection pin="A8_WL_6" siteNumber="0" instrument="PXI1Slot8" channel="11" />
+		<Connection pin="A8_WL_7" siteNumber="0" instrument="PXI1Slot8" channel="16" />
+
+		<Connection pin="A8_SL_0" siteNumber="0" instrument="PXI1Slot8" channel="0" />
+		<Connection pin="A8_SL_1" siteNumber="0" instrument="PXI1Slot8" channel="1" />
+		<Connection pin="A8_SL_2" siteNumber="0" instrument="PXI1Slot8" channel="2" />
+		<Connection pin="A8_SL_3" siteNumber="0" instrument="PXI1Slot8" channel="3" />
+		<Connection pin="A8_SL_4" siteNumber="0" instrument="PXI1Slot8" channel="4" />
+		<Connection pin="A8_SL_5" siteNumber="0" instrument="PXI1Slot8" channel="5" />
+		<Connection pin="A8_SL_6" siteNumber="0" instrument="PXI1Slot8" channel="6" />
+		<Connection pin="A8_SL_7" siteNumber="0" instrument="PXI1Slot8" channel="7" />
+	</Connections>
+</PinMap>

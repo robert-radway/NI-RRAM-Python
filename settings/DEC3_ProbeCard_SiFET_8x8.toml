@@ -5,38 +5,53 @@ data_header = "data/"
 
 
 [NIDigital]
-deviceID = "PXI1Slot9"
-pinmap = "settings/DEC3_ProbeCard_SiFET_A2_A4.pinmap"
+deviceID = "PXI1Slot8"
+pinmap = "settings/DEC3_ProbeCard_CNFET_8x8.pinmap"
 specs = [
     "settings/DEC3.specs",
-    "settings/DEC3_Full_SiFET_A2_A4.digilevels",
+    "settings/DEC3_Full_SiFET_A8.digilevels",
     "settings/DEC3.digitiming",
 ]
-patterns = "settings/patterns/*DEC3_Full_SiFET_2x2.digipat"
+patterns = "settings/patterns/*DEC3_Full_SiFET_8x8.digipat"
 
 
 [device]
 # define all body voltage names and map them to their neutral value
 # for PMOS this is typically VDD while for NMOS this is typically GND or VSS
-body = { A2_PMOS_BODY = 1.5, A2_NMOS_BODY = 0.0 }
+# body = { A2_PMOS_BODY = 1.5, A2_NMOS_BODY = 0.0 }
 # body = { A2_PMOS_BODY = 0.0, A2_NMOS_BODY = 0.0 }
-# body = {} # for cnfet
+body = {} # for cnfet
 
 # define all WLs, BLs, SLs names
-all_WLS = [ "A2_WL_0", "A2_WL_1" ]
-all_BLS = [ "A2_BL_0", "A2_BL_1" ]
-all_SLS = [ "A2_SL_0", "A2_SL_1" ]
+all_WLS = [ "A8_WL_0", "A8_WL_1", "A8_WL_2", "A8_WL_3", "A8_WL_4", "A8_WL_5", "A8_WL_6", "A8_WL_7" ]
+all_BLS = [ "A8_BL_0", "A8_BL_1", "A8_BL_2", "A8_BL_3", "A8_BL_4", "A8_BL_5", "A8_BL_6", "A8_BL_7" ]
+all_SLS = [ "A8_SL_0", "A8_SL_1", "A8_SL_2", "A8_SL_3", "A8_SL_4", "A8_SL_5", "A8_SL_6", "A8_SL_7" ]
 
 # subset of WL, BL, SL that will be pulsed for measurement
-# all BL,WL,SL
-WLS = [ "A2_WL_1"] #, "A2_WL_1" ]
-BLS = [ "A2_BL_1"] #, "A2_BL_1" ]
-SLS = [ "A2_SL_1"] #, "A2_SL_1" ]
+# all BL,WL,SL targeting set
+# WLS = [ "A8_WL_0", "A8_WL_2", "A8_WL_4", "A8_WL_6" ]
+# BLS = [ "A8_BL_0", "A8_BL_2", "A8_BL_4", "A8_BL_6" ]
+# SLS = [ "A8_SL_0", "A8_SL_2", "A8_SL_4", "A8_SL_6" ]
+
+# all BL,WL,SL targeting reset
+# WLS = [ "A8_WL_1", "A8_WL_3", "A8_WL_5", "A8_WL_7" ]
+# BLS = [ "A8_BL_1", "A8_BL_3", "A8_BL_5", "A8_BL_7" ]
+# SLS = [ "A8_SL_1", "A8_SL_3", "A8_SL_5", "A8_SL_7" ]
+
+#targeting read
+# WLS = [ "A8_WL_0", "A8_WL_1", "A8_WL_2", "A8_WL_3", "A8_WL_4", "A8_WL_5", "A8_WL_6", "A8_WL_7" ]
+# BLS = [ "A8_BL_0", "A8_BL_1", "A8_BL_2", "A8_BL_3", "A8_BL_4", "A8_BL_5", "A8_BL_6", "A8_BL_7" ]
+# SLS = [ "A8_SL_0", "A8_SL_1", "A8_SL_2", "A8_SL_3", "A8_SL_4", "A8_SL_5", "A8_SL_6", "A8_SL_7" ]
+
+
+# WLS = [ "A8_WL_0"] #, "A8_WL_1" ]
+# BLS = [ "A8_BL_2"] #, "A8_BL_1" ]
+# SLS = [ "A8_SL_2"] #, "A8_SL_1" ]
 
 # uncomment for testing single cell
-# WLS = [ "A2_WL_0" ]
-# BLS = [ "A2_BL_0" ]
-# SLS = [ "A2_SL_0" ]
+WLS = [ "A8_WL_0" ]
+BLS = [ "A8_BL_3" ]
+SLS = [ "A8_SL_3" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
@@ -48,8 +63,8 @@ SLS = [ "A2_SL_1"] #, "A2_SL_1" ]
 # for cnfet
 [target_res]
 FORM = 50000
-SET = 45000
-RESET = 60000
+SET = 12000
+RESET = 20000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -79,7 +94,7 @@ VSL = 0
 VB = 0
 
 [op.READ.PMOS]
-VWL = -1.5
+VWL = -0.3
 VBL = -0.3
 VSL = 0
 VB = 1.5
@@ -199,13 +214,13 @@ VBL = 2.5
 PW = 100
 
 VWL_RESET_start = 1.1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -0.3
+VWL_RESET_step = -0.2
+VWL_RESET_stop = -0.5
 
 VSL_start = 1.5
-VSL_step = -0.1
+VSL_step = -0.2
 VSL_stop = 0.0
 
 PW_start = 1
 PW_stop = 1000
-PW_steps = 4
+PW_steps = 2

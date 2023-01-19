@@ -8,7 +8,8 @@ python scripts/transistor_iv.py settings/DEC3_ProbeCard_CNFET_2x2.json die_cnfet
 import argparse
 import os
 import numpy as np
-from digitalpattern import env, NIRRAM
+from digitalpattern import env
+from digitalpattern.nirram import NIRRAM
 import nidigital
 import matplotlib.pyplot as plt
 
@@ -23,6 +24,7 @@ parser.add_argument("--step-vds", type=float, default=10, help="step vds")
 parser.add_argument("--start-vgs", type=float, default=2.0, help="start vgs")
 parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
 parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
+parser.add_argument("--array", default=False, action="store_true", help="flag for dec3 array")
 args = parser.parse_args()
 
 def iv_curve(
@@ -73,19 +75,21 @@ def iv_curve(
         for vgs in vgs_sweep:
             nisys.ppmu_set_vwl(wl, vgs)
             nisys.ppmu_set_vbl(bl, vds)
-            meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
-            meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
-            meas_v_gate = nisys.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
-            meas_i_gate = nisys.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
-            results_bl[i].append(meas_i)
-            results_wl[i].append(meas_i_gate)
-            results_vbl[i].append(meas_v)
-            results_vwl[i].append(meas_v_gate)
+            meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)
+            meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
+            meas_v_gate = nisys.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)
+            meas_i_gate = nisys.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
+
+            # print(nisys.digital.get_pin_results_pin_information())
+            results_bl[i].append(meas_i[0])
+            results_wl[i].append(meas_i_gate[0])
+            results_vbl[i].append(meas_v[0])
+            results_vwl[i].append(meas_v_gate[0])
         i += 1
 
-    for bl in nisys.all_bls: nisys.ppmu_set_vbl(bl,0)
-    for sl in nisys.all_sls: nisys.ppmu_set_vsl(sl,0)
-    for wl in nisys.all_wls: nisys.ppmu_set_vwl(wl,0)
+    for bl_i in nisys.all_bls: nisys.ppmu_set_vbl(bl_i,0)
+    for sl_i in nisys.all_sls: nisys.ppmu_set_vsl(sl_i,0)
+    for wl_i in nisys.all_wls: nisys.ppmu_set_vwl(wl_i,0)
     for body in nisys.body: nisys.ppmu_set_vbody(body,0)
     
     results_bl = np.abs(np.array(results_bl))
@@ -149,20 +153,20 @@ def iv_curve(
 #iv_curve(wl_ind=0,bl_sl_ind=0,args=args)
 
 # TODO: abstract this out for array vs single FET
-iv_curve(
-    args,
-    wl=f"WL_0",
-    bl=f"BL_0",
-    sl=f"SL_0",
-)
-
-# FOR DEC3 ARRAYS
-# for wl_ind in [0,1]:
-#     for bl_sl_ind in [0,1]:
-#         iv_curve(
-#             args,
-#             wl=f"A2_WL_{wl_ind}",
-#             bl=f"A2_BL_{bl_sl_ind}",
-#             sl=f"A2_SL_{bl_sl_ind}",
-#         )
-#         pass
+if args.array:
+    # FOR DEC3 ARRAYS
+    for wl_ind in [0,1]:
+        for bl_sl_ind in [0,1]:
+            iv_curve(
+                args,
+                wl=f"A2_WL_{wl_ind}",
+                bl=f"A2_BL_{bl_sl_ind}",
+                sl=f"A2_SL_{bl_sl_ind}",
+            )
+else:
+    iv_curve(
+        args,
+        wl=f"WL_0",
+        bl=f"BL_0",
+        sl=f"SL_0",
+    )
