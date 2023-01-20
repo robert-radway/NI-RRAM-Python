@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.5">
+	<Instruments>
+		<NIDigitalPatternInstrument name="PXI1Slot9" numberOfChannels="32" group="Digital" />
+	</Instruments>
+	<Pins>
+		<DUTPin name="A4_BL_0" />
+		<DUTPin name="A4_BL_1" />
+		<DUTPin name="A4_BL_2" />
+		<DUTPin name="A4_BL_3" />
+		<DUTPin name="A4_SL_0" />
+		<DUTPin name="A4_SL_1" />
+		<DUTPin name="A4_SL_2" />
+		<DUTPin name="A4_SL_3" />
+		<DUTPin name="A4_WL_0" />
+		<DUTPin name="A4_WL_1" />
+		<DUTPin name="A4_WL_2" />
+		<DUTPin name="A4_WL_3" />
+	</Pins>
+	<PinGroups>
+		<PinGroup name="BLSLWLS">
+			<PinReference pin="A4_BL_0" />
+			<PinReference pin="A4_BL_1" />
+			<PinReference pin="A4_BL_2" />
+			<PinReference pin="A4_BL_3" />
+
+			<PinReference pin="A4_SL_0" />
+			<PinReference pin="A4_SL_1" />
+			<PinReference pin="A4_SL_2" />
+			<PinReference pin="A4_SL_3" />
+			
+			<PinReference pin="A4_WL_0" />
+			<PinReference pin="A4_WL_1" />
+			<PinReference pin="A4_WL_2" />
+			<PinReference pin="A4_WL_3" />
+		</PinGroup>
+	</PinGroups>
+	<Sites>
+		<Site siteNumber="0" />
+	</Sites>
+	<Connections>
+		<Connection pin="A4_SL_0" siteNumber="0" instrument="PXI1Slot9" channel="3" />
+		<Connection pin="A4_SL_1" siteNumber="0" instrument="PXI1Slot9" channel="4" />
+		<Connection pin="A4_SL_2" siteNumber="0" instrument="PXI1Slot9" channel="5" />
+		<Connection pin="A4_SL_3" siteNumber="0" instrument="PXI1Slot9" channel="6" />
+		
+		<Connection pin="A4_WL_0" siteNumber="0" instrument="PXI1Slot9" channel="7" />
+		<Connection pin="A4_WL_1" siteNumber="0" instrument="PXI1Slot9" channel="22" />
+		<Connection pin="A4_WL_2" siteNumber="0" instrument="PXI1Slot9" channel="8" />
+		<Connection pin="A4_WL_3" siteNumber="0" instrument="PXI1Slot9" channel="21" />
+
+		<Connection pin="A4_BL_0" siteNumber="0" instrument="PXI1Slot9" channel="26" />
+		<Connection pin="A4_BL_1" siteNumber="0" instrument="PXI1Slot9" channel="25" />
+		<Connection pin="A4_BL_2" siteNumber="0" instrument="PXI1Slot9" channel="24" />
+		<Connection pin="A4_BL_3" siteNumber="0" instrument="PXI1Slot9" channel="23" />
+	</Connections>
+</PinMap>

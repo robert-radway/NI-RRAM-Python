@@ -9,10 +9,10 @@ deviceID = "PXI1Slot8"
 pinmap = "settings/DEC3_ProbeCard_CNFET_8x8.pinmap"
 specs = [
     "settings/DEC3.specs",
-    "settings/DEC3_Full_SiFET_A8.digilevels",
+    "settings/DEC3_ProbeCard_levels_8x8.digilevels",
     "settings/DEC3.digitiming",
 ]
-patterns = "settings/patterns/*DEC3_Full_SiFET_8x8.digipat"
+patterns = "settings/patterns/*DEC3_probecard_8x8.digipat"
 
 
 [device]
@@ -49,7 +49,7 @@ all_SLS = [ "A8_SL_0", "A8_SL_1", "A8_SL_2", "A8_SL_3", "A8_SL_4", "A8_SL_5", "A
 # SLS = [ "A8_SL_2"] #, "A8_SL_1" ]
 
 # uncomment for testing single cell
-WLS = [ "A8_WL_0" ]
+WLS = [ "A8_WL_3" ]
 BLS = [ "A8_BL_3" ]
 SLS = [ "A8_SL_3" ]
 

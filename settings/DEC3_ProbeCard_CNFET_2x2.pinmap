@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.5">
+	<Instruments>
+		<NIDigitalPatternInstrument name="PXI1Slot9" numberOfChannels="32" group="Digital" />
+	</Instruments>
+	<Pins>
+		<DUTPin name="A2_SL_0" />
+		<DUTPin name="A2_SL_1" />
+		<DUTPin name="A2_WL_0" />
+		<DUTPin name="A2_WL_1" />
+		<DUTPin name="A2_BL_1" />
+		<DUTPin name="A2_BL_0" />
+	</Pins>
+	<PinGroups>
+		<PinGroup name="BLSLWLS">
+			<PinReference pin="A2_BL_0" />
+			<PinReference pin="A2_BL_1" />
+			<PinReference pin="A2_SL_0" />
+			<PinReference pin="A2_SL_1" />
+			<PinReference pin="A2_WL_0" />
+			<PinReference pin="A2_WL_1" />
+		</PinGroup>
+	</PinGroups>
+	<Sites>
+		<Site siteNumber="0" />
+	</Sites>
+	<Connections>
+		<Connection pin="A2_BL_0" siteNumber="0" instrument="PXI1Slot9" channel="29" />
+		<Connection pin="A2_BL_1" siteNumber="0" instrument="PXI1Slot9" channel="28" />
+
+		<Connection pin="A2_WL_0" siteNumber="0" instrument="PXI1Slot9" channel="2" />
+		<Connection pin="A2_WL_1" siteNumber="0" instrument="PXI1Slot9" channel="27" />
+
+		<Connection pin="A2_SL_0" siteNumber="0" instrument="PXI1Slot9" channel="0" />
+		<Connection pin="A2_SL_1" siteNumber="0" instrument="PXI1Slot9" channel="1" />
+	</Connections>
+</PinMap>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PinLevelsFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/PinLevels">
+  <PinLevelsSheet>
+    <DigitalPinLevelSets>
+      <DigitalPinLevelSet pin="A2_SL_0">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A2_SL_1">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A2_WL_0">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A2_WL_1">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A2_BL_1">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="A2_BL_0">
+        <Vil>0</Vil>
+        <Vih>2.5</Vih>
+        <Vol>0</Vol>
+        <Voh>1.1</Voh>
+      </DigitalPinLevelSet>
+    </DigitalPinLevelSets>
+    <PpmuPinLevelSets>
+      <PpmuPinLevelSet pin="A2_SL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A2_SL_1">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A2_WL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A2_WL_1">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A2_BL_1">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="A2_BL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="BL_0">
+        <Vf>0</Vf>
+        <IRange>128 µA</IRange>
+      </PpmuPinLevelSet>
+    </PpmuPinLevelSets>
+  </PinLevelsSheet>
+</PinLevelsFile>

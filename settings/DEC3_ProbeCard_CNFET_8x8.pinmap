@@ -31,22 +31,6 @@
 	</Pins>
 	<PinGroups>
 		<PinGroup name="BLSLWLS">
-			<PinReference pin="A8_SL_0" />
-			<PinReference pin="A8_SL_1" />
-			<PinReference pin="A8_SL_2" />
-			<PinReference pin="A8_SL_3" />
-			<PinReference pin="A8_SL_4" />
-			<PinReference pin="A8_SL_5" />
-			<PinReference pin="A8_SL_6" />
-			<PinReference pin="A8_SL_7" />
-			<PinReference pin="A8_WL_0" />
-			<PinReference pin="A8_WL_1" />
-			<PinReference pin="A8_WL_2" />
-			<PinReference pin="A8_WL_3" />
-			<PinReference pin="A8_WL_4" />
-			<PinReference pin="A8_WL_5" />
-			<PinReference pin="A8_WL_6" />
-			<PinReference pin="A8_WL_7" />
 			<PinReference pin="A8_BL_0" />
 			<PinReference pin="A8_BL_1" />
 			<PinReference pin="A8_BL_2" />
@@ -55,6 +39,24 @@
 			<PinReference pin="A8_BL_5" />
 			<PinReference pin="A8_BL_6" />
 			<PinReference pin="A8_BL_7" />
+
+			<PinReference pin="A8_SL_0" />
+			<PinReference pin="A8_SL_1" />
+			<PinReference pin="A8_SL_2" />
+			<PinReference pin="A8_SL_3" />
+			<PinReference pin="A8_SL_4" />
+			<PinReference pin="A8_SL_5" />
+			<PinReference pin="A8_SL_6" />
+			<PinReference pin="A8_SL_7" />
+			
+			<PinReference pin="A8_WL_0" />
+			<PinReference pin="A8_WL_1" />
+			<PinReference pin="A8_WL_2" />
+			<PinReference pin="A8_WL_3" />
+			<PinReference pin="A8_WL_4" />
+			<PinReference pin="A8_WL_5" />
+			<PinReference pin="A8_WL_6" />
+			<PinReference pin="A8_WL_7" />
 		</PinGroup>
 	</PinGroups>
 	<Sites>

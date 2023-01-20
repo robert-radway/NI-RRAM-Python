@@ -578,8 +578,7 @@ class NIRRAM:
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(pulse_len+prepulse_len+postpulse_len)
-        # self.digital.burst_pattern("WL_PULSE_DEC3") #PULSE_MPW_ProbeCard
-        self.digital.burst_pattern("PULSE_DEC3") #PULSE_MPW_ProbeCard
+        self.digital.burst_pattern("WL_PULSE_DEC3") #PULSE_MPW_ProbeCard
 
     def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200):
         """Create pulse train. Format of bits is [BL SL WL]. For an array
@@ -643,8 +642,7 @@ class NIRRAM:
         self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(prepulse_len + pulse_len + postpulse_len)
-        # self.digital.burst_pattern("WL_PULSE_DEC3")
-        self.digital.burst_pattern("PULSE_DEC3")
+        self.digital.burst_pattern("WL_PULSE_DEC3")
 
     def set_pw(self, pulse_width):
         """Set pulse width"""

@@ -6,37 +6,37 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/DEC3_ProbeCard_SiFET_A2_A4.pinmap"
+pinmap = "settings/DEC3_ProbeCard_CNFET_4x4.pinmap"
 specs = [
     "settings/DEC3.specs",
-    "settings/DEC3_Full_SiFET_A2_A4.digilevels",
+    "settings/DEC3_ProbeCard_levels_4x4.digilevels",
     "settings/DEC3.digitiming",
 ]
-patterns = "settings/patterns/*DEC3_Full_SiFET_2x2.digipat"
+patterns = "settings/patterns/*DEC3_probecard_4x4.digipat"
 
 
 [device]
 # define all body voltage names and map them to their neutral value
 # for PMOS this is typically VDD while for NMOS this is typically GND or VSS
-body = { A2_PMOS_BODY = 1.5, A2_NMOS_BODY = 0.0 }
-# body = { A2_PMOS_BODY = 0.0, A2_NMOS_BODY = 0.0 }
-# body = {} # for cnfet
+# body = { A4_PMOS_BODY = 1.5, A4_NMOS_BODY = 0.0 }
+# body = { A4_PMOS_BODY = 0.0, A4_NMOS_BODY = 0.0 }
+body = {} # for cnfet
 
 # define all WLs, BLs, SLs names
-all_WLS = [ "A2_WL_0", "A2_WL_1" ]
-all_BLS = [ "A2_BL_0", "A2_BL_1" ]
-all_SLS = [ "A2_SL_0", "A2_SL_1" ]
+all_WLS = [ "A4_WL_0", "A4_WL_1", "A4_WL_2", "A4_WL_3" ]
+all_BLS = [ "A4_BL_0", "A4_BL_1", "A4_BL_2", "A4_BL_3" ]
+all_SLS = [ "A4_SL_0", "A4_SL_1", "A4_SL_2", "A4_SL_3" ]
 
 # subset of WL, BL, SL that will be pulsed for measurement
 # all BL,WL,SL
-WLS = [ "A2_WL_1"] #, "A2_WL_1" ]
-BLS = [ "A2_BL_1"] #, "A2_BL_1" ]
-SLS = [ "A2_SL_1"] #, "A2_SL_1" ]
+# WLS = [ "A4_WL_0", "A4_WL_1", "A4_WL_2", "A4_WL_3" ]
+# BLS = [ "A4_BL_0", "A4_BL_1", "A4_BL_2", "A4_BL_3" ]
+# SLS = [ "A4_SL_0", "A4_SL_1", "A4_SL_2", "A4_SL_3" ]
 
 # uncomment for testing single cell
-# WLS = [ "A2_WL_0" ]
-# BLS = [ "A2_BL_0" ]
-# SLS = [ "A2_SL_0" ]
+WLS = [ "A4_WL_0" ]
+BLS = [ "A4_BL_0" ]
+SLS = [ "A4_SL_0" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
@@ -48,8 +48,8 @@ SLS = [ "A2_SL_1"] #, "A2_SL_1" ]
 # for cnfet
 [target_res]
 FORM = 50000
-SET = 45000
-RESET = 60000
+SET = 12000
+RESET = 50000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -105,7 +105,7 @@ VBL_step = 0.2
 VBL_stop = 4.5
 
 PW_start = 1
-PW_stop = 1000
+PW_stop = 100
 PW_steps = 3
 
 [op.FORM.PMOS]
@@ -123,8 +123,8 @@ VBL_step = -0.1
 VBL_stop = -1
 
 PW_start = 1
-PW_stop = 1000
-PW_steps = 4
+PW_stop = 100
+PW_steps = 3
 
 # =============================================================================
 # SET PULSE
@@ -165,8 +165,56 @@ VBL_step = -0.1
 VBL_stop = -0.5
 
 PW_start = 1
-PW_stop = 1000
-PW_steps = 4
+PW_stop = 10
+PW_steps = 3
+
+# MULTIBIT TARGET WINDOW 1 (CLOSER TO HRS)
+[op.SET_TARGET_WINDOW_1.PMOS]
+res_high_coarse = 45_000
+res_high_fine = 40_000
+res_low = 30_000
+VSL = 2
+PW = 1
+
+VWL_coarse_start = 2.0
+VWL_coarse_stop = 1.4
+VWL_coarse_step = -0.2
+VWL_fine_window_high = 0.2
+VWL_fine_window_low = -0.2
+VWL_fine_step = -0.1
+VWL_fine_limit = 1.4 # clamp so fine window vwl does not go past this
+
+VBL_coarse_start = 1.8
+VBL_coarse_stop = 1.0
+VBL_coarse_step = -0.02
+VBL_fine_window_high = 0.1
+VBL_fine_window_low = -0.2
+VBL_fine_step = -0.01
+VBL_fine_limit = 1.0 # clamp so fine window vwl does not go past this
+
+# MULTIBIT TARGET WINDOW 2 (CLOSER TO LRS)
+[op.SET_TARGET_WINDOW_2.PMOS]
+res_high_coarse = 25_000
+res_high_fine = 20_000
+res_low = 15_000 #25_000
+VSL = 2
+PW = 1
+
+VWL_coarse_start = 3.0 #2.4
+VWL_coarse_stop = 2.4 #2.0
+VWL_coarse_step = -0.2
+VWL_fine_window_high = 0.2
+VWL_fine_window_low = -0.2
+VWL_fine_step = -0.025 #0.05
+VWL_fine_limit = 2.4 # clamp so fine window vwl does not go past this
+
+VBL_coarse_start = 1.5
+VBL_coarse_stop = 1.0
+VBL_coarse_step = -0.01
+VBL_fine_window_high = 0.05
+VBL_fine_window_low = -0.1
+VBL_fine_step = -0.005
+VBL_fine_limit = 1.0 # clamp so fine window vwl does not go past this
 
 # =============================================================================
 # RESET PULSE
@@ -189,7 +237,7 @@ VSL_step = 0.2
 VSL_stop = 5.5
 
 PW_start = 1
-PW_stop = 1000
+PW_stop = 10
 PW_steps = 2
 
 [op.RESET.PMOS]
@@ -199,13 +247,13 @@ VBL = 2.5
 PW = 100
 
 VWL_RESET_start = 1.1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -0.3
+VWL_RESET_step = -0.2
+VWL_RESET_stop = -0.5
 
 VSL_start = 1.5
 VSL_step = -0.1
 VSL_stop = 0.0
 
 PW_start = 1
-PW_stop = 1000
-PW_steps = 4
+PW_stop = 10
+PW_steps = 3
