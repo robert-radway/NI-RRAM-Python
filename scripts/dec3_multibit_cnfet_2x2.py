@@ -22,9 +22,19 @@ nisys.dynamic_form()
 nisys.dynamic_reset()
 # nisys.dynamic_set()
 
+# nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=10, debug=False)
+# nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=10, debug=False)
+# nisys.dynamic_reset()
+# nisys.dynamic_set()
+
 # for i in range(10):
 #     nisys.dynamic_reset()
 #     nisys.dynamic_set()
-# #     pass
+
+# for i in range(10000):
+#     # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=1, debug=False)
+#     # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=1, debug=False)
+#     nisys.dynamic_reset()
+#     nisys.dynamic_set()
 
 nisys.close()

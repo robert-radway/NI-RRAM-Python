@@ -19,12 +19,12 @@ parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("settings", help="path to settings file")
 parser.add_argument("device_no", help="chip name for logging")
 parser.add_argument("--start-vds", type=float, default=0.0, help="start vds")
-parser.add_argument("--end-vds", type=float, default=-2.0, help="end vds")
+parser.add_argument("--end-vds", type=float, default=-1.0, help="end vds")
 parser.add_argument("--step-vds", type=float, default=10, help="step vds")
-parser.add_argument("--start-vgs", type=float, default=2.0, help="start vgs")
-parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
+parser.add_argument("--start-vgs", type=float, default=1.0, help="start vgs")
+parser.add_argument("--end-vgs", type=float, default=-1.0, help="end vgs")
 parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
-parser.add_argument("--array", default=False, action="store_true", help="flag for dec3 array")
+parser.add_argument("--array", type=int, default=0, help="input for array size, changes pins used")
 args = parser.parse_args()
 
 def iv_curve(
@@ -152,18 +152,38 @@ def iv_curve(
 
 #iv_curve(wl_ind=0,bl_sl_ind=0,args=args)
 
-# TODO: abstract this out for array vs single FET
-if args.array:
-    # FOR DEC3 ARRAYS
-    for wl_ind in [0,1]:
-        for bl_sl_ind in [0,1]:
+# FOR NOW: manually check array input size and change
+# hardcoded string pins (for different array sizes)
+# TODO: better abstracting for array vs single FET pin names
+
+if args.array == 2:
+    for wl_ind in [0, 1]:
+        for bl_sl_ind in [0, 1]:
             iv_curve(
                 args,
                 wl=f"A2_WL_{wl_ind}",
                 bl=f"A2_BL_{bl_sl_ind}",
                 sl=f"A2_SL_{bl_sl_ind}",
             )
-else:
+elif args.array == 4:
+    for wl_ind in [0, 1, 2, 3]:
+        for bl_sl_ind in [0, 1, 2, 3]:
+            iv_curve(
+                args,
+                wl=f"A4_WL_{wl_ind}",
+                bl=f"A4_BL_{bl_sl_ind}",
+                sl=f"A4_SL_{bl_sl_ind}",
+            )
+elif args.array == 8:
+    for wl_ind in [0, 1, 2, 3, 4, 5, 6, 7]:
+        for bl_sl_ind in [0, 1, 2, 3, 4, 5, 6, 7]:
+            iv_curve(
+                args,
+                wl=f"A8_WL_{wl_ind}",
+                bl=f"A8_BL_{bl_sl_ind}",
+                sl=f"A8_SL_{bl_sl_ind}",
+            )
+else: # default, single device
     iv_curve(
         args,
         wl=f"WL_0",

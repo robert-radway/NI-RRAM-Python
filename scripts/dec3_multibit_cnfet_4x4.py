@@ -20,6 +20,12 @@ nisys.read(record=True)
 # input("Dynamic Form")
 # nisys.dynamic_form()
 # nisys.dynamic_reset()
+# nisys.read(record=True)
+
+# nisys.dynamic_set()
+# nisys.read(record=True)
+
+# nisys.dynamic_reset()
 
 # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=10, debug=False)
 # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=10, debug=False)
@@ -30,10 +36,78 @@ nisys.read(record=True)
 #     nisys.dynamic_reset()
 #     nisys.dynamic_set()
 
-for i in range(4):
-    # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=50, debug=False)
-    # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=50, debug=False)
-    nisys.dynamic_reset()
-    nisys.dynamic_set()
+# for i in range(10000):
+#     # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=1, debug=False)
+#     # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=1, debug=False)
+#     nisys.dynamic_reset()
+#     nisys.dynamic_set()
+
+
+### CODE FOR SEQUENTIAL FORM/RESET OF ALL WL/(BL,SL) COMBINATIONS
+for wl_idx in [0, 1, 2, 3]:
+    nisys.wls = [f"A4_WL_{wl_idx}"]
+    for blsl_idx in [0, 1, 2, 3]:
+        nisys.bls = [f"A4_BL_{blsl_idx}"]
+        nisys.sls = [f"A4_SL_{blsl_idx}"]
+        nisys.reset_all_pins_to_zero()
+        nisys.dynamic_form()
+        nisys.dynamic_reset()
+
+# nisys.dynamic_reset()
+
+### RE-READ ALL WLS/BLS TO MAKE SURE OPERATION DID NOT DISTURB OTHER CELLS
+nisys.reset_all_pins_to_zero()
+nisys.wls = nisys.all_wls
+nisys.bls = nisys.all_bls
+nisys.sls = nisys.all_sls
+nisys.read(record=True)
+
+exit()
+
+### CHECKERBOARD ATTEMPT
+cells = { # (WL, BL/SL) => "bit"
+    # (0, 0): 0,
+    # (0, 1): 1,
+    # (0, 2): 2,
+    # (0, 3): 3,
+
+    # (1, 0): 1,
+    (1, 1): 2,
+    (1, 2): 3,
+    (1, 3): 0,
+
+    # (2, 0): 2,
+    # (2, 1): 3,
+    # (2, 2): 0,
+    # (2, 3): 1,
+
+    # (3, 0): 3,
+    # (3, 1): 0,
+    # (3, 2): 1,
+    # (3, 3): 2,
+}
+
+for (wl_idx, blsl_idx), bit in cells.items():
+    nisys.wls = [f"A4_WL_{wl_idx}"]
+    nisys.bls = [f"A4_BL_{blsl_idx}"]
+    nisys.sls = [f"A4_SL_{blsl_idx}"]
+    nisys.reset_all_pins_to_zero()
+    if bit == 0:
+        nisys.dynamic_reset()
+    elif bit == 1:
+        nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=10, debug=False)
+    elif bit == 2:
+        nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=10, debug=False)
+    elif bit == 3:
+        nisys.dynamic_set()
+    else:
+        raise ValueError(f"Invalid bit {bit}, must be 0, 1, 2, 3")
+
+    ### RE-READ ALL WLS/BLS TO MAKE SURE OPERATION DID NOT DISTURB OTHER CELLS
+    nisys.reset_all_pins_to_zero()
+    nisys.wls = nisys.all_wls
+    nisys.bls = nisys.all_bls
+    nisys.sls = nisys.all_sls
+    nisys.read(record=True)
 
 nisys.close()

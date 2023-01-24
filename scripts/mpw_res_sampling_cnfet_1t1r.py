@@ -36,7 +36,7 @@ res_samples = nisys.sample_resistance_at_bias(
     mode = "SET_SAMPLE",
     initialize_cell_fn = nisys.dynamic_reset, # DONT TOUCH use bound method, either nisys.dynamic_reset or nisys.dynamic_set
     pulse_fn = nisys.set_pulse, # DONT TOUCH use bound method, either nisys.reset_pulse or nisys.set_pulse
-    samples = 10,
+    samples = 20,
     pw = 1,
     debug = True,
 )

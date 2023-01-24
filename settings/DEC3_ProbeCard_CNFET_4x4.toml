@@ -29,14 +29,14 @@ all_SLS = [ "A4_SL_0", "A4_SL_1", "A4_SL_2", "A4_SL_3" ]
 
 # subset of WL, BL, SL that will be pulsed for measurement
 # all BL,WL,SL
-# WLS = [ "A4_WL_0", "A4_WL_1", "A4_WL_2", "A4_WL_3" ]
-# BLS = [ "A4_BL_0", "A4_BL_1", "A4_BL_2", "A4_BL_3" ]
-# SLS = [ "A4_SL_0", "A4_SL_1", "A4_SL_2", "A4_SL_3" ]
+WLS = [ "A4_WL_0", "A4_WL_1", "A4_WL_2", "A4_WL_3" ]
+BLS = [ "A4_BL_0", "A4_BL_1", "A4_BL_2", "A4_BL_3" ]
+SLS = [ "A4_SL_0", "A4_SL_1", "A4_SL_2", "A4_SL_3" ]
 
-# uncomment for testing single cell
-WLS = [ "A4_WL_0" ]
-BLS = [ "A4_BL_0" ]
-SLS = [ "A4_SL_0" ]
+# # uncomment for testing single cell
+# WLS = [ "A4_WL_3" ]
+# BLS = [ "A4_BL_3" ]
+# SLS = [ "A4_SL_3" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
@@ -49,7 +49,7 @@ SLS = [ "A4_SL_0" ]
 [target_res]
 FORM = 50000
 SET = 12000
-RESET = 50000
+RESET = 100000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -77,12 +77,14 @@ VWL = 1.5
 VBL = 0.3
 VSL = 0
 VB = 0
+VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
 
 [op.READ.PMOS]
 VWL = -1.5
 VBL = -0.3
 VSL = 0
 VB = 1.5
+VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
 
 # =============================================================================
 # FORM PULSE
@@ -152,6 +154,7 @@ PW_steps = 4
 
 [op.SET.PMOS]
 VWL = 0.5
+VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
 VBL = 1
 VSL = 2
 PW = 1200
@@ -175,6 +178,7 @@ res_high_fine = 40_000
 res_low = 30_000
 VSL = 2
 PW = 1
+VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
 
 VWL_coarse_start = 2.0
 VWL_coarse_stop = 1.4
@@ -199,6 +203,7 @@ res_high_fine = 20_000
 res_low = 15_000 #25_000
 VSL = 2
 PW = 1
+VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
 
 VWL_coarse_start = 3.0 #2.4
 VWL_coarse_stop = 2.4 #2.0
@@ -242,6 +247,7 @@ PW_steps = 2
 
 [op.RESET.PMOS]
 VWL = 1.1
+VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
 VSL = 1.5
 VBL = 2.5
 PW = 100
@@ -255,5 +261,5 @@ VSL_step = -0.1
 VSL_stop = 0.0
 
 PW_start = 1
-PW_stop = 10
-PW_steps = 3
+PW_stop = 1
+PW_steps = 1

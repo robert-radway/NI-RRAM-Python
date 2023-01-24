@@ -205,7 +205,7 @@ class NIRRAM:
     """
 
 
-    def read(self, vbl=None, vsl=None, vwl=None, vwl_unsel=None, vb=None, record=False):
+    def read(self, vbl=None, vsl=None, vwl=None, vwl_unsel_offset=None, vb=None, record=False):
         """Perform a READ operation. This operation works for single 1T1R devices and 
         arrays of devices, where each device has its own WL/BL.
         Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
@@ -219,6 +219,13 @@ class NIRRAM:
         vsl = self.op["READ"][self.polarity]["VSL"] if vsl is None else vsl
         vb = self.op["READ"][self.polarity]["VB"] if vb is None else vb
 
+        # unselected WL bias parameter
+        if vwl_unsel_offset is None:
+            if "VWL_UNSEL_OFFSET" in self.op["READ"][self.polarity]:
+                vwl_unsel_offset = self.op["READ"][self.polarity]["VWL_UNSEL_OFFSET"]
+            else:
+                vwl_unsel_offset = 0.0
+        
         for bl in self.bls: 
             self.ppmu_set_vbl(bl,vbl)
             self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
@@ -242,10 +249,11 @@ class NIRRAM:
             # Measure with NI-Digital
             for wl in self.wls:
                 # sets all WL voltages in the array: read WL is VWL, all others are VSL
-                for wl_i in self.all_wls:
-                    if wl_i == wl: self.ppmu_set_vwl(wl_i,vwl)
-                    else: self.ppmu_set_vwl(wl_i,vsl)
-                    self.digital.channels[wl_i].selected_function = nidigital.SelectedFunction.PPMU
+                for wl_i in self.all_wls: 
+                    if wl_i == wl:
+                        self.ppmu_set_vwl(wl_i, vwl)
+                    else: # UNSELECTED WLs: set to ~vsl with some offset (to reduce bias)
+                        self.ppmu_set_vwl(wl_i, vsl + vwl_unsel_offset)
                 self.digital.ppmu_source()
                 time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 
@@ -382,11 +390,13 @@ class NIRRAM:
     def set_pulse(
         self,
         mask,
+        mode="SET",
         bl_selected=None, # selected BL
         vwl=None,
         vbl=None,
         vsl=None,
         vbl_unsel=None,
+        vwl_unsel_offset=None,
         pulse_len=None,
     ):
         """Perform a SET operation.
@@ -407,11 +417,18 @@ class NIRRAM:
             2.0     1.0      0.25          1.75
         """
         # Get parameters
-        vwl = vwl if vwl is not None else self.op["SET"][self.polarity]["VWL"]
-        vbl = vbl if vbl is not None else self.op["SET"][self.polarity]["VBL"]
-        vsl = vsl if vsl is not None else self.op["SET"][self.polarity]["VSL"]
+        vwl = vwl if vwl is not None else self.op[mode][self.polarity]["VWL"]
+        vbl = vbl if vbl is not None else self.op[mode][self.polarity]["VBL"]
+        vsl = vsl if vsl is not None else self.op[mode][self.polarity]["VSL"]
         vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
-        pulse_len = pulse_len if pulse_len is not None else self.op["SET"][self.polarity]["PW"] 
+        pulse_len = pulse_len if pulse_len is not None else self.op[mode][self.polarity]["PW"] 
+        
+        # unselected WL bias parameter
+        if vwl_unsel_offset is None:
+            if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
+                vwl_unsel_offset = self.op[mode][self.polarity]["VWL_UNSEL_OFFSET"]
+            else:
+                vwl_unsel_offset = 0.0
         
         # set voltages
         for bl_i in self.bls:
@@ -426,11 +443,26 @@ class NIRRAM:
             # print(f"Setting SL {sl_i} to {vsl} V")
             self.set_vsl(sl_i, vsl)
         
+        # UNSELECTED WLs: set to ~vsl with some offset (to reduce bias)
+        for wl_i in self.all_wls: 
+            if self.polarity == "PMOS":
+                self.set_vwl(
+                    wl_i,
+                    vwl_hi = vsl + vwl_unsel_offset,
+                    vwl_lo = vsl + vwl_unsel_offset,
+                )
+            else:
+                self.set_vwl(
+                    wl_i,
+                    vwl_hi = vwl_unsel_offset,
+                    vwl_lo = vwl_unsel_offset,
+                )
+        
         for wl_i in self.wls:
             if self.polarity == "PMOS":
-                self.set_vwl(wl_i, vsl, vwl_lo=vwl)
+                self.set_vwl(wl_i, vsl + vwl_unsel_offset, vwl_lo=vwl)
             else:
-                self.set_vwl(wl_i, vwl)   
+                self.set_vwl(wl_i, vwl, vwl_lo=vwl_unsel_offset)   
          
         # pulse WL
         self.pulse(mask, pulse_len=pulse_len)
@@ -442,11 +474,13 @@ class NIRRAM:
     def reset_pulse(
         self,
         mask,
+        mode="RESET",
         bl_selected=None, # selected BL
         vwl=None,
         vbl=None,
         vsl=None,
         vbl_unsel=None,
+        vwl_unsel_offset=None,
         pulse_len=None,
     ):
         """Perform a RESET operation.
@@ -467,11 +501,18 @@ class NIRRAM:
             1.0     2.0      0.5           1.25
         """
         # Get parameters
-        vwl = vwl if vwl is not None else self.op["RESET"][self.polarity]["VWL"]
-        vbl = vbl if vbl is not None else self.op["RESET"][self.polarity]["VBL"]
-        vsl = vsl if vsl is not None else self.op["RESET"][self.polarity]["VSL"]
+        vwl = vwl if vwl is not None else self.op[mode][self.polarity]["VWL"]
+        vbl = vbl if vbl is not None else self.op[mode][self.polarity]["VBL"]
+        vsl = vsl if vsl is not None else self.op[mode][self.polarity]["VSL"]
         vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
-        pulse_len = pulse_len if pulse_len is not None else self.op["RESET"][self.polarity]["PW"] 
+        pulse_len = pulse_len if pulse_len is not None else self.op[mode][self.polarity]["PW"] 
+
+        # unselected WL bias parameter
+        if vwl_unsel_offset is None:
+            if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
+                vwl_unsel_offset = self.op[mode][self.polarity]["VWL_UNSEL_OFFSET"]
+            else:
+                vwl_unsel_offset = 0.0
 
         # set voltages
         for bl_i in self.bls:
@@ -486,12 +527,29 @@ class NIRRAM:
             # print(f"Setting SL {sl_i} to {vsl} V")
             self.set_vsl(sl_i, vsl)
 
-        for wl_i in self.wls: 
+        # UNSELECTED WLs: set to ~vsl with some offset (to reduce bias)
+        for wl_i in self.all_wls: 
             if self.polarity == "PMOS":
-                self.set_vwl(wl_i, vsl, vwl_lo=vwl)
+                self.set_vwl(
+                    wl_i,
+                    vwl_hi = vsl + vwl_unsel_offset,
+                    vwl_lo = vsl + vwl_unsel_offset,
+                )
                 # self.set_vwl(wl, vwl)
             else:
-                self.set_vwl(wl_i, vwl) 
+                self.set_vwl(
+                    wl_i,
+                    vwl_hi = vwl_unsel_offset,
+                    vwl_lo = vwl_unsel_offset,
+                )
+        
+        # SELECTED WLs: set to pulse
+        for wl_i in self.wls: 
+            if self.polarity == "PMOS":
+                self.set_vwl(wl_i, vsl + vwl_unsel_offset, vwl_lo=vwl)
+                # self.set_vwl(wl, vwl)
+            else:
+                self.set_vwl(wl_i, vwl, vwl_lo=vwl_unsel_offset) 
 
         # pulse WL
         self.pulse(mask, pulse_len=pulse_len)
@@ -499,6 +557,27 @@ class NIRRAM:
         # Log the pulse
         #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
         #self.mlogfile.write(f"RESET,{vwl},0,{vsl},{pulse_width}\n")
+    
+    def reset_all_pins_to_zero(self):
+        """Reset all Bl, SL, WL pin hi/lo voltage levels to zero.
+
+        If we are manually changing the BLs, SLs, WLs by replacing the 
+        NISYS sls/bls/wls field, these may be configured with a non-zero
+        voltage pulse. If an operation runs, these may erroneously switch high.
+        when they should be de-selected and turned off. Use this function to
+        reset all pin voltage settings. Typical context:
+            for bl in [0, 1, 2, 3]:
+                self.bls = [f"BL_{bl}"]       # here we are replacing bitlines
+                self.reset_all_pins_to_zero() # reset pins state
+                self.dynamic_reset()          # do some operation
+        """
+        for bl_i in self.all_bls:
+            self.set_vbl(bl_i, vbl=0, vbl_lo=0)
+        for sl_i in self.all_sls:
+            self.set_vsl(sl_i, vsl=0, vsl_lo=0)
+        for wl_i in self.all_wls:
+            self.set_vwl(wl_i, vwl_hi=0, vwl_lo=0)
+        self.digital.ppmu_source()
     
     def set_vsl(self, vsl_chan, vsl, vsl_lo=0):
         """Set VSL using NI-Digital driver"""
@@ -618,12 +697,32 @@ class NIRRAM:
                 sl_mask_bits = BitVector(bitlist=~sl_mask).int_val()
             else:
                 raise ValueError(f"Invalid polarity: {self.polarity}. Must be 'NMOS' or 'PMOS'.")
-            
-            # print(f"wl_mask_bits: {wl_mask_bits}")
 
             data_prepulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_pre_post_bits
             data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
             data_postpulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset)  + wl_pre_post_bits
+
+            # ### TURN ON WL THEN PULSE BL
+            # if self.polarity =="NMOS":
+            #     wl_pre_post_bits = BitVector(bitlist=(wl_mask & False)).int_val()
+            #     wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
+            #     bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
+            #     sl_mask_bits = BitVector(bitlist=sl_mask).int_val()
+            # elif self.polarity =="PMOS":
+            #     wl_mask_bits = BitVector(bitlist=~wl_mask).int_val()
+
+            #     bl_pre_post_bits = BitVector(bitlist=(bl_mask & False)).int_val() # [00 1111 00] pad BL pulse with with 0s
+            #     bl_mask_bits = BitVector(bitlist=bl_mask).int_val() 
+
+            #     sl_pre_post_bits = BitVector(bitlist=sl_mask & False).int_val() # [00 1111 00] pad SL pulse with with 0s
+            #     sl_mask_bits = BitVector(bitlist=~sl_mask).int_val()
+            # else:
+            #     raise ValueError(f"Invalid polarity: {self.polarity}. Must be 'NMOS' or 'PMOS'.")
+            # # print(f"wl_mask_bits: {wl_mask_bits}")
+            
+            # data_prepulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset) + wl_mask_bits
+            # data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
+            # data_postpulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset) + wl_mask_bits
 
             ### print bits for debugging
             # print(f"data_prepulse = {data_prepulse:b}")
@@ -676,8 +775,11 @@ class NIRRAM:
         is_1tnr=False,
         bl_selected=None, # select specific bl for 1TNR measurements
     ):
-        """Performs SET pulses in increasing fashion until resistance reaches target_res.
-        Returns tuple (res, cond, meas_i, meas_v, success)."""
+        """Performs SET pulses in increasing fashion until resistance reaches
+        target_res (either input or in the `target_res` config).
+        This will try to SET ALL CELLS in self.bls and self.wls.
+        Returns tuple (res, cond, meas_i, meas_v, success).
+        """
         # Get settings
         cfg = self.op[mode][self.polarity]
         target_res = target_res if target_res is not None else self.target_res[mode]
