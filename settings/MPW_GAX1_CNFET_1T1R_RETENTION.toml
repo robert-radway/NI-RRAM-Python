@@ -6,7 +6,7 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/MPW_GAX2_CNFET.pinmap"
+pinmap = "settings/MPW_GAX1_CNFET.pinmap"
 specs = [
   "settings/DEC3.specs",
   "settings/DEC3.digilevels",
@@ -33,7 +33,7 @@ BLS = [ "BL_0", ]
 
 # RRAM resistance target level corresponding to each operation defined below
 [target_res]
-FORM = 150_000
+FORM = 50_000
 SET = 20_000
 RESET = 100_000
 
@@ -92,38 +92,39 @@ PW_stop = 100
 PW_steps = 4
 
 # [op.FORM.PMOS]
-# VWL = 2.0
+# VWL = 1.5
 # VBL = 0.5
 # VSL = 2.5
 # PW = 1200
 
-# VWL_SET_start = 2.0
+# VWL_SET_start = 1.5
 # VWL_SET_step = -0.1
-# VWL_SET_stop = 1.8
+# VWL_SET_stop = 0.5
 
-# VBL_start = 0.5
+# VBL_start = 2.0
 # VBL_step = -0.1
-# VBL_stop = 0
+# VBL_stop = -1.0
 
 # PW_start = 1
 # PW_stop = 100
 # PW_steps = 3
+
 [op.FORM.PMOS]
 VWL = 1.5
 VBL = 0.5
-VSL = 2.5
+VSL = 0.4
 PW = 1200
 
-VWL_SET_start = 1.9
-VWL_SET_step = -0.2
-VWL_SET_stop = 1.0
+VWL_SET_start = 0
+VWL_SET_step = -0.1
+VWL_SET_stop = -2
 
-VBL_start = 2.0
-VBL_step = -0.2
-VBL_stop = -1
+VBL_start = 0
+VBL_step = -0.1
+VBL_stop = -2
 
 PW_start = 1
-PW_stop = 1000
+PW_stop = 100
 PW_steps = 3
 
 # =============================================================================
@@ -151,16 +152,16 @@ PW_steps = 3
 [op.SET.PMOS]
 VWL = 2.0
 VBL = 1.5
-VSL = 2.5
+VSL = 0
 PW = 100
 
-VWL_SET_start = 1.4
+VWL_SET_start = 0
 VWL_SET_step = -0.1
-VWL_SET_stop = 0.6
+VWL_SET_stop = -0.7
 
-VBL_start = 0.8
+VBL_start = 0
 VBL_step = -0.1
-VBL_stop = -0.4
+VBL_stop = -2
 
 PW_start = 1
 PW_stop = 1
@@ -188,62 +189,63 @@ PW_steps = 1
 # VBL_fine_step = -0.01
 
 [op.SET_TARGET_WINDOW_1.PMOS]
-res_high_coarse = 140_000 # coarse threshold, when it switches to fine sweep
-res_high_fine = 120_000 # fine window high
-res_low = 55_000 # fine window low
+res_high_coarse = 110_000 # coarse threshold, when it switches to fine sweep
+res_high_fine = 100_000 # fine window high
+res_low = 50_000 # fine window low
 VSL = 2.5
 PW = 1
 
 VWL_coarse_start = 2.4
-VWL_coarse_stop = 1.2
+VWL_coarse_stop = 1.4
 VWL_coarse_step = -0.2
 VWL_fine_window_high = 0.2
 VWL_fine_window_low = -0.4
 VWL_fine_step = -0.1
-VWL_fine_limit = 1.2 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
+VWL_fine_limit = 1.4 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
 
 VBL_coarse_start = 1.8
-VBL_coarse_stop = 1.2
+VBL_coarse_stop = 1.38
 VBL_coarse_step = -0.02
 VBL_fine_window_high = 0.05
 VBL_fine_window_low = -0.1
 VBL_fine_step = -0.01
-VBL_fine_limit = 1.2 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
+VBL_fine_limit = 1.38 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
+
 
 [op.SET_TARGET_WINDOW_2.PMOS]
-res_high_coarse = 55_000
+res_high_coarse = 50_000
 res_high_fine = 40_000
-res_low = 25_000 #25_000
+res_low = 20_000 #25_000
 VSL = 2.5
 PW = 1
 
-VWL_coarse_start = 2.0 #2.4
-VWL_coarse_stop = 1.2 #2.0
+VWL_coarse_start = 3.4 #2.4
+VWL_coarse_stop = 2.6 #2.0
 VWL_coarse_step = -0.1
 VWL_fine_window_high = 0.2
 VWL_fine_window_low = -0.2
 VWL_fine_step = -0.025 #0.05
-VWL_fine_limit = 1.2 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
+VWL_fine_limit = 2.5 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
 
-VBL_coarse_start = 1.4
-VBL_coarse_stop = 0.8
+VBL_coarse_start = 1.5
+VBL_coarse_stop = 1.36
 VBL_coarse_step = -0.01
 VBL_fine_window_high = 0.05
 VBL_fine_window_low = -0.1
-VBL_fine_step = -0.01
-VBL_fine_limit = 0.8 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
+VBL_fine_step = -0.005
+VBL_fine_limit = 1.36 # fine window low bound, JUST SET EQUAL TO VWL_coarse_stop
 
 [op.SET_SAMPLE.PMOS]
 settling_time = 0.001
 VSL = 2.5
 
-VWL_start = 3.2
-VWL_step = -0.2
-VWL_stop = 1.2
+VWL_start = 3.5
+VWL_step = -0.5
+VWL_stop = 1.0
 
 VBL_start = 1.6
-VBL_step = -0.2
-VBL_stop = 0.2
+VBL_step = -0.025
+VBL_stop = 0.8
 
 [op.SET_SAMPLE_SMALL.PMOS]
 settling_time = 0.001
@@ -282,20 +284,20 @@ PW_steps = 3
 [op.RESET.PMOS]
 VWL = 0.8
 VSL = 1.5
-VBL = 2.5
+VBL = 3
 PW = 100
 
-VWL_RESET_start = 1.2
+VWL_RESET_start = 1
 VWL_RESET_step = -0.2
-VWL_RESET_stop = -0.8
+VWL_RESET_stop = -0.5
 
-VSL_start = 0.8
+VSL_start = 1
 VSL_step = -0.2
-VSL_stop = -0.4
+VSL_stop = 0
 
 PW_start = 1
-PW_stop = 1
-PW_steps = 1
+PW_stop = 100
+PW_steps = 3
 
 # sampling sweep values
 [op.RESET_SAMPLE.PMOS]

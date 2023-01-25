@@ -8,8 +8,8 @@ python scripts/transistor_iv.py settings/DEC3_ProbeCard_CNFET_2x2.json die_cnfet
 import argparse
 import os
 import numpy as np
-from digitalpattern import env
 from digitalpattern.nirram import NIRRAM
+from digitalpattern import env
 import nidigital
 import matplotlib.pyplot as plt
 
@@ -38,7 +38,10 @@ def iv_curve(
     # nisys.digital.channels["Body"].selected_function = nidigital.SelectedFunction.PPMU
     # nisys.digital.channels["Body"].ppmu_voltage_level = 1.8
     # nisys.digital.channels["Body"].ppmu_source()
-    for body_i, vbody_i in nisys.body.items(): nisys.ppmu_set_vbody(body_i, vbody_i)
+    for body_i, vbody_i in nisys.body.items():
+        print(f"body_i: {body_i} {vbody_i}")
+        nisys.ppmu_set_vbody(body_i, vbody_i)
+    
     for bl_i in nisys.all_bls: nisys.ppmu_set_vbl(bl_i, 0)
     for sl_i in nisys.all_sls: nisys.ppmu_set_vsl(sl_i, 0)
     for wl_i in nisys.all_wls: nisys.ppmu_set_vwl(wl_i, 0)

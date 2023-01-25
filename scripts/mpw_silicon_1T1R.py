@@ -21,11 +21,11 @@ nisys.read(record=True)
 # nisys.dynamic_form()
 # nisys.dynamic_reset()
 
-for i in range(2):
-    nisys.dynamic_reset()
+for i in range(1000):
     nisys.dynamic_set()
-#     pass
+    nisys.dynamic_reset()
+# #     pass
 
-nisys.dynamic_reset()
+# nisys.dynamic_reset()
 
 nisys.close()

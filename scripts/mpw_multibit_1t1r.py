@@ -18,16 +18,16 @@ nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R.to
 
 nisys.read(record=True)
 # input("Dynamic Form")
-# nisys.dynamic_form()
-# nisys.dynamic_reset()
+nisys.dynamic_form()
+nisys.dynamic_reset()
 
 # for i in range(100):
 #     nisys.dynamic_set()
 #     nisys.dynamic_reset()
 
-for i in range(100):
-    nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=25, debug=False)
-    nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=25, debug=False)
+for i in range(60000):
+    nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=40, debug=False)
+    nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=40, debug=False)
     nisys.dynamic_reset()
     nisys.dynamic_set()
 #     pass

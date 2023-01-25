@@ -48,7 +48,7 @@ class RRAMArrayMask:
         for wl in needed_wls.index:
             wl_mask = self.mask.index == wl
             bl_mask = pd.Series.to_numpy(needed_wls.loc[wl])
-            sl_mask = bl_mask & False
+            sl_mask = bl_mask
             masks.append((wl_mask, bl_mask, sl_mask))
         # print(f"pulse masks {masks}")
         return masks

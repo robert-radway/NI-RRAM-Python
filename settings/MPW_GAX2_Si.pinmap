@@ -41,23 +41,17 @@
 			<PinReference pin="WL_3" />
 			<!-- END -->
 		</PinGroup>
-		<PinGroup name="Body_BL0_SL0_WL0">
-			<PinReference pin="Body" />
-			<PinReference pin="BL_0" />
-			<PinReference pin="SL_0" />
-			<PinReference pin="WL_0" />
-		</PinGroup>
 	</PinGroups>
 	<Sites>
 		<Site siteNumber="0" />
 	</Sites>
 	<Connections>
-		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="31" />
+		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="2" />
 		<Connection pin="BL_0" siteNumber="0" instrument="PXI1Slot9" channel="3" />
-		<Connection pin="BL_1" siteNumber="0" instrument="PXI1Slot9" channel="0" />
-		<Connection pin="BL_2" siteNumber="0" instrument="PXI1Slot9" channel="4" />
-		<Connection pin="BL_3" siteNumber="0" instrument="PXI1Slot9" channel="5" />
-		<Connection pin="SL_0" siteNumber="0" instrument="PXI1Slot9" channel="2" />
+		<Connection pin="BL_1" siteNumber="0" instrument="PXI1Slot9" channel="4" />
+		<Connection pin="BL_2" siteNumber="0" instrument="PXI1Slot9" channel="5" />
+		<Connection pin="BL_3" siteNumber="0" instrument="PXI1Slot9" channel="6" />
+		<Connection pin="SL_0" siteNumber="0" instrument="PXI1Slot9" channel="0" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
 		<Connection pin="SL_1" siteNumber="0" instrument="PXI1Slot9" channel="16" />
 		<Connection pin="SL_2" siteNumber="0" instrument="PXI1Slot9" channel="17" />

@@ -22,21 +22,21 @@ data_foldername = f"{timestamp}_{str(args.chip)}_{str(args.device)}_res_sampling
 path_data_folder = os.path.join("data", data_foldername)
 os.makedirs(path_data_folder, exist_ok=True)
 
-### Initialize NI system
-### For CNFET: make sure polarity is PMOS
-nisys = NIRRAM(args.chip, args.device, settings="settings/DEC3_ProbeCard_CNFET_2x2.toml", polarity="PMOS") # FOR CNFET RRAM
+# Initialize NI system
+# For CNFET: make sure polarity is PMOS
+nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R.toml", polarity="PMOS") # FOR CNFET RRAM
 
 
 nisys.read(record=True)
 # input("Dynamic Form")
-# nisys.dynamic_form()
+nisys.dynamic_form()
 # nisys.dynamic_reset()
 
 res_samples = nisys.sample_resistance_at_bias(
     mode = "SET_SAMPLE",
-    initialize_cell_fn = nisys.dynamic_reset, # DONT TOUCH use bound method, either nisys.dynamic_reset or nisys.dynamic_set
-    pulse_fn = nisys.set_pulse, # DONT TOUCH use bound method, either nisys.reset_pulse or nisys.set_pulse
-    samples = 20,
+    initialize_cell_fn = nisys.dynamic_reset, # use bound method, either nisys.dynamic_reset or nisys.dynamic_set
+    pulse_fn = nisys.set_pulse, # use bound method, either nisys.reset_pulse or nisys.set_pulse
+    samples = 10,
     pw = 1,
     debug = True,
 )

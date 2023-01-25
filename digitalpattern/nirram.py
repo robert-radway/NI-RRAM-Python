@@ -151,9 +151,9 @@ class NIRRAM:
         for body_i, vbody_i in self.body.items(): self.ppmu_set_vbody(body_i, vbody_i)
 
         # Set address and all voltages to 0
-        for bl in self.all_bls: self.set_vbl(bl, 0.0)
-        for sl in self.all_sls: self.set_vsl(sl, 0.0)
-        for wl in self.all_wls: self.set_vwl(wl, 0.0)
+        for bl in self.all_bls: self.set_vbl(bl, 0.0, 0.0)
+        for sl in self.all_sls: self.set_vsl(sl, 0.0, 0.0)
+        for wl in self.all_wls: self.set_vwl(wl, 0.0, 0.0)
 
     def close(self):
         """Do cleanup and then close all NI sessions"""
@@ -437,35 +437,25 @@ class NIRRAM:
             else:
                 vbl_i = vbl
             # print(f"Setting BL {bl_i} to {vbl_i} V")
-            self.set_vbl(bl_i, vbl_i)
+            self.set_vbl(bl_i, vbl = vbl_i, vbl_lo = vsl)
         
         for sl_i in self.sls:
             # print(f"Setting SL {sl_i} to {vsl} V")
-            self.set_vsl(sl_i, vsl)
+            self.set_vsl(sl_i, vsl = vsl, vsl_lo = vsl)
         
-        # UNSELECTED WLs: set to ~vsl with some offset (to reduce bias)
+        # Unselected Wls add in bias
         for wl_i in self.all_wls: 
-            if self.polarity == "PMOS":
-                self.set_vwl(
-                    wl_i,
-                    vwl_hi = vsl + vwl_unsel_offset,
-                    vwl_lo = vsl + vwl_unsel_offset,
-                )
+            if wl_i in self.wls:
+                self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vsl)
             else:
-                self.set_vwl(
-                    wl_i,
-                    vwl_hi = vwl_unsel_offset,
-                    vwl_lo = vwl_unsel_offset,
-                )
-        
-        for wl_i in self.wls:
-            if self.polarity == "PMOS":
-                self.set_vwl(wl_i, vsl + vwl_unsel_offset, vwl_lo=vwl)
-            else:
-                self.set_vwl(wl_i, vwl, vwl_lo=vwl_unsel_offset)   
-         
+                self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vsl + vwl_unsel_offset)
+
         # pulse WL
         self.pulse(mask, pulse_len=pulse_len)
+
+        # # reset to high Z
+        # for wl_i in self.wls:
+        #     self.digital.channels[wl_i].termination_mode = nidigital.TerminationMode.HIGH_Z
 
         # Log the pulse
         #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
@@ -514,6 +504,19 @@ class NIRRAM:
             else:
                 vwl_unsel_offset = 0.0
 
+
+        # DO THESE FIRST TO AVOID ACCIDENTAL SET/RESET
+        for sl_i in self.sls:
+            # print(f"Setting SL {sl_i} to {vsl} V")
+            self.set_vsl(sl_i, vsl = vsl, vsl_lo = vbl)
+
+        # Unselected Wls add in bias
+        for wl_i in self.all_wls: 
+            if wl_i in self.wls:
+                self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vbl)
+            else:
+                self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vbl + vwl_unsel_offset)
+                
         # set voltages
         for bl_i in self.bls:
             if bl_selected is not None: # selecting specific bl, unselecting others
@@ -521,35 +524,7 @@ class NIRRAM:
             else:
                 vbl_i = vbl
             # print(f"Setting BL {bl_i} to {vbl_i} V")
-            self.set_vbl(bl_i, vbl_i)
-        
-        for sl_i in self.sls:
-            # print(f"Setting SL {sl_i} to {vsl} V")
-            self.set_vsl(sl_i, vsl)
-
-        # UNSELECTED WLs: set to ~vsl with some offset (to reduce bias)
-        for wl_i in self.all_wls: 
-            if self.polarity == "PMOS":
-                self.set_vwl(
-                    wl_i,
-                    vwl_hi = vsl + vwl_unsel_offset,
-                    vwl_lo = vsl + vwl_unsel_offset,
-                )
-                # self.set_vwl(wl, vwl)
-            else:
-                self.set_vwl(
-                    wl_i,
-                    vwl_hi = vwl_unsel_offset,
-                    vwl_lo = vwl_unsel_offset,
-                )
-        
-        # SELECTED WLs: set to pulse
-        for wl_i in self.wls: 
-            if self.polarity == "PMOS":
-                self.set_vwl(wl_i, vsl + vwl_unsel_offset, vwl_lo=vwl)
-                # self.set_vwl(wl, vwl)
-            else:
-                self.set_vwl(wl_i, vwl, vwl_lo=vwl_unsel_offset) 
+            self.set_vbl(bl_i, vbl = vbl_i, vbl_lo = vbl_i)
 
         # pulse WL
         self.pulse(mask, pulse_len=pulse_len)
@@ -579,7 +554,7 @@ class NIRRAM:
             self.set_vwl(wl_i, vwl_hi=0, vwl_lo=0)
         self.digital.ppmu_source()
     
-    def set_vsl(self, vsl_chan, vsl, vsl_lo=0):
+    def set_vsl(self, vsl_chan, vsl, vsl_lo):
         """Set VSL using NI-Digital driver"""
         # if self.polarity == "NMOS":
         #     assert(vsl <= 4)
@@ -589,14 +564,14 @@ class NIRRAM:
         self.digital.channels[vsl_chan].configure_voltage_levels(vsl_lo, vsl, vsl_lo, vsl, 0)
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
-    def set_vbl(self, vbl_chan, vbl, vbl_lo=0):
+    def set_vbl(self, vbl_chan, vbl, vbl_lo):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
         # assert(vbl <= 3.5)
         # assert(vbl >= 0)
         assert(vbl_chan in self.all_bls)
         self.digital.channels[vbl_chan].configure_voltage_levels(vbl_lo, vbl, vbl_lo, vbl, 0)
 
-    def set_vwl(self, vwl_chan, vwl_hi, vwl_lo=0):
+    def set_vwl(self, vwl_chan, vwl_hi, vwl_lo):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
         # Assertions
         # assert(vwl_hi <= 2.5)
@@ -659,7 +634,7 @@ class NIRRAM:
         self.set_pw(pulse_len+prepulse_len+postpulse_len)
         self.digital.burst_pattern("WL_PULSE_DEC3") #PULSE_MPW_ProbeCard
 
-    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200):
+    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200, wl_first=True):
         """Create pulse train. Format of bits is [BL SL WL]. For an array
         with 2 BLs, 2 SLs, and 2 WLs, the bits are ordered:
             [ BL0 BL1 SL0 SL1 WL0 WL1]
@@ -684,46 +659,26 @@ class NIRRAM:
             # print(f"wl_mask = {wl_mask}")
             # print(f"bl_mask = {bl_mask}")
             # print(f"sl_mask = {sl_mask}")
-
-            if self.polarity =="NMOS":
+            if wl_first: 
                 wl_pre_post_bits = BitVector(bitlist=(wl_mask & False)).int_val()
                 wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
                 sl_mask_bits = BitVector(bitlist=sl_mask).int_val()
-            elif self.polarity =="PMOS":
-                wl_pre_post_bits = BitVector(bitlist=(wl_mask | True)).int_val()
-                wl_mask_bits = BitVector(bitlist=~wl_mask).int_val()
+
+                data_prepulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_pre_post_bits
+                data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
+                data_postpulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset)  + wl_pre_post_bits
+            else: 
+                bl_pre_post_bits = BitVector(bitlist=(bl_mask & False)).int_val()
+                sl_pre_post_bits = BitVector(bitlist=(sl_mask & False)).int_val()
+                wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
-                sl_mask_bits = BitVector(bitlist=~sl_mask).int_val()
-            else:
-                raise ValueError(f"Invalid polarity: {self.polarity}. Must be 'NMOS' or 'PMOS'.")
+                sl_mask_bits = BitVector(bitlist=sl_mask).int_val()
 
-            data_prepulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_pre_post_bits
-            data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
-            data_postpulse = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset)  + wl_pre_post_bits
-
-            # ### TURN ON WL THEN PULSE BL
-            # if self.polarity =="NMOS":
-            #     wl_pre_post_bits = BitVector(bitlist=(wl_mask & False)).int_val()
-            #     wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
-            #     bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
-            #     sl_mask_bits = BitVector(bitlist=sl_mask).int_val()
-            # elif self.polarity =="PMOS":
-            #     wl_mask_bits = BitVector(bitlist=~wl_mask).int_val()
-
-            #     bl_pre_post_bits = BitVector(bitlist=(bl_mask & False)).int_val() # [00 1111 00] pad BL pulse with with 0s
-            #     bl_mask_bits = BitVector(bitlist=bl_mask).int_val() 
-
-            #     sl_pre_post_bits = BitVector(bitlist=sl_mask & False).int_val() # [00 1111 00] pad SL pulse with with 0s
-            #     sl_mask_bits = BitVector(bitlist=~sl_mask).int_val()
-            # else:
-            #     raise ValueError(f"Invalid polarity: {self.polarity}. Must be 'NMOS' or 'PMOS'.")
-            # # print(f"wl_mask_bits: {wl_mask_bits}")
-            
-            # data_prepulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset) + wl_mask_bits
-            # data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
-            # data_postpulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset) + wl_mask_bits
-
+                data_prepulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset) + wl_mask_bits
+                data = (bl_mask_bits << bl_bits_offset) + (sl_mask_bits << sl_bits_offset) + wl_mask_bits
+                data_postpulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset)  + wl_mask_bits
+           
             ### print bits for debugging
             # print(f"data_prepulse = {data_prepulse:b}")
             # print(f"data = {data:b}")
