@@ -21,10 +21,11 @@ nisys.read(record=True)
 
 ### CALL THIS TO FORM
 nisys.dynamic_form()
-#nisys.dynamic_reset()
+# nisys.read(record=True)
+nisys.dynamic_reset()
 
 ### CALL THIS TO CHECK IF CELL WORKS
-for i in range(100):
+for i in range(1000):
     nisys.dynamic_reset()
     nisys.dynamic_set()
 

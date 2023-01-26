@@ -6,7 +6,7 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/MPW_GAX2_Si.pinmap"
+pinmap = "settings/MPW_GAX1_Si.pinmap"
 specs = [
   "settings/DEC3.specs",
   "settings/DEC3.digilevels",
@@ -139,16 +139,16 @@ VBL = 0
 VSL = 0
 PW = 100
 
-VWL_SET_start = 1.2
+VWL_SET_start = 2.4
 VWL_SET_step = 0.2
-VWL_SET_stop = 2.5
+VWL_SET_stop = 2.8
 
-VBL_start = 1.4
+VBL_start = 0.5
 VBL_step = 0.1
 VBL_stop = 3.5
 
 PW_start = 1
-PW_stop = 10
+PW_stop = 1
 PW_steps = 1
 
 # [op.SET.PMOS]
@@ -196,17 +196,17 @@ VSL = 0
 VBL = 0
 PW = 100
 
-VWL_RESET_start = 1.5
+VWL_RESET_start = 2.4
 VWL_RESET_step = 0.2
 VWL_RESET_stop = 3.2
 
-VSL_start = 3
+VSL_start = 0.5
 VSL_step = 0.6
 VSL_stop = 6
 
 PW_start = 1
-PW_stop = 10
-PW_steps = 2
+PW_stop = 1
+PW_steps = 1
 
 # [op.RESET.PMOS]
 # VWL = 1.0

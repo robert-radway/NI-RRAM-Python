@@ -92,6 +92,7 @@ class NIRRAM:
         self.all_wls = settings["device"]["all_WLS"]
         self.all_bls = settings["device"]["all_BLS"]
         self.all_sls = settings["device"]["all_SLS"]
+        self.all_channels = self.all_wls + self.all_bls + self.all_sls
 
         self.wls = settings["device"]["WLS"]
         self.bls = settings["device"]["BLS"]
@@ -118,11 +119,15 @@ class NIRRAM:
         # Initialize NI-Digital driver
         self.digital = nidigital.Session(settings["NIDigital"]["deviceID"])
         self.digital.load_pin_map(settings["NIDigital"]["pinmap"])
-        self.digital.load_specifications_levels_and_timing(*settings["NIDigital"]["specs"])
-        self.digital.apply_levels_and_timing(*settings["NIDigital"]["specs"][1:])
-        self.digital.unload_all_patterns()
+        ###TODO This replaces the DEC3.digilevles and DEC4.digitiming files
+        ### you should update TOMLS accordingly to parameterise the configure_time
+        self.digital.create_time_set("test")
+        self.digital.configure_time_set_period("test", 5e-8)
+        self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.ZERO)
+        self.digital.unload_all_patterns() 
         for pattern in glob.glob(settings["NIDigital"]["patterns"]):
             print(pattern)
+        #TODO you can remove this grep and just do the single pattern that is all that is needed now
             self.digital.load_pattern(abspath(pattern))
         self.closed = False
 
@@ -134,16 +139,12 @@ class NIRRAM:
                 self.digital.channels[bl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
                 self.digital.channels[bl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
                 self.digital.channels[bl].ppmu_current_limit_range = self.op["READ"]["current_limit_range"]
-                self.digital.channels[bl].ppmu_voltage_level = 0
-                self.digital.channels[bl].ppmu_source()
             for sl in self.sls:
                 # Configure NI-Digital current read measurements
                 self.digital.channels[sl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
                 self.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
                 self.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
                 self.digital.channels[sl].ppmu_current_limit_range = self.op["READ"]["current_limit_range"]
-                self.digital.channels[sl].ppmu_voltage_level = 0
-                self.digital.channels[sl].ppmu_source()
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
@@ -154,6 +155,7 @@ class NIRRAM:
         for bl in self.all_bls: self.set_vbl(bl, 0.0, 0.0)
         for sl in self.all_sls: self.set_vsl(sl, 0.0, 0.0)
         for wl in self.all_wls: self.set_vwl(wl, 0.0, 0.0)
+        self.digital.commit()
 
     def close(self):
         """Do cleanup and then close all NI sessions"""
@@ -209,10 +211,7 @@ class NIRRAM:
         """Perform a READ operation. This operation works for single 1T1R devices and 
         arrays of devices, where each device has its own WL/BL.
         Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
-        # Increment the number of READs
-        # Let the cell relax after programming to get an accurate read 
-        self.digital_all_off(self.op["READ"]["relaxation_cycles"])
-        
+        # Increment the number of READs        
         # Set the read voltage levels
         vbl = self.op["READ"][self.polarity]["VBL"] if vbl is None else vbl
         vwl = self.op["READ"][self.polarity]["VWL"] if vwl is None else vwl
@@ -283,8 +282,9 @@ class NIRRAM:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
         # Disable READ, make sure all the supplies in off state for any subsequent operations
-        self.digital_all_off(self.op["READ"]["relaxation_cycles"])
-
+        # self.digital_all_off(self.op["READ"]["relaxation_cycles"])
+        self.ppmu_all_pins_to_zero()
+        time.sleep(self.op["READ"]["settling_time"]) # let the supplies settle
         # Log operation to master file
         # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
         # self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
@@ -302,7 +302,6 @@ class NIRRAM:
         """
         # Increment the number of READs
         # Let the cell relax after programming to get an accurate read 
-        self.digital_all_off(self.op["READ"]["relaxation_cycles"])
 
         # Set the read voltage levels
         vbl = self.op["READ"][self.polarity]["VBL"] if vbl is None else vbl
@@ -379,7 +378,7 @@ class NIRRAM:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
         # Disable READ, make sure all the supplies in off state for any subsequent operations
-        self.digital_all_off(10)
+        self.ppmu_all_pins_to_zero()
 
         # Log operation to master file
         # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
@@ -423,6 +422,8 @@ class NIRRAM:
         vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
         pulse_len = pulse_len if pulse_len is not None else self.op[mode][self.polarity]["PW"] 
         
+        self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.X)
+
         # unselected WL bias parameter
         if vwl_unsel_offset is None:
             if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
@@ -450,8 +451,14 @@ class NIRRAM:
             else:
                 self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vsl + vwl_unsel_offset)
 
-        # pulse WL
+        # Update the voltages    
+        self.digital.commit()
+
+        # Issue the pulse
         self.pulse(mask, pulse_len=pulse_len)
+
+        # Turn everything off high Z
+        self.digital_all_pins_to_zero()
 
         # # reset to high Z
         # for wl_i in self.wls:
@@ -496,7 +503,6 @@ class NIRRAM:
         vsl = vsl if vsl is not None else self.op[mode][self.polarity]["VSL"]
         vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 4.0)
         pulse_len = pulse_len if pulse_len is not None else self.op[mode][self.polarity]["PW"] 
-
         # unselected WL bias parameter
         if vwl_unsel_offset is None:
             if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
@@ -505,81 +511,81 @@ class NIRRAM:
                 vwl_unsel_offset = 0.0
 
 
-        # DO THESE FIRST TO AVOID ACCIDENTAL SET/RESET
-        for sl_i in self.sls:
-            # print(f"Setting SL {sl_i} to {vsl} V")
-            self.set_vsl(sl_i, vsl = vsl, vsl_lo = vbl)
+        self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.X)
 
-        # Unselected Wls add in bias
-        for wl_i in self.all_wls: 
+        # set voltages
+        
+        for wl_i in self.all_wls:
             if wl_i in self.wls:
                 self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vbl)
             else:
+                # Unselected Wls add in bias
                 self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vbl + vwl_unsel_offset)
-                
-        # set voltages
+
         for bl_i in self.bls:
-            if bl_selected is not None: # selecting specific bl, unselecting others
+            if bl_selected is not None: 
+                # selecting specific bl, unselecting others
                 vbl_i = vbl if bl_i == bl_selected else vbl_unsel
             else:
                 vbl_i = vbl
             # print(f"Setting BL {bl_i} to {vbl_i} V")
             self.set_vbl(bl_i, vbl = vbl_i, vbl_lo = vbl_i)
 
-        # pulse WL
+        for sl_i in self.sls:
+            # print(f"Setting SL {sl_i} to {vsl} V")
+            self.set_vsl(sl_i, vsl = vsl, vsl_lo = vbl)
+
+        # Update the voltages    
+        self.digital.commit()
+
+        # Issue the pulse
         self.pulse(mask, pulse_len=pulse_len)
+
+        # Turn everything off high Z
+        self.digital_all_pins_to_zero()
 
         # Log the pulse
         #self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
         #self.mlogfile.write(f"RESET,{vwl},0,{vsl},{pulse_width}\n")
     
-    def reset_all_pins_to_zero(self):
-        """Reset all Bl, SL, WL pin hi/lo voltage levels to zero.
-
-        If we are manually changing the BLs, SLs, WLs by replacing the 
-        NISYS sls/bls/wls field, these may be configured with a non-zero
-        voltage pulse. If an operation runs, these may erroneously switch high.
-        when they should be de-selected and turned off. Use this function to
-        reset all pin voltage settings. Typical context:
-            for bl in [0, 1, 2, 3]:
-                self.bls = [f"BL_{bl}"]       # here we are replacing bitlines
-                self.reset_all_pins_to_zero() # reset pins state
-                self.dynamic_reset()          # do some operation
+    def digital_all_pins_to_zero(self):
         """
-        for bl_i in self.all_bls:
-            self.set_vbl(bl_i, vbl=0, vbl_lo=0)
-        for sl_i in self.all_sls:
-            self.set_vsl(sl_i, vsl=0, vsl_lo=0)
-        for wl_i in self.all_wls:
-            self.set_vwl(wl_i, vwl_hi=0, vwl_lo=0)
+        High z down to zero
+        """
+        self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.X)
+        for chan in self.all_channels:
+            self.digital.channels[chan].configure_voltage_levels(0, 0, 0, 0, 0)
+        self.digital.commit()
+
+        return
+     
+    def ppmu_all_pins_to_zero(self):
+        """ 
+        Cleans up after PPMU operation (otherwise levels default when going back digital)
+        """
+        for chan in self.all_channels:
+            self.digital.channels[chan].ppmu_voltage_level = 0
         self.digital.ppmu_source()
+        return
     
     def set_vsl(self, vsl_chan, vsl, vsl_lo):
         """Set VSL using NI-Digital driver"""
-        # if self.polarity == "NMOS":
-        #     assert(vsl <= 4)
-        #     assert(vsl >= 0)
-        # if self.polarity == "PMOS":
         assert(vsl_chan in self.all_sls)
         self.digital.channels[vsl_chan].configure_voltage_levels(vsl_lo, vsl, vsl_lo, vsl, 0)
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
+        return
 
     def set_vbl(self, vbl_chan, vbl, vbl_lo):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
-        # assert(vbl <= 3.5)
-        # assert(vbl >= 0)
         assert(vbl_chan in self.all_bls)
         self.digital.channels[vbl_chan].configure_voltage_levels(vbl_lo, vbl, vbl_lo, vbl, 0)
+        return
 
     def set_vwl(self, vwl_chan, vwl_hi, vwl_lo):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
-        # Assertions
-        # assert(vwl_hi <= 2.5)
-        # assert(vwl_hi >= 0)
-        # assert(vwl_lo <= 2.5)
-        # assert(vwl_lo >= 0)
         assert(vwl_chan in self.all_wls)
         self.digital.channels[vwl_chan].configure_voltage_levels(vwl_lo, vwl_hi, vwl_lo, vwl_hi, 0)
+        return
 
     def ppmu_set_vsl(self, vsl_chan, vsl):
         """Set VSL using NI-Digital driver"""
@@ -623,24 +629,16 @@ class NIRRAM:
         self.digital.channels[vbody_chan].ppmu_source()
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
-    def digital_all_off(self, pulse_len=1, prepulse_len=0, postpulse_len=0, max_pulse_len=1200):
-        waveform = [0 for i in range(max_pulse_len*len(self.all_wls))]
-        # print(waveform)
-        
-        # Configure and send pulse waveform
-        broadcast = nidigital.SourceDataMapping.BROADCAST
-        self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
-        self.digital.write_source_waveform_broadcast("wl_data", waveform)
-        self.set_pw(pulse_len+prepulse_len+postpulse_len)
-        self.digital.burst_pattern("WL_PULSE_DEC3") #PULSE_MPW_ProbeCard
-
-    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=1200, wl_first=True):
+    #TODO
+    #max_pulse length must be leass than the prepulse_len + postpulse_len + pulse_lne
+    #WL_first is currently defaulting off
+    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=10000, wl_first=False):
         """Create pulse train. Format of bits is [BL SL WL]. For an array
         with 2 BLs, 2 SLs, and 2 WLs, the bits are ordered:
             [ BL0 BL1 SL0 SL1 WL0 WL1]
         To allow for BL/SL settling before pulsing the WL, pre-pend
         and post-pend pulses where WLs are 0. For example, if we are
-        pulsing both WLs, with all BLs and SLs enabled, our pulses will be:
+        pulsing both WLs, with all BLs and SLs enabled, our pulses will be: 
             [ 1 1 1 1 0 0 ]   } Pre-pulse (WL zero'd, BL/SL active)
             [ 1 1 1 1 0 0 ]
                  ...
@@ -652,14 +650,13 @@ class NIRRAM:
         """
         bl_bits_offset = len(self.all_wls) + len(self.all_sls)
         sl_bits_offset = len(self.all_wls)
-
         waveform = []
         for (wl_mask, bl_mask, sl_mask) in mask.get_pulse_masks():
             ### Print masks for debugging
             # print(f"wl_mask = {wl_mask}")
             # print(f"bl_mask = {bl_mask}")
             # print(f"sl_mask = {sl_mask}")
-            if wl_first: 
+            if not wl_first:
                 wl_pre_post_bits = BitVector(bitlist=(wl_mask & False)).int_val()
                 wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
                 bl_mask_bits = BitVector(bitlist=bl_mask).int_val()
@@ -697,6 +694,7 @@ class NIRRAM:
         self.digital.write_source_waveform_broadcast("wl_data", waveform)
         self.set_pw(prepulse_len + pulse_len + postpulse_len)
         self.digital.burst_pattern("WL_PULSE_DEC3")
+        return
 
     def set_pw(self, pulse_width):
         """Set pulse width"""
@@ -758,6 +756,7 @@ class NIRRAM:
                         vwl=vwl,
                         pulse_len=int(pw),
                     )
+                    self.ppmu_all_pins_to_zero()
                     
                     # use settling if parameter present, to discharge parasitic cap
                     if "settling_time" in self.op[mode]:
@@ -830,6 +829,7 @@ class NIRRAM:
                         vwl=vwl,
                         pulse_len=int(pw),
                     )
+                    self.ppmu_all_pins_to_zero()
                     
                     # use settling if parameter present, to discharge parasitic cap
                     if "settling_time" in self.op[mode]:

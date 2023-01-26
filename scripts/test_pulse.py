@@ -4,8 +4,8 @@ import numpy as np
 from digitalpattern.nirram import NIRRAM
 from digitalpattern.mask import RRAMArrayMask
 import matplotlib.pyplot as plt
-
-
+import nidigital
+import time
 # Get arguments
 parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("chip", help="chip name for logging")
@@ -18,27 +18,43 @@ nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R.to
 
 mask = RRAMArrayMask(nisys.wls, nisys.bls, nisys.sls, nisys.all_wls, nisys.all_bls, nisys.all_sls, nisys.polarity)
 
-# nisys.set_pulse(
-#     mask,
-#     bl_selected=None, # specific selected BL for 1TNR
-#     vbl=-1.5,
-#     vsl=0,
-#     vwl=-1.5,
-#     pulse_len=1,
-# )
+nisys.read(record=True)
 
+nisys.set_pulse(
+    mask,
+    bl_selected=None, # specific selected BL for 1TNR
+    vbl=-1.5,
+    vsl=0,
+    vwl=-1.5,
+    pulse_len=1,
+)
+
+nisys.read(record=True)
 
 nisys.reset_pulse(
     mask,
     bl_selected=None, # specific selected BL for 1TNR
     vbl=0.5,
-    vsl=-1.5,
-    vwl=-1.5,
+    vsl=-0.5,
+    vwl=-0.5,
     pulse_len=1,
 )
 
-nisys.reset_all_pins_to_zero()
+nisys.read(record=True)
 
+nisys.reset_pulse(
+    mask,
+    bl_selected=None, # specific selected BL for 1TNR
+    vbl=0.5,
+    vsl=-2,
+    vwl=-2,
+    pulse_len=10,
+)
+
+nisys.read(record=True)
+
+# input()
+# nisys.read()
 # nisys.read(record=True)
 # input("Dynamic Form")
 # nisys.dynamic_form()

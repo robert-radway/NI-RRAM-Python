@@ -8,8 +8,8 @@
           <PinEdge pin="BLSLWLS">
             <DriveNonReturn>
               <On>0</On>
-              <Data>1E-6</Data>
-              <Off>1E-6</Off>
+              <Data>0</Data>
+              <Off>0</Off>
             </DriveNonReturn>
             <CompareStrobe>
               <Strobe>2.5E-08</Strobe>

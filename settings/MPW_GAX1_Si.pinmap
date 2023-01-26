@@ -46,7 +46,7 @@
 		<Site siteNumber="0" />
 	</Sites>
 	<Connections>
-		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="1" />
+		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="0" />
 		<Connection pin="BL_0" siteNumber="0" instrument="PXI1Slot9" channel="3" />
 		<Connection pin="BL_1" siteNumber="0" instrument="PXI1Slot9" channel="4" />
 		<Connection pin="BL_2" siteNumber="0" instrument="PXI1Slot9" channel="5" />
@@ -57,7 +57,7 @@
 		<Connection pin="SL_2" siteNumber="0" instrument="PXI1Slot9" channel="17" />
 		<Connection pin="SL_3" siteNumber="0" instrument="PXI1Slot9" channel="18" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
-		<Connection pin="WL_0" siteNumber="0" instrument="PXI1Slot9" channel="0" />
+		<Connection pin="WL_0" siteNumber="0" instrument="PXI1Slot9" channel="1" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
 		<Connection pin="WL_1" siteNumber="0" instrument="PXI1Slot9" channel="19" />
 		<Connection pin="WL_2" siteNumber="0" instrument="PXI1Slot9" channel="20" />
