@@ -6,7 +6,7 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/DEC3_ProbeCard_CNFET_2x2.pinmap"
+pinmap = "settings/DEC3_ProbeCard_Si_2x2.pinmap"
 specs = [
     "settings/DEC3.specs",
     "settings/DEC3_ProbeCard_levels_2x2.digilevels",
@@ -18,9 +18,9 @@ patterns = "settings/patterns/*DEC3_probecard_2x2.digipat"
 [device]
 # define all body voltage names and map them to their neutral value
 # for PMOS this is typically VDD while for NMOS this is typically GND or VSS
-# body = { A2_PMOS_BODY = 1.5, A2_NMOS_BODY = 0.0 }
+body = { A2_PMOS_BODY = 1.5, A2_NMOS_BODY = 0.0 }
 # body = { A2_PMOS_BODY = 0.0, A2_NMOS_BODY = 0.0 }
-body = {} # for cnfet
+# body = {} # for cnfet
 
 # define all WLs, BLs, SLs names
 all_WLS = [ "A2_WL_0", "A2_WL_1" ]
@@ -29,14 +29,14 @@ all_SLS = [ "A2_SL_0", "A2_SL_1" ]
 
 # subset of WL, BL, SL that will be pulsed for measurement
 # all BL,WL,SL
-# WLS = [ "A2_WL_0", "A2_WL_1" ]
-# BLS = [ "A2_BL_0", "A2_BL_1" ]
-# SLS = [ "A2_SL_0", "A2_SL_1" ]
+WLS = [ "A2_WL_0", "A2_WL_1" ]
+BLS = [ "A2_BL_0", "A2_BL_1" ]
+SLS = [ "A2_SL_0", "A2_SL_1" ]
 
-# uncomment for testing single cell
-WLS = [ "A2_WL_1" ]
-BLS = [ "A2_BL_1" ]
-SLS = [ "A2_SL_1" ]
+# # uncomment for testing single cell
+# WLS = [ "A2_WL_0" ]
+# BLS = [ "A2_BL_0" ]
+# SLS = [ "A2_SL_0" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
@@ -79,10 +79,11 @@ VSL = 0
 VB = 0
 
 [op.READ.PMOS]
-VWL = -1.5
+VWL = -0.3
 VBL = -0.3
 VSL = 0
 VB = 1.5
+VWL_UNSEL_OFFSET = 1.0
 
 # =============================================================================
 # FORM PULSE
@@ -98,11 +99,11 @@ PW = 1200
 
 VWL_SET_start = 1.0
 VWL_SET_step = 0.2
-VWL_SET_stop = 2.2
+VWL_SET_stop = 1.6
 
 VBL_start = 0.5
 VBL_step = 0.2
-VBL_stop = 4.5
+VBL_stop = 2.2
 
 PW_start = 1
 PW_stop = 10
@@ -122,8 +123,8 @@ VBL_start = 1
 VBL_step = -0.1
 VBL_stop = -1
 
-PW_start = 1
-PW_stop = 10
+PW_start = 10
+PW_stop = 100
 PW_steps = 3
 
 # =============================================================================
@@ -139,12 +140,12 @@ VSL = 0
 PW = 1
 
 VWL_SET_start = 0.5
-VWL_SET_step = 0.1
+VWL_SET_step = 0.2
 VWL_SET_stop = 1.5
 
 VBL_start = 0.5
-VBL_step = 0.1
-VBL_stop = 2.0
+VBL_step = 0.2
+VBL_stop = 2.5
 
 PW_start = 1
 PW_stop = 10
@@ -152,7 +153,7 @@ PW_steps = 3
 
 [op.SET.PMOS]
 VWL = 0.5
-VWL_UNSEL_OFFSET = 0.5 # positive value -> reduces PMOS bias
+VWL_UNSEL_OFFSET = 1.0 # positive value -> reduces PMOS bias
 VBL = 1
 VSL = 2
 PW = 1200
@@ -165,8 +166,8 @@ VBL_start = 1
 VBL_step = -0.1
 VBL_stop = -0.5
 
-PW_start = 1
-PW_stop = 10
+PW_start = 10
+PW_stop = 100
 PW_steps = 3
 
 [op.SET_SAMPLE.PMOS]
@@ -193,16 +194,16 @@ VSL = 3
 VBL = 0
 PW = 1
 
-VWL_RESET_start = 3.5
+VWL_RESET_start = 1.0
 VWL_RESET_step = 0.2
-VWL_RESET_stop = 4
+VWL_RESET_stop = 1.6
 
-VSL_start = 3.8
-VSL_step = 0.2
-VSL_stop = 5.5
+VSL_start = 1.5
+VSL_step = 0.1
+VSL_stop = 2.2
 
-PW_start = 1
-PW_stop = 10
+PW_start = 10
+PW_stop = 100
 PW_steps = 2
 
 [op.RESET.PMOS]
@@ -220,6 +221,6 @@ VSL_start = 1.5
 VSL_step = -0.1
 VSL_stop = 0.0
 
-PW_start = 1
-PW_stop = 10
+PW_start = 10
+PW_stop = 100
 PW_steps = 3

@@ -122,7 +122,7 @@ class NIRRAM:
         ###TODO This replaces the DEC3.digilevles and DEC4.digitiming files
         ### you should update TOMLS accordingly to parameterise the configure_time
         self.digital.create_time_set("test")
-        self.digital.configure_time_set_period("test", 5e-8)
+        self.digital.configure_time_set_period("test", 1e-8)
         self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.ZERO)
         self.digital.unload_all_patterns() 
         for pattern in glob.glob(settings["NIDigital"]["patterns"]):
@@ -207,7 +207,15 @@ class NIRRAM:
     """
 
 
-    def read(self, vbl=None, vsl=None, vwl=None, vwl_unsel_offset=None, vb=None, record=False):
+    def read(
+        self,
+        vbl=None,
+        vsl=None,
+        vwl=None,
+        vwl_unsel_offset=None,
+        vb=None,
+        record=False,
+    ):
         """Perform a READ operation. This operation works for single 1T1R devices and 
         arrays of devices, where each device has its own WL/BL.
         Returns list (per-bitline) of tuple with (res, cond, meas_i, meas_v)"""
@@ -449,7 +457,7 @@ class NIRRAM:
             if wl_i in self.wls:
                 self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vsl)
             else:
-                self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vsl + vwl_unsel_offset)
+                self.set_vwl(wl_i, vwl_hi = vsl, vwl_lo = vsl + vwl_unsel_offset)
 
         # Update the voltages    
         self.digital.commit()
@@ -520,7 +528,7 @@ class NIRRAM:
                 self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vbl)
             else:
                 # Unselected Wls add in bias
-                self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vbl + vwl_unsel_offset)
+                self.set_vwl(wl_i, vwl_hi = vbl, vwl_lo = vbl + vwl_unsel_offset)
 
         for bl_i in self.bls:
             if bl_selected is not None: 
@@ -632,7 +640,7 @@ class NIRRAM:
     #TODO
     #max_pulse length must be leass than the prepulse_len + postpulse_len + pulse_lne
     #WL_first is currently defaulting off
-    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=2, max_pulse_len=10000, wl_first=False):
+    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=0, max_pulse_len=10000, wl_first=True):
         """Create pulse train. Format of bits is [BL SL WL]. For an array
         with 2 BLs, 2 SLs, and 2 WLs, the bits are ordered:
             [ BL0 BL1 SL0 SL1 WL0 WL1]
@@ -1433,7 +1441,8 @@ class NIRRAM:
             mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
             coarse_success = False
             for vwl, vbl in product(vwl_coarse_sweep, vbl_coarse_sweep):
-                #print(pw, vwl, vbl, vsl)
+                if debug: print(pw, vwl, vbl, vsl)
+
                 self.set_pulse(
                     mask,
                     bl_selected=bl_selected, # specific selected BL for 1TNR
