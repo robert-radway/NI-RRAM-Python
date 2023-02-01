@@ -21,8 +21,8 @@ parser.add_argument("device_no", help="chip name for logging")
 parser.add_argument("--start-vds", type=float, default=0.0, help="start vds")
 parser.add_argument("--end-vds", type=float, default=-1.0, help="end vds")
 parser.add_argument("--step-vds", type=float, default=10, help="step vds")
-parser.add_argument("--start-vgs", type=float, default=1.0, help="start vgs")
-parser.add_argument("--end-vgs", type=float, default=-1.0, help="end vgs")
+parser.add_argument("--start-vgs", type=float, default=2.0, help="start vgs")
+parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
 parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
 parser.add_argument("--array", type=int, default=0, help="input for array size, changes pins used")
 args = parser.parse_args()
@@ -58,12 +58,12 @@ def iv_curve(
     nisys.digital.channels[bl].ppmu_aperture_time = nisys.op["READ"]["aperture_time"]
     nisys.digital.channels[bl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
     nisys.digital.channels[bl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-    nisys.digital.channels[bl].ppmu_current_limit_range = 32e-6
+    nisys.digital.channels[bl].ppmu_current_limit_range = 128e-6
 
     nisys.digital.channels[sl].ppmu_aperture_time = nisys.op["READ"]["aperture_time"]
     nisys.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
     nisys.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
-    nisys.digital.channels[sl].ppmu_current_limit_range = 32e-6
+    nisys.digital.channels[sl].ppmu_current_limit_range = 128e-6
 
     nisys.digital.channels[wl].ppmu_aperture_time = nisys.op["READ"]["aperture_time"]
     nisys.digital.channels[wl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS

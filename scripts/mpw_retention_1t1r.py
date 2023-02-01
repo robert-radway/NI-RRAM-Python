@@ -20,12 +20,14 @@ nisys.read(record=True)
 ## input("Dynamic Form")
 
 ### CALL THIS TO FORM
-nisys.dynamic_form()
+# nisys.dynamic_form()
 # nisys.read(record=True)
-nisys.dynamic_reset()
+# nisys.dynamic_reset()
 
 ### CALL THIS TO CHECK IF CELL WORKS
 for i in range(1000):
+    # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_1", max_attempts=1, debug=False)
+    # nisys.targeted_dynamic_set(mode="SET_TARGET_WINDOW_2", max_attempts=1, debug=False)
     nisys.dynamic_reset()
     nisys.dynamic_set()
 

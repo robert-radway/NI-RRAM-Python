@@ -6,7 +6,7 @@ data_header = "data/"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/MPW_GAX1_CNFET.pinmap"
+pinmap = "settings/MPW_CNFET_NBTI.pinmap"
 specs = [
   "settings/DEC3.specs",
   "settings/DEC3.digilevels",
@@ -18,7 +18,7 @@ patterns = "settings/patterns/WL_PULSE_DEC3.digipat"
 [device]
 # define all body voltage names and map them to their neutral value
 # for PMOS this is typically VDD while for NMOS this is typically GND or VSS
-body = { }
+body = { Body = 0.0 }
 
 # define all WLs, BLs, SLs names
 all_WLS = [ "WL_0", "WL_1", "WL_2", "WL_3" ]
@@ -115,8 +115,8 @@ VBL = 0.5
 VSL = 1.0
 PW = 1200
 
-VWL_SET_start = 0
-VWL_SET_step = -0.2
+VWL_SET_start = 0.7
+VWL_SET_step = -0.1
 VWL_SET_stop = -1.4
 
 VBL_start = 0
@@ -156,11 +156,11 @@ VSL = 1.0
 PW = 100
 
 VWL_SET_start = 0.7
-VWL_SET_step = -0.2
+VWL_SET_step = -0.1
 VWL_SET_stop = -1.0
 
-VBL_start = 1.0
-VBL_step = -0.2
+VBL_start = 0.4
+VBL_step = -0.1
 VBL_stop = -2.0
 
 PW_start = 1
@@ -288,12 +288,12 @@ VBL = 2.5
 PW = 100
 
 VWL_RESET_start = 2.2
-VWL_RESET_step = -0.2
-VWL_RESET_stop = 1.5
+VWL_RESET_step = -0.1
+VWL_RESET_stop = 1.4
 
-VSL_start = 2.0
+VSL_start = 1.8
 VSL_step = -0.1
-VSL_stop = 0.0
+VSL_stop = -0.5
 
 PW_start = 1
 PW_stop = 1

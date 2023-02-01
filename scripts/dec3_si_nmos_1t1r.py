@@ -19,7 +19,7 @@ nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_Si.toml", pol
 nisys.read(record=True)
 # input("Dynamic Form")
 # nisys.dynamic_form()
-nisys.dynamic_reset()
+# nisys.dynamic_reset()
 
 for i in range(1000):
     nisys.dynamic_reset()

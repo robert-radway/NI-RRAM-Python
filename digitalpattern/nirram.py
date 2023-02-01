@@ -163,6 +163,7 @@ class NIRRAM:
             # set all body voltages back to zero
             for body_i in self.body.keys(): self.ppmu_set_vbody(body_i, 0.0)
             print("[close] set body")
+            self.ppmu_all_pins_to_zero()
 
             # Close NI-Digital
             # print("[close] TRY digital.close()", self.digital.is_done())
@@ -1941,7 +1942,6 @@ class NIRRAM:
         v_body = 0.0,
         current_limit_range = 32e-6, # for S/D
     ) -> dict:
-        config = self.settings["cnfet"]
         body = list(self.body)[0]
         bl = self.bls[0]
         sl = self.sls[0]

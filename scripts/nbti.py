@@ -39,11 +39,12 @@ parser.add_argument("settings", help="settings filename")
 parser.add_argument("chip", help="chip name for logging")
 parser.add_argument("device", help="device name for logging")
 parser.add_argument("--polarity", type=str, nargs="?", default="PMOS", help="polarity of device (PMOS or NMOS)")
-parser.add_argument("--tstart", type=int, nargs="?", default=1e-1, help="when to start reading iv after applying dc gate bias")
-parser.add_argument("--tend", type=int, nargs="?", default=1e1, help="when to stop reading")
-parser.add_argument("--samples", type=int, nargs="?", default=20, help="number of samples to read during the time range")
-parser.add_argument("--read_bias", type=int, nargs="?", default=0.050, help="read drain bias in volts")
-parser.add_argument("--gate_bias", type=int, nargs="?", default=1, help="constant gate bias in volts")
+parser.add_argument("--tstart", type=float, nargs="?", default=1e-1, help="when to start reading iv after applying dc gate bias")
+parser.add_argument("--tend", type=float, nargs="?", default=1e4, help="when to stop reading")
+parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
+parser.add_argument("--read_bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
+parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.2, help="constant gate bias in volts")
+parser.add_argument("--gate_bias", type=float, nargs="?", default=-1.8, help="constant gate bias in volts")
 
 args = parser.parse_args()
 
@@ -53,6 +54,7 @@ tend = args.tend
 samples = args.samples
 v_read = args.read_bias
 v_gate = args.gate_bias
+v_read_gate_bias = args.read_gate_bias
 
 # create time points when device should be measured
 print(f"Creating log sampling points from {tstart} to {tend} with {samples} samples")
@@ -78,6 +80,7 @@ config = {
     "samples": samples,
     "v_read": v_read,
     "v_gate": v_gate,
+    "v_read_gate_bias": v_read_gate_bias,
 }
 with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
     json.dump(config, f, indent=4)
@@ -85,6 +88,8 @@ with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
 # Initialize NI system
 # For CNFET: make sure polarity is PMOS
 nisys = NIRRAM(args.chip, args.device, settings=args.settings, polarity=args.polarity)
+# nisys.close()
+# exit()
 
 # ==============================================================================
 # DO INITIAL COARSE I-V curve
@@ -92,16 +97,28 @@ nisys = NIRRAM(args.chip, args.device, settings=args.settings, polarity=args.pol
 # used for fitting I-V to find VT shift
 # run spot measurement to get current at some voltage
 initial_iv = []
-for v_wl in [0.0, -0.2, -0.4, -0.8, -1.2]:
+# for v_wl in [0.0]:
+# for v_wl in [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.6]:
+# for v_wl in [0.0]: # for 1 V bias
+# for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # for 1 V bias
+# for v_wl in [0.0, -0.4, -0.8, -1.2]: # for 1 V bias
+for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4]: # for 1 V bias
+# for v_wl in [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # i-v curve
+# for v_wl in [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]: # i-v curve
+# for v_wl in np.linspace(-2.0, 2.0, 41): # i-v curve
     iv_data = nisys.cnfet_spot_iv(
         v_wl=v_wl,
-        v_bl=-0.05,
+        v_bl=v_read,
         v_sl=0.0,
     )
     print(iv_data)
     initial_iv.append(iv_data)
     # give some relaxation time
-    time.sleep(1.0)
+    # time.sleep(0.5)
+    time.sleep(10.0)
+
+# nisys.close()
+# exit()
 
 # save in json format
 path_initial_iv_json = os.path.join(path_data_folder, f"initial_iv.json")
@@ -111,15 +128,20 @@ with open(path_initial_iv_json, "w+") as f:
 # also write into csv
 path_initial_iv_csv = os.path.join(path_data_folder, f"initial_iv.csv")
 with open(path_initial_iv_csv, "w+") as f:
-    f.write("v_bl,i_bl,v_sl,i_sl,v_wl,i_wl")
+    f.write("v_bl,i_bl,v_sl,i_sl,v_wl,i_wl\n")
     for iv in initial_iv:
         f.write(f"{iv['v_bl']},{iv['i_bl']},{iv['v_sl']},{iv['i_sl']},{iv['v_wl']},{iv['i_wl']}\n")
+
+# uncomment to close after iv
+# nisys.close()
+# exit()
 
 # ==============================================================================
 # DO NBTI TIME GATE VOLTAGE STRESS MEASUREMENT
 # ==============================================================================
 # choose BL to read from, for now just use first bl
 bl = nisys.bls[0]
+wl = nisys.wls[0]
 
 # data that will be saved
 data_measurement = {
@@ -129,7 +151,7 @@ data_measurement = {
 }
 
 # turn on DC gate bias
-nisys.ppmu_set_vwl(v_gate)
+nisys.ppmu_set_vwl(wl, v_gate)
 
 # take initial timestamp when measurement begins
 # NOTE: need to guess or measure roughly how long it takes
@@ -149,9 +171,11 @@ for t_next_measure in t_measure_points:
 
     # turn on drain bias and do measurement, then turn off drain bias
     nisys.ppmu_set_vbl(bl, v_read)
+    nisys.ppmu_set_vwl(wl, v_read_gate_bias)
     nisys.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
     meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
     meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+    nisys.ppmu_set_vwl(wl, v_gate)
     nisys.ppmu_set_vbl(bl, 0.0)
 
     # print measurement
