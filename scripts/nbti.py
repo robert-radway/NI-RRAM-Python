@@ -33,18 +33,22 @@ import nidigital
 import numpy as np
 import time
 
+
 # Get arguments
 parser = argparse.ArgumentParser(description="NBTI measurement")
 parser.add_argument("settings", help="settings filename")
 parser.add_argument("chip", help="chip name for logging")
 parser.add_argument("device", help="device name for logging")
 parser.add_argument("--polarity", type=str, nargs="?", default="PMOS", help="polarity of device (PMOS or NMOS)")
-parser.add_argument("--tstart", type=float, nargs="?", default=1e-1, help="when to start reading iv after applying dc gate bias")
-parser.add_argument("--tend", type=float, nargs="?", default=1e4, help="when to stop reading")
+parser.add_argument("--tstart", type=float, nargs="?", default=20e-3, help="when to start reading iv after applying dc gate bias")
+parser.add_argument("--tend", type=float, nargs="?", default=2e3, help="when to stop reading")
+parser.add_argument("--tstart_relax", type=float, nargs="?", default=20e-3, help="when to start reading iv after stopping bias stress")
+parser.add_argument("--tend_relax", type=float, nargs="?", default=2e3, help="when to stop reading relaxation")
 parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
+parser.add_argument("--samples_relax", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--read_bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
-parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.2, help="constant gate bias in volts")
-parser.add_argument("--gate_bias", type=float, nargs="?", default=-1.8, help="constant gate bias in volts")
+parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.4, help="constant gate bias in volts")
+parser.add_argument("--gate_bias", type=float, nargs="?", default=-2, help="constant gate bias in volts")
 
 args = parser.parse_args()
 
@@ -52,22 +56,29 @@ args = parser.parse_args()
 tstart = args.tstart
 tend = args.tend
 samples = args.samples
+tstart_relax = args.tstart_relax
+tend_relax = args.tend_relax
+samples_relax = args.samples_relax
 v_read = args.read_bias
 v_gate = args.gate_bias
 v_read_gate_bias = args.read_gate_bias
 
 # create time points when device should be measured
-print(f"Creating log sampling points from {tstart} to {tend} with {samples} samples")
+print(f"STRESS: Creating log sampling points from {tstart} to {tend} with {samples} samples")
+print(f"RELAX: Creating log sampling points from {tstart_relax} to {tend_relax} with {samples_relax} samples")
 
-t_measure_points = np.logspace(np.log10(tstart), np.log10(tend), samples)
+t_measure_points_stress = np.logspace(np.log10(tstart), np.log10(tend), samples)
+t_measure_points_relax = np.logspace(np.log10(tstart_relax), np.log10(tend_relax), samples_relax)
 
-print(f"Time sampling points: {t_measure_points}")
+print(f"Time sampling points STRESS: {t_measure_points_stress}")
+print(f"Time sampling points RELAX: {t_measure_points_relax}")
 
 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 data_foldername = f"{timestamp}_{str(args.chip)}_{str(args.device)}"
 path_data_folder = os.path.join("data", data_foldername)
 os.makedirs(path_data_folder, exist_ok=True)
-path_data_measurement = os.path.join(path_data_folder, "nbti_id_vs_time.json")
+path_data_stress = os.path.join(path_data_folder, "nbti_id_vs_time_stress")
+path_data_relax = os.path.join(path_data_folder, "nbti_id_vs_time_relax")
 
 # save config that will be run
 config = {
@@ -101,8 +112,8 @@ initial_iv = []
 # for v_wl in [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.6]:
 # for v_wl in [0.0]: # for 1 V bias
 # for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # for 1 V bias
-# for v_wl in [0.0, -0.4, -0.8, -1.2]: # for 1 V bias
-for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4]: # for 1 V bias
+# for v_wl in [0.0, -0.4, -0.8, -1.2]:
+for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6]:
 # for v_wl in [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # i-v curve
 # for v_wl in [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]: # i-v curve
 # for v_wl in np.linspace(-2.0, 2.0, 41): # i-v curve
@@ -143,59 +154,91 @@ with open(path_initial_iv_csv, "w+") as f:
 bl = nisys.bls[0]
 wl = nisys.wls[0]
 
-# data that will be saved
-data_measurement = {
-    "t": [],   # time in seconds when measurement is taken
-    "v_d": [], # drain voltage read
-    "i_d": [], # drain current read
-}
 
-# turn on DC gate bias
-nisys.ppmu_set_vwl(wl, v_gate)
+def run_bias_stress_measurement(
+    v_stress: float,
+    t_measure_points: list[float],
+    path_data: str,
+    t_save_threshold: float = 10.0, # time before saving to json during measurement
+):
+    """Common routine for stress and relaxation NBTI current measurement.
+    Implements a "on-the-fly" method of holding an initial stressing
+    """
+    # turn on DC gate bias
+    nisys.ppmu_set_vwl(wl, v_stress)
 
-# take initial timestamp when measurement begins
-# NOTE: need to guess or measure roughly how long it takes
-# from turning on DC bias to when this timestamp is taken
-# do this on oscilloscope by measuring delay between setting ppmu
-# and when pulse appears
-t0 = time.perf_counter_ns() # make sure to use perf_counter, includes time during sleeps
+    # take initial timestamp when measurement begins
+    # NOTE: need to guess or measure roughly how long it takes
+    # from turning on DC bias to when this timestamp is taken
+    # do this on oscilloscope by measuring delay between setting ppmu
+    # and when pulse appears
+    t0 = time.perf_counter_ns() # make sure to use perf_counter, includes time during sleeps
 
-# wait for each measurement point
-for t_next_measure in t_measure_points:
-    # wait until next measurement time
-    dt = t_next_measure - ((time.perf_counter_ns() - t0) * 1e-9)
-    if dt > 0:
-        time.sleep(dt)
-    
-    t_measure = (time.perf_counter_ns() - t0) * 1e-9
+    # data that will be saved
+    data_measurement = {
+        "t": [],   # time in seconds when measurement is taken
+        # "v_d": [], # drain voltage read # dont need
+        "i_d": [], # drain current read
+    }
 
-    # turn on drain bias and do measurement, then turn off drain bias
-    nisys.ppmu_set_vbl(bl, v_read)
-    nisys.ppmu_set_vwl(wl, v_read_gate_bias)
+    # set to ppmu to measure
     nisys.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
-    meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
-    meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
-    nisys.ppmu_set_vwl(wl, v_gate)
-    nisys.ppmu_set_vbl(bl, 0.0)
 
-    # print measurement
-    print(f"t={t_measure}, v_d={meas_v}, i_d={meas_i}")
+    # wait for each measurement point
+    for n, t_next_measure in enumerate(t_measure_points):
+        # wait until next measurement time
+        dt = t_next_measure - ((time.perf_counter_ns() - t0) * 1e-9)
+        if dt > 0:
+            time.sleep(dt)
+        
+        t_measure = (time.perf_counter_ns() - t0) * 1e-9
 
-    # save measurement and time
-    data_measurement["t"].append(t_measure)
-    data_measurement["v_d"].append(meas_v)
-    data_measurement["i_d"].append(meas_i)
+        # turn on drain bias and do measurement, then turn off drain bias
+        nisys.ppmu_set_vbl(bl, v_read)
+        nisys.ppmu_set_vwl(wl, v_read_gate_bias)
+        # meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0] # takes ~1 ms
+        meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0] # takes ~1 ms
+        nisys.ppmu_set_vwl(wl, v_stress)
+        nisys.ppmu_set_vbl(bl, 0.0)
 
-    # save measurement to file
-    with open(path_data_measurement, "w+") as f:
-        json.dump(data_measurement, f, indent=2)
+        # print measurement
+        # print(f"t={t_measure}, v_d={meas_v}, i_d={meas_i}")
+        print(f"t={t_measure}, i_d={meas_i}")
 
-# also save as csv
-path_data_measurement_csv = os.path.join(path_data_folder, "nbti_id_vs_time.csv")
-with open(path_data_measurement_csv, "w+") as f:
-    f.write("t,v_d,i_d\n")
-    for t, v_d, i_d in zip(data_measurement["t"], data_measurement["v_d"], data_measurement["i_d"]):
-        f.write(f"{t},{v_d},{i_d}\n")
+        # save measurement and time
+        data_measurement["t"].append(t_measure)
+        # data_measurement["v_d"].append(meas_v)
+        data_measurement["i_d"].append(meas_i)
 
+        # save measurement to file
+        # (only do after ~10 seconds to reduce effect of delay from saving to file
+        # during early fast measurements)
+        if t_measure > t_save_threshold or n >= (len(t_measure_points) - 1):
+            with open(path_data, "w+") as f:
+                json.dump(data_measurement, f, indent=2)
+    
+    return data_measurement
+
+### STRESS MEASUREMENT
+data_stress = run_bias_stress_measurement(v_stress=v_gate, t_measure_points=t_measure_points_stress, path_data=path_data_stress + ".json")
+
+### RELAXATION
+data_relax = run_bias_stress_measurement(v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax + ".json")
+
+# close ni system connection
 nisys.ppmu_all_pins_to_zero()
 nisys.close()
+
+# also results as csv
+for path_data, data in [
+    (path_data_stress, data_stress),
+    (path_data_relax, data_relax),
+]:
+    path_data_csv = path_data_stress + ".csv"
+    with open(path_data_csv, "w+") as f:
+        f.write("t,i_d\n")
+        for t, i_d in zip(data["t"], data["i_d"]):
+            f.write(f"{t},{i_d}\n")
+        # f.write("t,v_d,i_d\n")
+        # for t, v_d, i_d in zip(data_measurement["t"], data_measurement["v_d"], data_measurement["i_d"]):
+        #     f.write(f"{t},{v_d},{i_d}\n")

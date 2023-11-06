@@ -17,21 +17,16 @@ args = parser.parse_args()
 # nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R.toml", polarity="PMOS") # FOR CNFET RRAM
 nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_GAX1_CNFET_1T1R_LCH160.toml", polarity="PMOS") # FOR CNFET RRAM
 
-### initial resistance read
-#nisys.read(record=True)
-
-### form/reset at start
+nisys.read(record=True)
+# input("Dynamic Form")
 nisys.dynamic_form()
+nisys.dynamic_reset()
 
-#nisys.dynamic_reset()
-
-
-### set/reset loop
-# for i in range(5):
-#     print(f"Cycle {i}")
-#     nisys.dynamic_reset()
-#     nisys.dynamic_set()
-#     pass
+for i in range(100):
+    print(f"Cycle {i}")
+    nisys.dynamic_reset()
+    nisys.dynamic_set()
+    pass
 
 # nisys.dynamic_reset()
 
