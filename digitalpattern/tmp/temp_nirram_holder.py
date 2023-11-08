@@ -1,3 +1,7 @@
+"""
+temp_nirram_holder.py
+"""
+
 """Defines the NI RRAM controller class"""
 import glob
 import tomli
@@ -406,6 +410,7 @@ class NIRRAM:
         vbl_unsel=None,
         vwl_unsel_offset=None,
         pulse_len=None,
+        orig_res=None,
     ):
         """Perform a SET operation.
         To support 1TNR devices (1 WL, 1 SL, multiple BLs), have input
@@ -428,7 +433,8 @@ class NIRRAM:
         vwl = vwl if vwl is not None else self.op[mode][self.polarity]["VWL"]
         vbl = vbl if vbl is not None else self.op[mode][self.polarity]["VBL"]
         vsl = vsl if vsl is not None else self.op[mode][self.polarity]["VSL"]
-        vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) / 2.0)
+        vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) /2)
+        #vbl_unsel = vbl_unsel if vbl_unsel is not None else (min((vbl*10_000 + (orig_res-10_000)*vsl) // (orig_res),6))
         pulse_len = pulse_len if pulse_len is not None else self.op[mode][self.polarity]["PW"] 
         
         self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.X)
@@ -488,6 +494,7 @@ class NIRRAM:
         vbl_unsel=None,
         vwl_unsel_offset=None,
         pulse_len=None,
+        orig_res=None,
     ):
         """Perform a RESET operation.
         To support 1TNR devices (1 WL, 1 SL, multiple BLs), have input
@@ -510,7 +517,20 @@ class NIRRAM:
         vwl = vwl if vwl is not None else self.op[mode][self.polarity]["VWL"]
         vbl = vbl if vbl is not None else self.op[mode][self.polarity]["VBL"]
         vsl = vsl if vsl is not None else self.op[mode][self.polarity]["VSL"]
-        vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) /1.1)
+        
+        orig_res = [int(orig_res[0]), int(orig_res[1])]
+        #print(orig_res)
+        print(f"orig_res: {orig_res}")
+        
+        #vbl_unsel = vbl_unsel if vbl_unsel is not None else (min(round((vbl*8_000 + (orig_res-8_000)*vsl) / (orig_res),2),6))
+        print(f"vbl: {vbl:.2f}")
+        print(f"vsl: {vsl:.2f}")
+        
+        vbl_unsel = vbl_unsel if vbl_unsel is not None else vsl + ((vbl - vsl) /4)
+        print(f"vbl_unsel: {vbl_unsel}\n")
+        
+        #print(f"vbl_unsel_oth: {vbl_unsel_oth}")
+        
         pulse_len = pulse_len if pulse_len is not None else self.op[mode][self.polarity]["PW"] 
         # unselected WL bias parameter
         if vwl_unsel_offset is None:
@@ -627,27 +647,6 @@ class NIRRAM:
         self.digital.channels[vwl_chan].ppmu_voltage_level = vwl
         self.digital.channels[vwl_chan].ppmu_source()
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
-    
-    def ppmu_set_all_to_voltage(self, val, vwl_chan=None, vsl_chan=None, vbl_chan=None):
-        """Set all VWL, VSL, VBL at once to a single value. Used for boosting
-        voltages to a different level, e.g. for NBTI script.
-        """
-        assert(val <= 6)
-        assert(val >= -2)
-        if vwl_chan is not None:
-            assert(vwl_chan in self.all_wls)
-        if vsl_chan is not None:
-            assert(vsl_chan in self.all_sls)
-        if vbl_chan is not None:
-            assert(vbl_chan in self.all_bls)
-        
-        if vwl_chan is not None:
-            self.digital.channels[vwl_chan].ppmu_voltage_level = val
-        if vsl_chan is not None:
-            self.digital.channels[vsl_chan].ppmu_voltage_level = val
-        if vbl_chan is not None:
-            self.digital.channels[vbl_chan].ppmu_voltage_level = val
-        self.digital.ppmu_source()
 
     def ppmu_set_vbody(self, vbody_chan, vbody):
         """Set VBODY using NI-Digital driver"""
@@ -775,7 +774,6 @@ class NIRRAM:
         # Iterative pulse-verify
         success = False
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
-            print(pw)
             for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
                 for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
                     #print(pw, vwl, vbl, vsl)
@@ -809,6 +807,21 @@ class NIRRAM:
                             if (res_array.loc[wl_i, bl_selected] > target_res) & mask.mask.loc[wl_i, bl_selected]:
                                 success = False
                                 break
+
+                    # self.set_pulse(
+                    #     mask,
+                    #     bl_selected=bl_selected, # specific selected BL for 1TNR
+                    #     vbl=vbl,
+                    #     vsl=vsl,
+                    #     vwl=vwl,
+                    #     pulse_len=int(pw),
+                    #     orig_res=res_array.loc["WL_0", bl_selected]
+                    # )
+                    # self.ppmu_all_pins_to_zero()
+                    
+                    # # use settling if parameter present, to discharge parasitic cap
+                    # if "settling_time" in self.op[mode]:
+                    #     time.sleep(self.op[mode]["settling_time"])
                     
                     if success:
                         break
@@ -849,23 +862,23 @@ class NIRRAM:
         read_pulse = self.read_1tnr if is_1tnr else self.read
         # Iterative pulse-verify
         success = False
-        temp_int = 0
         for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
             for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
                 for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
-                    self.reset_pulse(
-                        mask,
-                        bl_selected=bl_selected, # specific selected BL for 1TNR
-                        vbl=vbl,
-                        vsl=vsl,
-                        vwl=vwl,
-                        pulse_len=int(pw),
-                    )
-                    self.ppmu_all_pins_to_zero()
                     
-                    # use settling if parameter present, to discharge parasitic cap
-                    if "settling_time" in self.op[mode]:
-                        time.sleep(self.op[mode]["settling_time"])
+                    # self.reset_pulse(
+                    #     mask,
+                    #     bl_selected=bl_selected, # specific selected BL for 1TNR
+                    #     vbl=vbl,
+                    #     vsl=vsl,
+                    #     vwl=vwl,
+                    #     pulse_len=int(pw),
+                    # )
+                    # self.ppmu_all_pins_to_zero()
+                    
+                    # # use settling if parameter present, to discharge parasitic cap
+                    # if "settling_time" in self.op[mode]:
+                    #     time.sleep(self.op[mode]["settling_time"])
                     
                     # read result resistance
                     res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
@@ -873,22 +886,33 @@ class NIRRAM:
                     if bl_selected is None: # use array success condition: all in array must hit target
                         for wl_i in self.wls:
                             for bl_i in self.bls:
-                                print(res_array.loc[wl_i,bl_i])
                                 if (res_array.loc[wl_i, bl_i] >= target_res) & mask.mask.loc[wl_i, bl_i]:
                                     mask.mask.loc[wl_i, bl_i] = False
                         success = (mask.mask.to_numpy().sum() == 0)
                     else: # 1TNR success condition: check if selected 1tnr cell hit target
                         success = True
-                        
                         for wl_i in self.wls:
-                            # if temp_int == 50:
-                            #     print([res_array.loc[wl_i,"BL_0"],res_array.loc[wl_i,"BL_1"]])
-                            #     temp_int = 0
-                            # else:
-                            #     temp_int += 1
                             if (res_array.loc[wl_i, bl_selected] < target_res) & mask.mask.loc[wl_i, bl_selected]:
                                 success = False
                                 break
+                    
+                    # (end)
+                    self.reset_pulse(
+                        mask,
+                        bl_selected=bl_selected, # specific selected BL for 1TNR
+                        vbl=vbl,
+                        vsl=vsl,
+                        vwl=vwl,
+                        pulse_len=int(pw),
+                        orig_res=[res_array.loc[self.wls[0], "BL_0"],res_array.loc[self.wls[0], "BL_1"]]
+                    )
+                    self.ppmu_all_pins_to_zero()
+
+                    # use settling if parameter present, to discharge parasitic cap (end)
+                    if "settling_time" in self.op[mode]:
+                        time.sleep(self.op[mode]["settling_time"])                    
+
+                    #print(pw, vwl, vbl,vsl, res_array.loc["WL_0", bl_selected])
                     if success:
                         break
                 if success:

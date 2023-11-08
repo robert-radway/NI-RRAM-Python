@@ -23,6 +23,18 @@ measurements, dc bias around the measurement voltage levels
 does not really shift device as much...the 4 V bias and 1e6
 accumulated cycling has more impact than DC sweep at
 lower biases.
+
+NOTE: boosting voltages
+NI system only goes from -2 V to 6 V.
+For NBTI, if we want to do biases more than -2 V we need to "boost"
+the voltages to a higher initial value.
+E.g. for a -3 V bias:
+VSL = VBL = 1 V
+VWL = -2 V
+
+So the "boost" voltage is the initial reference voltage we set the lines.
+Make sure to do control tests to ensure that VSL,VBL,VWL = 0,0,-2
+gives the sam results as VSL,VBL,VWL = 1,1,-1 !! 
 """
 import argparse
 from datetime import datetime
@@ -41,14 +53,16 @@ parser.add_argument("chip", help="chip name for logging")
 parser.add_argument("device", help="device name for logging")
 parser.add_argument("--polarity", type=str, nargs="?", default="PMOS", help="polarity of device (PMOS or NMOS)")
 parser.add_argument("--tstart", type=float, nargs="?", default=20e-3, help="when to start reading iv after applying dc gate bias")
-parser.add_argument("--tend", type=float, nargs="?", default=2e3, help="when to stop reading")
+parser.add_argument("--tend", type=float, nargs="?", default=1e4, help="when to stop reading")
 parser.add_argument("--tstart_relax", type=float, nargs="?", default=20e-3, help="when to start reading iv after stopping bias stress")
-parser.add_argument("--tend_relax", type=float, nargs="?", default=2e3, help="when to stop reading relaxation")
+parser.add_argument("--tend_relax", type=float, nargs="?", default=1e4, help="when to stop reading relaxation")
 parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--samples_relax", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--read_bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
-parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.4, help="constant gate bias in volts")
+parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.2, help="constant gate bias in volts")
 parser.add_argument("--gate_bias", type=float, nargs="?", default=-2, help="constant gate bias in volts")
+parser.add_argument("--boost_voltage", type=float, nargs="?", default=0, help="boost all lines by this value")
+parser.add_argument("--boost_sleep", type=float, nargs="?", default=10.0, help="seconds to wait after boosting")
 
 args = parser.parse_args()
 
@@ -62,6 +76,8 @@ samples_relax = args.samples_relax
 v_read = args.read_bias
 v_gate = args.gate_bias
 v_read_gate_bias = args.read_gate_bias
+v0 = args.boost_voltage
+boost_sleep = args.boost_sleep
 
 # create time points when device should be measured
 print(f"STRESS: Creating log sampling points from {tstart} to {tend} with {samples} samples")
@@ -82,6 +98,7 @@ path_data_relax = os.path.join(path_data_folder, "nbti_id_vs_time_relax")
 
 # save config that will be run
 config = {
+    "timestamp": timestamp,
     "settings": args.settings,
     "chip": args.chip,
     "device": args.device,
@@ -92,6 +109,13 @@ config = {
     "v_read": v_read,
     "v_gate": v_gate,
     "v_read_gate_bias": v_read_gate_bias,
+    "v_boost": v0,
+    # actual written voltages
+    "v_s": v0,
+    "v_d": v0 + v_read,
+    "v_g_read": v0 + v_read_gate_bias,
+    "v_g_stress": v0 + v_gate,
+    "v_g_relax": v0,
 }
 with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
     json.dump(config, f, indent=4)
@@ -108,12 +132,12 @@ nisys = NIRRAM(args.chip, args.device, settings=args.settings, polarity=args.pol
 # used for fitting I-V to find VT shift
 # run spot measurement to get current at some voltage
 initial_iv = []
-# for v_wl in [0.0]:
+for v_wl in [0.0]:
 # for v_wl in [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.6]:
 # for v_wl in [0.0]: # for 1 V bias
 # for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # for 1 V bias
 # for v_wl in [0.0, -0.4, -0.8, -1.2]:
-for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6]:
+# for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4]:
 # for v_wl in [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # i-v curve
 # for v_wl in [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]: # i-v curve
 # for v_wl in np.linspace(-2.0, 2.0, 41): # i-v curve
@@ -125,8 +149,9 @@ for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6]:
     print(iv_data)
     initial_iv.append(iv_data)
     # give some relaxation time
+    time.sleep(0.1)
     # time.sleep(0.5)
-    time.sleep(10.0)
+    # time.sleep(10.0)
 
 # nisys.close()
 # exit()
@@ -151,11 +176,12 @@ with open(path_initial_iv_csv, "w+") as f:
 # DO NBTI TIME GATE VOLTAGE STRESS MEASUREMENT
 # ==============================================================================
 # choose BL to read from, for now just use first bl
+sl = nisys.sls[0]
 bl = nisys.bls[0]
 wl = nisys.wls[0]
 
-
 def run_bias_stress_measurement(
+    v0: float, # reference zero voltage level
     v_stress: float,
     t_measure_points: list[float],
     path_data: str,
@@ -165,7 +191,7 @@ def run_bias_stress_measurement(
     Implements a "on-the-fly" method of holding an initial stressing
     """
     # turn on DC gate bias
-    nisys.ppmu_set_vwl(wl, v_stress)
+    nisys.ppmu_set_vwl(wl, v0 + v_stress)
 
     # take initial timestamp when measurement begins
     # NOTE: need to guess or measure roughly how long it takes
@@ -194,12 +220,12 @@ def run_bias_stress_measurement(
         t_measure = (time.perf_counter_ns() - t0) * 1e-9
 
         # turn on drain bias and do measurement, then turn off drain bias
-        nisys.ppmu_set_vbl(bl, v_read)
-        nisys.ppmu_set_vwl(wl, v_read_gate_bias)
+        nisys.ppmu_set_vbl(bl, v0 + v_read)
+        nisys.ppmu_set_vwl(wl, v0 + v_read_gate_bias)
         # meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0] # takes ~1 ms
         meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0] # takes ~1 ms
-        nisys.ppmu_set_vwl(wl, v_stress)
-        nisys.ppmu_set_vbl(bl, 0.0)
+        nisys.ppmu_set_vwl(wl, v0 + v_stress)
+        nisys.ppmu_set_vbl(bl, v0)
 
         # print measurement
         # print(f"t={t_measure}, v_d={meas_v}, i_d={meas_i}")
@@ -220,10 +246,25 @@ def run_bias_stress_measurement(
     return data_measurement
 
 ### STRESS MEASUREMENT
-data_stress = run_bias_stress_measurement(v_stress=v_gate, t_measure_points=t_measure_points_stress, path_data=path_data_stress + ".json")
 
-### RELAXATION
-data_relax = run_bias_stress_measurement(v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax + ".json")
+# boost voltages
+if v0 != 0:
+    print(f"boosting wl/sl/bl voltage to {v0} V")
+    nisys.ppmu_set_all_to_voltage(
+        val=v0,
+        vwl_chan=wl,
+        vsl_chan=sl,
+        vbl_chan=bl,
+    )
+    print(f"sleeping for {boost_sleep} s")
+    time.sleep(boost_sleep)
+
+data_stress = run_bias_stress_measurement(v0=v0, v_stress=v_gate, t_measure_points=t_measure_points_stress, path_data=path_data_stress + ".json")
+
+### RELAXATION (reset all to zero)
+if v0 != 0:
+    nisys.ppmu_all_pins_to_zero()
+data_relax = run_bias_stress_measurement(v0=0, v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax + ".json")
 
 # close ni system connection
 nisys.ppmu_all_pins_to_zero()
