@@ -53,9 +53,9 @@ parser.add_argument("chip", help="chip name for logging")
 parser.add_argument("device", help="device name for logging")
 parser.add_argument("--polarity", type=str, nargs="?", default="PMOS", help="polarity of device (PMOS or NMOS)")
 parser.add_argument("--tstart", type=float, nargs="?", default=20e-3, help="when to start reading iv after applying dc gate bias")
-parser.add_argument("--tend", type=float, nargs="?", default=1e4, help="when to stop reading")
+parser.add_argument("--tend", type=float, nargs="?", default=2e3, help="when to stop reading")
 parser.add_argument("--tstart_relax", type=float, nargs="?", default=20e-3, help="when to start reading iv after stopping bias stress")
-parser.add_argument("--tend_relax", type=float, nargs="?", default=1e4, help="when to stop reading relaxation")
+parser.add_argument("--tend_relax", type=float, nargs="?", default=2e3, help="when to stop reading relaxation")
 parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--samples_relax", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--read_bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
@@ -63,6 +63,11 @@ parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.2, hel
 parser.add_argument("--gate_bias", type=float, nargs="?", default=-2, help="constant gate bias in volts")
 parser.add_argument("--boost_voltage", type=float, nargs="?", default=0, help="boost all lines by this value")
 parser.add_argument("--boost_sleep", type=float, nargs="?", default=10.0, help="seconds to wait after boosting")
+parser.add_argument("--efield", type=float, nargs="?", default=0.0, help="if >0, targets an efield instead of gate bias (units are MV/cm)")
+parser.add_argument("--eot", type=float, nargs="?", default=0.0, help="oxide eot in nm, needed if specifying an efield")
+parser.add_argument("--clamp_vt", type=bool, nargs="?", default=False, help="if VT not within a range, exit")
+parser.add_argument("--vt_min", type=float, nargs="?", default=-0.1, help="vt min for clamp vt")
+parser.add_argument("--vt_max", type=float, nargs="?", default=0.1, help="vt max for clamp vt")
 
 args = parser.parse_args()
 
@@ -74,10 +79,25 @@ tstart_relax = args.tstart_relax
 tend_relax = args.tend_relax
 samples_relax = args.samples_relax
 v_read = args.read_bias
-v_gate = args.gate_bias
 v_read_gate_bias = args.read_gate_bias
+v_gate = args.gate_bias
 v0 = args.boost_voltage
 boost_sleep = args.boost_sleep
+efield_ox = args.efield
+eot = args.eot
+clamp_vt = args.clamp_vt
+VT_MIN = args.vt_min
+VT_MAX = args.vt_max
+
+# require eot if using efield as input
+if efield_ox != 0 and eot == 0:
+    raise ValueError("EOT must be specified if targetted a Eox field for stress")
+
+# make sure polarity right (TODO: manual override this)
+if args.polarity.lower() == "pmos" and efield_ox > 0:
+    raise ValueError("For PMOS NBTI, efield must be <0")
+elif args.polarity.lower() == "nmos" and efield_ox < 0:
+    raise ValueError("For NMOS PBTI, efield must be >0")
 
 # create time points when device should be measured
 print(f"STRESS: Creating log sampling points from {tstart} to {tend} with {samples} samples")
@@ -96,51 +116,158 @@ os.makedirs(path_data_folder, exist_ok=True)
 path_data_stress = os.path.join(path_data_folder, "nbti_id_vs_time_stress")
 path_data_relax = os.path.join(path_data_folder, "nbti_id_vs_time_relax")
 
-# save config that will be run
-config = {
-    "timestamp": timestamp,
-    "settings": args.settings,
-    "chip": args.chip,
-    "device": args.device,
-    "polarity": args.polarity,
-    "tstart": tstart,
-    "tend": tend,
-    "samples": samples,
-    "v_read": v_read,
-    "v_gate": v_gate,
-    "v_read_gate_bias": v_read_gate_bias,
-    "v_boost": v0,
-    # actual written voltages
-    "v_s": v0,
-    "v_d": v0 + v_read,
-    "v_g_read": v0 + v_read_gate_bias,
-    "v_g_stress": v0 + v_gate,
-    "v_g_relax": v0,
-}
-with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
-    json.dump(config, f, indent=4)
 
+def idvg_vt_extrapolation(
+    v_gs: np.ndarray,
+    i_d: np.ndarray,
+    v_ds: float,
+    v_ds_v_t_factor: float = 0.5,
+    v_gs_window: (float, float) = None,
+    polarity: str = "pmos",
+    return_gm: bool = False,
+):
+    """VT extraction for a single ID-VG curve vector.
+    Determine threshold VT from largest gm slope extrapolated to x-axis.
+    
+    i_d = gm_max * v_gs_max + y0
+    0 = gm_max * v_t + y0
+    v_t = -y0/gm_max = -(i_d - gm_max * v_gs_max) / gm_max = v_gs_max - i_d/gm_max
+    
+    Also add drain bias correction, assuming linear model
+      Id = W/L * Cox * mu * (Vgs - Vt - m*Vds) * Vds
+      Id ~ a * (Vgs - Vt - m*Vds)
+    Normally m = 1/2
+    
+    Since devices can be ambipolar, window to > or < Vmin depending on
+    whether this is declared as NMOS or PMOS.
+    """
+    assert v_gs.shape == i_d.shape # must be same shape
+    num_points = v_gs.shape[0]
+
+    # absolute value id
+    i_d_abs = np.abs(i_d)
+
+    # gm = gradient (take abs)
+    gm = np.abs(np.gradient(i_d, v_gs))
+    
+    # true = forward sweep (-V to +V)
+    # false = reverse sweep (+V to -V)
+    sweep_direction = (v_gs[1] - v_gs[0]) > 0
+
+    # index of minimum current
+    idx_i_min = np.argmin(i_d_abs)
+
+    # default index range to search for peak gm for VT extraction
+    if polarity.lower() == "nmos":
+        if sweep_direction == True: # forward (vgs = 0...VDD)
+            idx_gm_max_search_start = idx_i_min
+            idx_gm_max_search_end = -1
+        else: # backward (vgs = VDD...0)
+            idx_gm_max_search_start = 0
+            idx_gm_max_search_end = idx_i_min
+    else: # pmos
+        if sweep_direction == True: # forward (vgs = 0..VDD)
+            idx_gm_max_search_start = 0
+            idx_gm_max_search_end = idx_i_min + 1
+        else: # backward (vgs = VDD...0)
+            idx_gm_max_search_start = idx_i_min
+            idx_gm_max_search_end = -1
+    
+    # refine gm vgs index search range using window
+    if v_gs_window is not None:
+        v_gs_window_sorted = np.sort(v_gs_window)
+        v_start = v_gs_window_sorted[0]
+        v_end = v_gs_window_sorted[1]
+        
+        v_gs_range = v_gs
+
+        idx_search_max = len(v_gs_range) - 1
+        idx_search_min = -len(v_gs_range)
+
+        # clamp idx_gm_max_search_end, since it may be > length of array
+        if idx_gm_max_search_end > idx_search_max:
+            idx_gm_max_search_end = idx_search_max
+
+        if sweep_direction == True: # forward (vgs = 0...VDD)
+            while v_gs_range[idx_gm_max_search_start] < v_start:
+                if idx_gm_max_search_start >= idx_search_max:
+                    print(f"gm: gm_max search window reached end: {idx_gm_max_search_start}")
+                    break
+                idx_gm_max_search_start += 1
+            while v_gs_range[idx_gm_max_search_end] > v_end:
+                if idx_gm_max_search_end <= idx_search_min:
+                    print(f"gm: gm_max search window reached end: {idx_gm_max_search_end}")
+                    break
+                idx_gm_max_search_end -= 1
+        else: # backward (vgs = VDD...0)
+            while v_gs_range[idx_gm_max_search_start] > v_end:
+                if idx_gm_max_search_start >= idx_search_max:
+                    print(f"gm: gm_max search window reached end: {idx_gm_max_search_start}")
+                    break
+                idx_gm_max_search_start += 1
+            while v_gs_range[idx_gm_max_search_end] < v_start:
+                if idx_gm_max_search_end <= idx_search_min:
+                    print(f"gm: gm_max search window reached end: {idx_gm_max_search_end}")
+                    break
+                idx_gm_max_search_end -= 1
+    
+    # same variable, easier to read
+    idx_start = idx_gm_max_search_start
+    idx_end = idx_gm_max_search_end
+    if idx_end < 0:
+        idx_end = num_points - idx_end + 1 # convert to normal indexing
+    
+    if idx_end > idx_start: # normal case
+        gm_window = np.abs(gm[idx_start:idx_end])
+        idx_gm_max = idx_start + np.argmax(gm_window)
+    else: # degenerate case, somehow idx start <= idx_end
+        print(f"gm: Invalid vt gm_max search window: {idx_start} : {idx_end}")
+        idx_gm_max = idx_start
+    
+    # print(f"v_ds = {v_ds}")
+    # print("idx_i_min = ", idx_i_min)
+    # print("idx_start = ", idx_start)
+    # print("idx_end = ", idx_end)
+    # print("idx_gm_max = ", idx_gm_max)
+    gm_max = gm[idx_gm_max]
+    v_gs_gm_max = v_gs[idx_gm_max]
+    i_d_gm_max = i_d[idx_gm_max]
+    v_t = v_gs_gm_max - i_d_gm_max / gm_max - (v_ds_v_t_factor * v_ds)
+    
+    if return_gm is True:
+        return v_t, gm
+    else:
+        return v_t
+
+
+# ==============================================================================
+# DO INITIAL COARSE I-V curve
+# ==============================================================================
 # Initialize NI system
 # For CNFET: make sure polarity is PMOS
 nisys = NIRRAM(args.chip, args.device, settings=args.settings, polarity=args.polarity)
 # nisys.close()
 # exit()
 
-# ==============================================================================
-# DO INITIAL COARSE I-V curve
-# ==============================================================================
 # used for fitting I-V to find VT shift
 # run spot measurement to get current at some voltage
+
+### TODO: abstract initial sweep range into an input
+# V_WL_INITIAL_SWEEP = [0.0]
+# V_WL_INITIAL_SWEEP = [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.6]
+# V_WL_INITIAL_SWEEP = [0.0] # for 1 V bias
+# V_WL_INITIAL_SWEEP = [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # for 1 V bias
+# V_WL_INITIAL_SWEEP = [0.0, -0.4, -0.8, -1.2]
+# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0] # 6-8 MV/cm
+# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # 8 - 10 MV/cm
+V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 - 12 MV/cm
+# V_WL_INITIAL_SWEEP = [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]
+# V_WL_INITIAL_SWEEP = [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
+# V_WL_INITIAL_SWEEP = np.linspace(-2.0, 2.0, 41)
+
 initial_iv = []
-for v_wl in [0.0]:
-# for v_wl in [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.6]:
-# for v_wl in [0.0]: # for 1 V bias
-# for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # for 1 V bias
-# for v_wl in [0.0, -0.4, -0.8, -1.2]:
-# for v_wl in [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4]:
-# for v_wl in [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]: # i-v curve
-# for v_wl in [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]: # i-v curve
-# for v_wl in np.linspace(-2.0, 2.0, 41): # i-v curve
+
+for v_wl in V_WL_INITIAL_SWEEP:
     iv_data = nisys.cnfet_spot_iv(
         v_wl=v_wl,
         v_bl=v_read,
@@ -149,9 +276,9 @@ for v_wl in [0.0]:
     print(iv_data)
     initial_iv.append(iv_data)
     # give some relaxation time
-    time.sleep(0.1)
+    # time.sleep(0.1)
     # time.sleep(0.5)
-    # time.sleep(10.0)
+    time.sleep(10.0)
 
 # nisys.close()
 # exit()
@@ -171,6 +298,121 @@ with open(path_initial_iv_csv, "w+") as f:
 # uncomment to close after iv
 # nisys.close()
 # exit()
+
+# ==============================================================================
+# DETERMINE STRESS CONFIG
+# If we do stress at an input electric field, we need to do initial VT
+# extraction from initial IV first, to estimate "effective" oxide field
+# So for an input field, we will determine boosting, stress, and read biases
+# here.
+# ==============================================================================
+
+VG_MIN = -2 # minimum NI voltage allowed
+VG_MAX = 6  # maximum NI voltage allowed
+VG_BOOST = [-1, -0.5, 0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0] # boosting voltages to try
+
+def vg_for_efield(efield_ox_MV_cm: float, vt: float, eot: float) -> float:
+    """Return vg needed to produce given oxide field, given vt.
+    Using approximation formula:
+        Efield_ox_eff = (VG - VT) / EOT 
+    where:
+        - efield_ox_MV_cm [MV/cm]: target oxide electric field
+        - vt [V]: threshold voltage
+        - eot [nm]: effective oxide thickness
+    """
+    efield_ox_V_nm = efield_ox_MV_cm * 1e6 * 1e-7
+    return vt + eot * efield_ox_V_nm
+
+# initial sweep VT
+v_gs_initial = np.array(V_WL_INITIAL_SWEEP)
+i_d_initial = np.array([iv['i_bl'] for iv in initial_iv])
+v_t_initial, gm_initial = idvg_vt_extrapolation(
+    v_gs = v_gs_initial,
+    i_d = i_d_initial,
+    v_ds = v_read,
+    return_gm = True,
+    polarity = args.polarity,
+)
+
+
+if efield_ox is not None:
+    vg_stress = vg_for_efield(efield_ox, v_t_initial, eot)
+    print(f"eot = {eot} nm, vt = {v_t_initial} V, vg_required = {vg_stress} V (Eox check = {(vg_stress - v_t_initial) / eot * 10})")
+    # deciding boosting voltage
+    vg_boost = None
+    if vg_stress < VG_MIN:
+        for vb in VG_BOOST:
+            if vg_stress + vb > VG_MIN:
+                print(f"vg_boost = {vb} V needed to boost vg_stress to VG_MIN")
+                vg_boost = vb
+                break
+    elif vg_stress > VG_MAX:
+        for vb in reversed(VG_BOOST):
+            if vg_stress + vb < VG_MAX:
+                print(f"vg_boost = {vb} V needed to boost vg_stress to VG_MIN")
+                vg_boost = vb
+                break
+    else:
+        vg_boost = 0
+    
+    if vg_boost is None:
+        raise ValueError(f"Could not find vg_boost for eot = {eot} nm, vg_stress = {vg_stress} V")
+    
+    print(f"Using: vg_boost = {vg_boost} V")
+
+    # determine bias to do read at:
+    # find first vg in vg_initial_sweep[:-1] (dont look at last point)
+    # that is less than vg_stress
+    vg_read = None
+    for vg in reversed(V_WL_INITIAL_SWEEP[:-1]):
+        if np.abs(vg) < np.abs(vg_stress):
+            vg_read = vg
+            break
+    
+    if vg_read is None:
+        raise ValueError(f"Could not find vg_read for eot = {eot} nm, vg_stress = {vg_stress} V")
+    
+    print(f"Using: vg_read = {vg_read} V")
+
+    # set new params
+    v0 = vg_boost
+    v_gate = vg_stress
+    v_read_gate_bias = vg_read
+
+# save config that will be run
+config = {
+    "timestamp": timestamp,
+    "settings": args.settings,
+    "chip": args.chip,
+    "device": args.device,
+    "polarity": args.polarity,
+    "tstart": tstart,
+    "tend": tend,
+    "samples": samples,
+    "efield_ox": efield_ox,
+    "eot": eot,
+    "v_read": v_read,
+    "v_gate": v_gate,
+    "v_read_gate_bias": v_read_gate_bias,
+    "v_boost": v0,
+    "v_t_initial": v_t_initial,
+    # actual written voltages
+    "v_s": v0,
+    "v_d": v0 + v_read,
+    "v_g_read": v0 + v_read_gate_bias,
+    "v_g_stress": v0 + v_gate,
+    "v_g_relax": v0,
+}
+
+with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
+    json.dump(config, f, indent=4)
+
+### TEMPORARY:
+# clamp VT within range or exit
+if clamp_vt:
+    if v_t_initial < VT_MIN or v_t_initial > VT_MAX:
+        print(f"VT = {v_t_initial} not within range ({VT_MIN}, {VT_MAX})")
+        exit()
 
 # ==============================================================================
 # DO NBTI TIME GATE VOLTAGE STRESS MEASUREMENT
