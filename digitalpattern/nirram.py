@@ -124,10 +124,10 @@ class NIRRAM:
         self.digital.create_time_set("test")
         self.digital.configure_time_set_period("test", 1e-8)
         self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.ZERO)
-        self.digital.unload_all_patterns() 
+        self.digital.unload_all_patterns()
         for pattern in glob.glob(settings["NIDigital"]["patterns"]):
             print(pattern)
-        #TODO you can remove this grep and just do the single pattern that is all that is needed now
+            #TODO you can remove this grep and just do the single pattern that is all that is needed now
             self.digital.load_pattern(abspath(pattern))
         self.closed = False
 
@@ -2005,6 +2005,73 @@ class NIRRAM:
         meas_i_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
         meas_v_wl = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
         meas_i_wl = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+
+        # reset ppmu to measurement levels
+        for pin in (body, wl, bl, sl):
+            self.digital.channels[pin].ppmu_voltage_level = 0.0
+        self.digital.ppmu_source()
+
+        return {
+            "v_bl": meas_v_bl,
+            "i_bl": meas_i_bl,
+            "v_sl": meas_v_sl,
+            "i_sl": meas_i_sl,
+            "v_wl": meas_v_wl,
+            "i_wl": meas_i_wl,
+        }
+    
+    def cnfet_iv_sweep(
+        self,
+        v_wl,
+        v_bl,
+        v_sl,
+        v_body = 0.0,
+        current_limit_range = 32e-6, # for S/D
+    ) -> dict:
+        meas_v_bl = []
+        meas_i_bl = []
+        meas_v_sl = []
+        meas_i_sl = []
+        meas_v_wl = []
+        meas_i_wl = []
+
+        body = list(self.body)[0]
+        bl = self.bls[0]
+        sl = self.sls[0]
+        wl = self.wls[0]
+
+        self.digital.channels[bl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
+        self.digital.channels[bl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+        self.digital.channels[bl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+        self.digital.channels[bl].ppmu_current_limit_range = current_limit_range
+
+        self.digital.channels[sl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
+        self.digital.channels[sl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+        self.digital.channels[sl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+        self.digital.channels[sl].ppmu_current_limit_range = current_limit_range
+
+        self.digital.channels[wl].ppmu_aperture_time = self.op["READ"]["aperture_time"]
+        self.digital.channels[wl].ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+        self.digital.channels[wl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
+        self.digital.channels[wl].ppmu_current_limit_range = 2e-6
+
+        # set ppmu to measurement levels
+        self.digital.channels[body].ppmu_voltage_level = v_body
+        self.digital.channels[bl].ppmu_voltage_level = v_bl
+        self.digital.channels[sl].ppmu_voltage_level = v_sl
+        self.digital.ppmu_source()
+
+        # sweep VWL
+        for v_wl_i in v_wl:
+            self.digital.channels[wl].ppmu_voltage_level = v_wl_i
+            self.digital.ppmu_source()
+            
+            meas_v_bl.append(self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+            meas_i_bl.append(self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
+            meas_v_sl.append(self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+            meas_i_sl.append(self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
+            meas_v_wl.append(self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+            meas_i_wl.append(self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
 
         # reset ppmu to measurement levels
         for pin in (body, wl, bl, sl):

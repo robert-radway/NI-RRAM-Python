@@ -1,22 +1,16 @@
 """
-Script for CNFET PMOS cycling on SkyWater MPW wafer.
-This contains settings for pulsed cycling cnfet with voltage
-levels that mimic the biases during 1T1R operation.
-Used for "endurance" measurement of CNFET, e.g. see the accumulated
-NBTI/PBTI effects during pulsed operation.
+11/2023
+Andrew Yu
 
-Unlike other script, this does hard coded log-spaced cycling
-sweep and only spot I/V measurements using NI system.
+Script for CNFET PMOS DC and AC NBTI for SkyWater MPW wafer.
+This measures accumulated delta ID and interpolated VT over a 
+stress period, measured at logarithmically spaced time points.
 
-I/V Measure (initial cycle 0)
-Pulse Cycle 100
-I/V Measure (1e2)
-Pulse Cycle 900
-I/V Measure (1e3)
-Pulse Cycle 9000
-I/V Measure (1e4)
-... 
-
+FOR AC NBTI:
+This measured accumulated delta ID and interpolated VT like DC NBTI
+except the stress is a square pulsed AC signal with configurable
+duty cycle. This allows relaxation between stress intervals. This mimics
+more realistic circuit operations.
 
 NOTE: NI system I/V measurement is DC, but based on
 measurements, dc bias around the measurement voltage levels
@@ -58,16 +52,23 @@ parser.add_argument("--tstart_relax", type=float, nargs="?", default=20e-3, help
 parser.add_argument("--tend_relax", type=float, nargs="?", default=2e3, help="when to stop reading relaxation")
 parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--samples_relax", type=int, nargs="?", default=100, help="number of samples to read during the time range")
+parser.add_argument("--relax", action=argparse.BooleanOptionalAction, default=True, help="Do relaxation measurement")
 parser.add_argument("--read_bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
-parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.2, help="constant gate bias in volts")
-parser.add_argument("--gate_bias", type=float, nargs="?", default=-2, help="constant gate bias in volts")
+parser.add_argument("--read_gate_bias", type=float, nargs="?", default=-1.0, help="constant gate bias in volts")
+parser.add_argument("--gate_bias", type=float, nargs="?", default=-2.0, help="constant gate bias in volts")
 parser.add_argument("--boost_voltage", type=float, nargs="?", default=0, help="boost all lines by this value")
 parser.add_argument("--boost_sleep", type=float, nargs="?", default=10.0, help="seconds to wait after boosting")
 parser.add_argument("--efield", type=float, nargs="?", default=0.0, help="if >0, targets an efield instead of gate bias (units are MV/cm)")
 parser.add_argument("--eot", type=float, nargs="?", default=0.0, help="oxide eot in nm, needed if specifying an efield")
 parser.add_argument("--clamp_vt", type=bool, nargs="?", default=False, help="if VT not within a range, exit")
 parser.add_argument("--vt_min", type=float, nargs="?", default=-0.1, help="vt min for clamp vt")
-parser.add_argument("--vt_max", type=float, nargs="?", default=0.1, help="vt max for clamp vt")
+parser.add_argument("--vt_max", type=float, nargs="?", default=0.2, help="vt max for clamp vt")
+
+# AC NBTI arguments
+parser.add_argument("--ac", action="store_true", default=False, help="Do AC pulsed stress")
+parser.add_argument("--ac_freq", type=float, nargs="?", default=100e3, help="AC frequency for stress")
+parser.add_argument("--dutycycle", type=float, nargs="?", default=0.1, help="AC pulse duty cycle for stress time (0.2 = 20 percent on, 80 percent off)")
+parser.add_argument("--pattern", type=str, nargs="?", default="settings/patterns/nbti_ac.digipat", help="ni digital pattern for ac nbti pulsing")
 
 args = parser.parse_args()
 
@@ -78,6 +79,7 @@ samples = args.samples
 tstart_relax = args.tstart_relax
 tend_relax = args.tend_relax
 samples_relax = args.samples_relax
+do_relax = args.relax
 v_read = args.read_bias
 v_read_gate_bias = args.read_gate_bias
 v_gate = args.gate_bias
@@ -88,6 +90,17 @@ eot = args.eot
 clamp_vt = args.clamp_vt
 VT_MIN = args.vt_min
 VT_MAX = args.vt_max
+ac_stress = args.ac
+ac_freq = args.ac_freq
+ac_dutycycle = args.dutycycle
+ac_period = 1.0 / ac_freq
+ac_t_stress = ac_dutycycle * ac_period
+ac_t_relax = (1.0 - ac_dutycycle) * ac_period
+ac_stress_pattern = args.pattern
+
+# print info using AC stress
+if ac_stress:
+    print(f"Using AC stress signal with frequency {ac_freq:.2e} duty cycle {ac_dutycycle:.2f} (t_stress = {ac_t_stress:2e}, t_relax={ac_t_relax:.2e})")
 
 # require eot if using efield as input
 if efield_ox != 0 and eot == 0:
@@ -254,16 +267,22 @@ nisys = NIRRAM(args.chip, args.device, settings=args.settings, polarity=args.pol
 
 ### TODO: abstract initial sweep range into an input
 # V_WL_INITIAL_SWEEP = [0.0]
-# V_WL_INITIAL_SWEEP = [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.6]
 # V_WL_INITIAL_SWEEP = [0.0] # for 1 V bias
 # V_WL_INITIAL_SWEEP = [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # for 1 V bias
 # V_WL_INITIAL_SWEEP = [0.0, -0.4, -0.8, -1.2]
-# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0] # 6-8 MV/cm
-# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # 8 - 10 MV/cm
-V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 - 12 MV/cm
+# V_WL_INITIAL_SWEEP = [0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4] # 2 MV/cm
+# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6] # 2 MV/cm
+# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8] # 4 MV/cm
+# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0] # 6-8 MV/cm
+# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # 8 - 10 MV/cm
+# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 - 12 MV/cm
+# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6] # 10 - 12 MV/cm
+# V_WL_INITIAL_SWEEP = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 - 12 MV/cm
 # V_WL_INITIAL_SWEEP = [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]
 # V_WL_INITIAL_SWEEP = [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
 # V_WL_INITIAL_SWEEP = np.linspace(-2.0, 2.0, 41)
+
+V_WL_INITIAL_SWEEP = [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4] # for 0.6 V stress
 
 initial_iv = []
 
@@ -276,6 +295,7 @@ for v_wl in V_WL_INITIAL_SWEEP:
     print(iv_data)
     initial_iv.append(iv_data)
     # give some relaxation time
+    # time.sleep(10e-3)
     # time.sleep(0.1)
     # time.sleep(0.5)
     time.sleep(10.0)
@@ -326,16 +346,23 @@ def vg_for_efield(efield_ox_MV_cm: float, vt: float, eot: float) -> float:
 # initial sweep VT
 v_gs_initial = np.array(V_WL_INITIAL_SWEEP)
 i_d_initial = np.array([iv['i_bl'] for iv in initial_iv])
-v_t_initial, gm_initial = idvg_vt_extrapolation(
-    v_gs = v_gs_initial,
-    i_d = i_d_initial,
-    v_ds = v_read,
-    return_gm = True,
-    polarity = args.polarity,
-)
+try:
+    v_t_initial, gm_initial = idvg_vt_extrapolation(
+        v_gs = v_gs_initial,
+        i_d = i_d_initial,
+        v_ds = v_read,
+        return_gm = True,
+        polarity = args.polarity,
+    )
+    print(f"vt = {v_t_initial} V")
+except Exception:
+    import traceback
+    print(traceback.format_exc())
+    print(f"setting initial v_t as None")
+    v_t_initial = None
+    gm_initial = None
 
-
-if efield_ox is not None:
+if efield_ox is not None and efield_ox != 0:
     vg_stress = vg_for_efield(efield_ox, v_t_initial, eot)
     print(f"eot = {eot} nm, vt = {v_t_initial} V, vg_required = {vg_stress} V (Eox check = {(vg_stress - v_t_initial) / eot * 10})")
     # deciding boosting voltage
@@ -402,6 +429,13 @@ config = {
     "v_g_read": v0 + v_read_gate_bias,
     "v_g_stress": v0 + v_gate,
     "v_g_relax": v0,
+    # save ac parameters
+    "ac": ac_stress,
+    "ac_freq": ac_freq,
+    "ac_dutycycle": ac_dutycycle,
+    "ac_period": ac_period,
+    "ac_t_stress": ac_t_stress,
+    "ac_t_relax": ac_t_relax,
 }
 
 with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
@@ -422,7 +456,7 @@ sl = nisys.sls[0]
 bl = nisys.bls[0]
 wl = nisys.wls[0]
 
-def run_bias_stress_measurement(
+def run_bias_stress_measurement_dc(
     v0: float, # reference zero voltage level
     v_stress: float,
     t_measure_points: list[float],
@@ -470,6 +504,8 @@ def run_bias_stress_measurement(
         nisys.ppmu_set_vbl(bl, v0)
 
         # print measurement
+        # THIS CAUSES UNPREDICTABLE DELAY IN CODE, BUT IS OKAY BECAUSE
+        # STRESS IS ON BEFORE WE PRINT. JUST MAKE SURE DO NOT PRINT BEFORE STRESS ON
         # print(f"t={t_measure}, v_d={meas_v}, i_d={meas_i}")
         print(f"t={t_measure}, i_d={meas_i}")
 
@@ -487,6 +523,183 @@ def run_bias_stress_measurement(
     
     return data_measurement
 
+
+def run_bias_stress_measurement_ac(
+    v0: float, # reference zero voltage level
+    v_stress: float,
+    t_measure_points: list[float],
+    path_data: str,
+    t_save_threshold: float = 10.0, # time before saving to json during measurement
+    t_nbti_ac_unit: float = 1e-5,   # 1e-5 ns base unit time interval
+    # t_nbti_ac_unit: float = 100e-9,   # 10 ns base unit time interval
+    pattern: str = "nbti_ac",       # this is "Pattern Name: ____" in NI digital pattern editor, not the pattern path
+):
+    """Routine for ac stress NBTI measurement.
+    Technique with NI system looks like following:
+
+       STRESS:           MEASURE:
+       burst_pattern()   manually setting pins to fixed voltage values and
+                         reading (can have ~1 ms order time delays)
+                         |
+       _   _   _   _     v    _   _   _   _   _   _  
+      | | | | | | | |        | | | | | | | | | | | | 
+      | | | | | | | |  ____  | | | | | | | | | | | |  ____
+    __| |_| |_| |_| |_|    |_| |_| |_| |_| |_| |_| |_|    |_
+    """
+    from os.path import abspath
+    from math import sqrt
+
+    # NI RRAM PULSE SETUP
+    # this time "t_nbti_ac" is hardcoded inside the .digitpat file as "Time Set"
+    nisys.digital.create_time_set("t_nbti_ac")
+    nisys.digital.configure_time_set_period("t_nbti_ac", t_nbti_ac_unit)
+
+    # load pattern
+    nisys.digital.load_pattern(abspath(ac_stress_pattern))
+
+    # ni digital registers to set cycles and pulse widths
+    MAX_REG_INT = 65535 # max register integer, need to split cycles into 2 for loops
+    reg_cycles_outer = nidigital.SequencerRegister.REGISTER0 # number of cycles outer
+    reg_cycles_inner = nidigital.SequencerRegister.REGISTER1 # number of cycles inner
+    reg_pw_stress = nidigital.SequencerRegister.REGISTER2    # stress pulse width
+    reg_pw_relax = nidigital.SequencerRegister.REGISTER3     # rela pulse width
+
+    # number of pulse width "units" for stress and relax
+    # `t_nbti_ac_unit` sets base time unit in nidigital system
+    # real pulse time is number of base time unit * pw
+    # THERES SOME WEIRD EXTRA CYCLES APPEARING FROM PATTERN SOMEHOW... WTF
+    # I ADJUSTED THESE PULSE WIDTHS TO MATCH, OTHERWISE FREQUENCY LOWER THAN DESIRED
+    # I OSCILLOSCOPE TUNED UNTIL FREQUENCY MATCHED TO WITHIN 0.1%
+    pw_set = int(ac_t_stress / t_nbti_ac_unit) - 1
+    pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 2
+
+    # print(f"pw_set = {pw_set}, pw_relax = {pw_relax}")
+
+    nisys.digital.write_sequencer_register(reg_pw_stress, pw_set)
+    nisys.digital.write_sequencer_register(reg_pw_relax, pw_relax)
+
+    # set ppmu hi/lo voltages
+    body = list(nisys.body)[0]
+    bl = nisys.bls[0]
+    sl = nisys.sls[0]
+    wl = nisys.wls[0]
+
+    v_body_lo = v0
+    v_body_hi = v0
+    v_bl_lo = v0
+    v_bl_hi = v0
+    v_bl_x = v0 + v_read
+    v_sl_lo = v0
+    v_sl_hi = v0
+    v_wl_lo = v0
+    v_wl_hi = v0 + v_stress
+    v_wl_x = v0 + v_read_gate_bias
+
+    nisys.digital.channels[body].configure_voltage_levels(v_body_lo, v_body_hi, v_body_lo, v_body_hi, v0)
+    nisys.digital.channels[bl].configure_voltage_levels(v_bl_lo, v_bl_hi, v_bl_lo, v_bl_hi, v_bl_x)
+    nisys.digital.channels[sl].configure_voltage_levels(v_sl_lo, v_sl_hi, v_sl_lo, v_sl_hi, v0)
+    nisys.digital.channels[wl].configure_voltage_levels(v_wl_lo, v_wl_hi, v_wl_lo, v_wl_hi, v_wl_x)
+    nisys.digital.ppmu_source()
+
+    # make pattern X states high Z
+    for pin in (body, bl, sl, wl):
+        nisys.digital.channels[pin].termination_mode = nidigital.TerminationMode.VTERM
+    
+    # set SL to ppmu to measure
+    nisys.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
+
+    # data to save
+    result_t = []  # accumulated total stress time
+    result_t_meas = [] # time measurement is occuring
+    result_i_d = [] # drain current read
+
+    # data that will be saved
+    data_measurement = {
+        "t": result_t,
+        "t_meas":result_t_meas,
+        "i_d": result_i_d,
+    }
+
+    print(f"STARTING AC NBTI...")
+
+    # time when measurement started, for tracking
+    t0 = time.perf_counter_ns() # make sure to use perf_counter, includes time during sleeps
+
+    # calculated accumulated stress time
+    t_accum_stress = 0
+    
+    # wait for each measurement point
+    for i, t_next_measure in enumerate(t_measure_points):        
+        # calculate stress cycles needed to reach next measure time as close as possible
+        dt = t_next_measure - t_accum_stress
+
+        # MAX REGISTER INTEGER VALUE IS 65535
+        # SO WE NEED TO SPLIT CYCLES INTO CHUNKS
+        cycles = max(1, int(dt / ac_t_stress))
+        if cycles < MAX_REG_INT:
+            cycles_inner = cycles
+            cycles_outer = 1
+        else:
+            sqrt_cycles = sqrt(cycles)
+            cycles_outer = int(sqrt_cycles)
+            cycles_inner = cycles_outer + 1
+            cycles = cycles_outer * cycles_inner
+        
+        # DEBUGGING
+        # print(f"cycles_inner={cycles_inner}, cycles_outer={cycles_outer}")
+        nisys.digital.write_sequencer_register(reg_cycles_outer, cycles_outer)
+        nisys.digital.write_sequencer_register(reg_cycles_inner, cycles_inner)
+
+        # actual change in accumulated stress time
+        t_accum_stress += cycles * ac_t_stress
+
+        # run stress pattern
+        nisys.digital.burst_pattern(
+            pattern, # cnfet_pmos_pulse_cycling.digipat
+            wait_until_done=False,
+        )
+
+        # print previous cycle result here while pattern is bursting
+        # and save data to file
+        # (takes random 1-5 ms so dont want to disturb measurement)
+        if i > 0 and dt > 1.0: # only print when >1s delta time steps to make sure no issues
+            print(f"[{i}] t={result_t[i-1]:.2f}, t_meas={result_t_meas[i-1]:.2f}, i_d={result_i_d[i-1]:.3e}")
+            with open(path_data, "w+") as f:
+                json.dump(data_measurement, f, indent=2)
+        
+        nisys.digital.wait_until_done(timeout=10000.0)
+
+        # time pattern finished and measurement is occuring
+        t_measure = (time.perf_counter_ns() - t0) * 1e-9
+
+        # MEASURE DRAIN CURRENT ~2 ms
+        # turns on drain for measurement
+        nisys.ppmu_set_vbl(bl, v0 + v_read)
+        # meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0] # takes ~1 ms
+        meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0] # takes ~1 ms
+        # nisys.ppmu_set_vbl(bl, v0) # unnecessary, pattern will set
+
+        ### ALTERNATIVELY measure source current ~1 ms
+        # but source current weirder and doesnt fit old data
+        # maybe in future use this for less error from delays
+        # meas_i = nisys.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0] # takes ~1 ms
+
+        # save measurement and time
+        result_t.append(t_accum_stress)
+        result_t_meas.append(t_measure)
+        # data_measurement["v_d"].append(meas_v)
+        result_i_d.append(meas_i)
+
+    # only do at end for AC stress to avoid file saving delay
+    # TODO: if ambitious, u can do file saving during loop while waiting
+    # for the burst sequence to finish (set burst_pattern wait if u r certain the file saving time
+    # (up to few ms) will finish before burst is done, and u will need to
+    # spinlock check if the burst pattern has finished
+    with open(path_data, "w+") as f:
+        json.dump(data_measurement, f, indent=2)
+    
+    return data_measurement
+
 ### STRESS MEASUREMENT
 
 # boost voltages
@@ -501,12 +714,41 @@ if v0 != 0:
     print(f"sleeping for {boost_sleep} s")
     time.sleep(boost_sleep)
 
-data_stress = run_bias_stress_measurement(v0=v0, v_stress=v_gate, t_measure_points=t_measure_points_stress, path_data=path_data_stress + ".json")
+if ac_stress:
+    run_stress = run_bias_stress_measurement_ac
+else: # dc
+    run_stress = run_bias_stress_measurement_dc
+
+data_stress = run_stress(
+    v0=v0,
+    v_stress=v_gate,
+    t_measure_points=t_measure_points_stress,
+    path_data=path_data_stress + ".json",
+)
+
+# ### POST STRESS IV
+# post_iv = nisys.cnfet_iv_sweep(
+#     v_wl=list(reversed(V_WL_INITIAL_SWEEP)),
+#     v_bl=v_read,
+#     v_sl=0.0,
+# )
+# print(iv_data)
+
+# # save in json format
+# path_post_iv_json = os.path.join(path_data_folder, f"post_iv.json")
+# with open(path_post_iv_json, "w+") as f:
+#     json.dump(post_iv, f, indent=2)
+
+# nisys.close()
+# exit()
 
 ### RELAXATION (reset all to zero)
-if v0 != 0:
-    nisys.ppmu_all_pins_to_zero()
-data_relax = run_bias_stress_measurement(v0=0, v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax + ".json")
+if do_relax:
+    if v0 != 0:
+        nisys.ppmu_all_pins_to_zero()
+    data_relax = run_bias_stress_measurement_dc(v0=0, v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax + ".json")
+else:
+    data_relax = None
 
 # close ni system connection
 nisys.ppmu_all_pins_to_zero()
@@ -517,7 +759,10 @@ for path_data, data in [
     (path_data_stress, data_stress),
     (path_data_relax, data_relax),
 ]:
-    path_data_csv = path_data_stress + ".csv"
+    if data is None:
+        continue
+    
+    path_data_csv = path_data + ".csv"
     with open(path_data_csv, "w+") as f:
         f.write("t,i_d\n")
         for t, i_d in zip(data["t"], data["i_d"]):

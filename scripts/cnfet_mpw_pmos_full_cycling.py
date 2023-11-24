@@ -1,4 +1,9 @@
 """
+11/2023
+DEPRECATED (ancient old script, written around 1/2023, precursor to 
+proper AC NBTI script)
+- Andrew
+
 Script for CNFET PMOS cycling on SkyWater MPW wafer.
 This contains settings for pulsed cycling cnfet with voltage
 levels that mimic the biases during 1T1R operation.
