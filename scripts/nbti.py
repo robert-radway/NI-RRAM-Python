@@ -46,17 +46,17 @@ parser.add_argument("settings", help="settings filename")
 parser.add_argument("chip", help="chip name for logging")
 parser.add_argument("device", help="device name for logging")
 parser.add_argument("--polarity", type=str, nargs="?", default="PMOS", help="polarity of device (PMOS or NMOS)")
-parser.add_argument("--tstart", type=float, nargs="?", default=20e-3, help="when to start reading iv after applying dc gate bias")
+parser.add_argument("--tstart", type=float, nargs="?", default=10e-3, help="when to start reading iv after applying dc gate bias")
 parser.add_argument("--tend", type=float, nargs="?", default=2e3, help="when to stop reading")
-parser.add_argument("--tstart-relax", type=float, nargs="?", default=20e-3, help="when to start reading iv after stopping bias stress")
+parser.add_argument("--tstart-relax", type=float, nargs="?", default=10e-3, help="when to start reading iv after stopping bias stress")
 parser.add_argument("--tend-relax", type=float, nargs="?", default=2e3, help="when to stop reading relaxation")
 parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--samples-relax", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--relax", action=argparse.BooleanOptionalAction, default=True, help="Do relaxation measurement")
 parser.add_argument("--relax-iv", action=argparse.BooleanOptionalAction, default=False, help="Do relaxation IV measurement")
 parser.add_argument("--read-bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
-parser.add_argument("--read-gate-bias", type=float, nargs="?", default=-1.2, help="constant gate bias in volts")
-parser.add_argument("--gate-bias", type=float, nargs="?", default=-2.0, help="constant gate bias in volts")
+parser.add_argument("--read-gate-bias", type=float, nargs="?", default=-1.2, help="read gate bias in volts")
+parser.add_argument("--gate-bias", type=float, nargs="?", default=-2.0, help="stress constant gate bias in volts")
 parser.add_argument("--boost-voltage", type=float, nargs="?", default=0, help="boost all lines by this value")
 parser.add_argument("--boost-sleep", type=float, nargs="?", default=10.0, help="seconds to wait after boosting")
 parser.add_argument("--efield", type=float, nargs="?", default=0.0, help="if >0, targets an efield instead of gate bias (units are MV/cm)")
@@ -72,6 +72,7 @@ parser.add_argument("--ac", action="store_true", default=False, help="Do AC puls
 parser.add_argument("--ac-freq", type=float, nargs="?", default=100e3, help="AC frequency for stress")
 parser.add_argument("--dutycycle", type=float, nargs="?", default=0.1, help="AC pulse duty cycle for stress time (0.2 = 20 percent on, 80 percent off)")
 parser.add_argument("--pattern", type=str, nargs="?", default="settings/patterns/nbti_ac.digipat", help="ni digital pattern for ac nbti pulsing")
+parser.add_argument("--t-unit", type=float, nargs="?", default=50e-9, help="ni digital pattern unit cycle time interval")
 
 args = parser.parse_args()
 
@@ -103,6 +104,7 @@ ac_period = 1.0 / ac_freq
 ac_t_stress = ac_dutycycle * ac_period
 ac_t_relax = (1.0 - ac_dutycycle) * ac_period
 ac_stress_pattern = args.pattern
+t_nbti_ac_unit = args.t_unit
 
 # print info using AC stress
 if ac_stress:
@@ -143,7 +145,7 @@ def into_sweep_range(v) -> list:
             for i in range(0, len(v_range)):
                 if np.abs(v_range[i]) < 1e-12:
                     v_range[i] = 0.0
-            return v_range
+            return v_range.tolist()
         else:
             return v
     else:
@@ -487,6 +489,10 @@ config = {
 with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
     json.dump(config, f, indent=4)
 
+### uncomment to close after sampling iv and saving config
+# nisys.close()
+# exit()
+
 ### TEMPORARY:
 # clamp VT within range or exit
 if clamp_vt:
@@ -635,7 +641,7 @@ def run_bias_stress_measurement_ac(
     t_measure_points: list[float],
     path_data: str,
     t_save_threshold: float = 10.0, # time before saving to json during measurement
-    t_nbti_ac_unit: float = 1e-5,   # 1e-5 ns base unit time interval
+    # t_nbti_ac_unit: float = 1e-5,   # 1e-5 ns base unit time interval
     # t_nbti_ac_unit: float = 100e-9,   # 10 ns base unit time interval
     pattern: str = "nbti_ac",       # this is "Pattern Name: ____" in NI digital pattern editor, not the pattern path
 ):
