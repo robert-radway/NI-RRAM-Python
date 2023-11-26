@@ -2026,8 +2026,17 @@ class NIRRAM:
         v_bl,
         v_sl,
         v_body = 0.0,
+        v_0 = 0.0,
+        v_wl_0 = 0.0,
         current_limit_range = 32e-6, # for S/D
+        measure_i_bl = True,
+        measure_v_bl = False,
+        measure_i_sl = False,
+        measure_v_sl = False,
+        measure_i_wl = False,
+        measure_v_wl = False,
     ) -> dict:
+        """Short IV sweep vs v_wl."""
         meas_v_bl = []
         meas_i_bl = []
         meas_v_sl = []
@@ -2066,16 +2075,23 @@ class NIRRAM:
             self.digital.channels[wl].ppmu_voltage_level = v_wl_i
             self.digital.ppmu_source()
             
-            meas_v_bl.append(self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
-            meas_i_bl.append(self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
-            meas_v_sl.append(self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
-            meas_i_sl.append(self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
-            meas_v_wl.append(self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
-            meas_i_wl.append(self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
+            if measure_v_bl:
+                meas_v_bl.append(self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+            if measure_i_bl:
+                meas_i_bl.append(self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
+            if measure_v_sl:
+                meas_v_sl.append(self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+            if measure_i_sl:
+                meas_i_sl.append(self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
+            if measure_v_wl:
+                meas_v_wl.append(self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0])
+            if measure_i_wl:
+                meas_i_wl.append(self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0])
 
         # reset ppmu to measurement levels
-        for pin in (body, wl, bl, sl):
-            self.digital.channels[pin].ppmu_voltage_level = 0.0
+        self.digital.channels[wl].ppmu_voltage_level = v_wl_0
+        for pin in (body, bl, sl):
+            self.digital.channels[pin].ppmu_voltage_level = v_0
         self.digital.ppmu_source()
 
         return {
