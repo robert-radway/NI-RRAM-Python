@@ -85,7 +85,7 @@ python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_4
 - VGstress = -1.2 V
 - VGread = -0.6 V
 ```
-python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_23_ac --no-relax --tstart 1e0 --tend 1e4 --samples 20 --ac --ac-freq 1 --dutycycle 0.5 --t-unit 1e-5 --initial-sweep 0.2 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_23_ac --no-relax --tstart 1e0 --tend 1e4 --samples 20 --ac --ac-freq 1 --dutycycle 0.5 --t-unit 1e-5 --initial-sweep 0.4 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
 ```
 
 ### 1 Hz, 0.5 duty cycle AC stress at high gate voltage = -1.8 V
@@ -124,7 +124,7 @@ python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_4
 - VGstress = -1.2 V
 - VGread = -0.6 V
 ```
-python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_23_ac --no-relax --tstart 5e-3 --tend 1e4 --samples 20 --ac --ac-freq 1e3 --dutycycle 0.5 --t-unit 1e-6 --initial-sweep 0.4 -1.2 0.2 --read-gate-bias -0.6 --gate-bias -1.2
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_23_ac --no-relax --tstart 5e-3 --tend 1e4 --samples 20 --ac --ac-freq 1e3 --dutycycle 0.5 --t-unit 1e-6 --initial-sweep 0.4 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
 ```
 
 ### 1 kHz, 0.5 duty cycle AC stress at medium gate voltage = -1.8 V
@@ -163,7 +163,7 @@ python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_4
 - VGstress = -1.2 V
 - VGread = -0.6 V
 ```
-python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_23_ac --no-relax --tstart 5e-3 --tend 1e4 --samples 20 --ac --ac-freq 1e6 --dutycycle 0.5 --t-unit 50e-9 --initial-sweep 0.4 -1.2 0.2 --read-gate-bias -0.6 --gate-bias -1.2
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_23_ac --no-relax --tstart 5e-3 --tend 1e4 --samples 20 --ac --ac-freq 1e6 --dutycycle 0.5 --t-unit 50e-9 --initial-sweep 0.4 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
 ```
 
 ### 1 MHz, 0.5 duty cycle AC stress at high gate voltage = -1.8 V

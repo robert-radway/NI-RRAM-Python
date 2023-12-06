@@ -64,7 +64,7 @@ parser.add_argument("--eot", type=float, nargs="?", default=0.0, help="oxide eot
 parser.add_argument("--clamp-vt", type=bool, nargs="?", default=False, help="if VT not within a range, exit")
 parser.add_argument("--vt-min", type=float, nargs="?", default=-0.1, help="vt min for clamp vt")
 parser.add_argument("--vt-max", type=float, nargs="?", default=0.2, help="vt max for clamp vt")
-parser.add_argument("--initial-sweep", type=float, nargs="+", default=[-0.2, 1.2, 0.2], help="pre-stress IDVG gate voltage initial sweep range [start, stop, step]")
+parser.add_argument("--initial-sweep", type=float, nargs="+", default=[0.4, -1.4, 0.2], help="pre-stress IDVG gate voltage initial sweep range [start, stop, step]")
 parser.add_argument("--initial-sweep-sleep", type=float, nargs="?", default=10.0, help="time to sleep between each initial IDVG sweep spot measurement point")
 
 # AC NBTI arguments
@@ -333,6 +333,8 @@ V_WL_POST_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6
 
 initial_iv = []
 
+# v_wl_initial_sweep = []
+
 for v_wl in v_wl_initial_sweep:
     iv_data = nisys.cnfet_spot_iv(
         v_wl=v_wl,
@@ -484,6 +486,7 @@ config = {
     "ac_period": ac_period,
     "ac_t_stress": ac_t_stress,
     "ac_t_relax": ac_t_relax,
+    "t_unit": t_nbti_ac_unit,
 }
 
 with open(os.path.join(path_data_folder, "config.json"), "w+") as f:
@@ -669,11 +672,16 @@ def run_bias_stress_measurement_ac(
     nisys.digital.load_pattern(abspath(ac_stress_pattern))
 
     # ni digital registers to set cycles and pulse widths
+    reg_pw_stress = nidigital.SequencerRegister.REGISTER0    # stress pulse width
+    reg_pw_relax = nidigital.SequencerRegister.REGISTER1     # rela pulse width
+    reg_cycles_loop0 = nidigital.SequencerRegister.REGISTER2 # number of cycles loop 0
+    reg_cycles_loop1 = nidigital.SequencerRegister.REGISTER3 # number of cycles loop 1
+    reg_cycles_loop2 = nidigital.SequencerRegister.REGISTER4 # number of cycles loop 2
+
+    # 16 bit register sizes, so for longer cycle counts, need to split 
     MAX_REG_INT = 65535 # max register integer, need to split cycles into 2 for loops
-    reg_cycles_outer = nidigital.SequencerRegister.REGISTER0 # number of cycles outer
-    reg_cycles_inner = nidigital.SequencerRegister.REGISTER1 # number of cycles inner
-    reg_pw_stress = nidigital.SequencerRegister.REGISTER2    # stress pulse width
-    reg_pw_relax = nidigital.SequencerRegister.REGISTER3     # rela pulse width
+    MAX_2LOOP = MAX_REG_INT * MAX_REG_INT
+    MAX_3LOOP = MAX_REG_INT * MAX_REG_INT * MAX_REG_INT
 
     # number of pulse width "units" for stress and relax
     # `t_nbti_ac_unit` sets base time unit in nidigital system
@@ -745,21 +753,33 @@ def run_bias_stress_measurement_ac(
         dt = t_next_measure - t_accum_stress
 
         # MAX REGISTER INTEGER VALUE IS 65535
-        # SO WE NEED TO SPLIT CYCLES INTO CHUNKS
+        # SO WE NEED TO SPLIT CYCLES INTO MULTIPLE CHUNKS FOR LARGE CYCLE COUNT
         cycles = max(1, int(dt / ac_t_stress))
         if cycles < MAX_REG_INT:
-            cycles_inner = cycles
-            cycles_outer = 1
-        else:
+            cycles_loop0 = 1
+            cycles_loop1 = 1
+            cycles_loop2 = cycles # most inner loop
+        elif cycles < MAX_2LOOP: # try 2 loops
             sqrt_cycles = sqrt(cycles)
-            cycles_outer = int(sqrt_cycles)
-            cycles_inner = cycles_outer + 1
-            cycles = cycles_outer * cycles_inner
-        
+            cycles_loop0 = 1
+            cycles_loop1 = int(sqrt_cycles)
+            cycles_loop2 = cycles_loop1 + 1
+            cycles = cycles_loop1 * cycles_loop2
+        else: # try 3 loops
+            cbrt_cycles = np.cbrt(cycles)
+            # produces good pos/neg balanced error plot,
+            # see CNT reliability documentation slides
+            # (or plot: error = cycles_approx - cycles)
+            cycles_loop0 = int(np.round(cbrt_cycles))
+            cycles_loop1 = cycles_loop0 + 1
+            cycles_loop2 = cycles_loop0 - 1
+            cycles = cycles_loop0 * cycles_loop1 * cycles_loop2
+
         # DEBUGGING
-        # print(f"cycles_inner={cycles_inner}, cycles_outer={cycles_outer}")
-        nisys.digital.write_sequencer_register(reg_cycles_outer, cycles_outer)
-        nisys.digital.write_sequencer_register(reg_cycles_inner, cycles_inner)
+        # print(f"cycles_loop0={cycles_loop0}, cycles_loop1={cycles_loop1}, cycles_loop2={cycles_loop2}")
+        nisys.digital.write_sequencer_register(reg_cycles_loop0, cycles_loop0)
+        nisys.digital.write_sequencer_register(reg_cycles_loop1, cycles_loop1)
+        nisys.digital.write_sequencer_register(reg_cycles_loop2, cycles_loop2)
 
         # actual change in accumulated stress time
         t_accum_stress += cycles * ac_t_stress
@@ -778,7 +798,7 @@ def run_bias_stress_measurement_ac(
             with open(path_data, "w+") as f:
                 json.dump(data_measurement, f, indent=2)
         
-        nisys.digital.wait_until_done(timeout=10000.0)
+        nisys.digital.wait_until_done(timeout=80000.0)
 
         # time pattern finished and measurement is occuring
         t_measure = (time.perf_counter_ns() - t0) * 1e-9

@@ -5,7 +5,7 @@ data_header = "data/"
 
 
 [NIDigital]
-deviceID = "PXI1Slot9"
+deviceID = "PXI2Slot7_6570"
 pinmap = "settings/MPW_GAX2_CNFET.pinmap"
 specs = [
   "settings/DEC3.specs",

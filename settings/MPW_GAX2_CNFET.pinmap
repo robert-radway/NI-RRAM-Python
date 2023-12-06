@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PinMap xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.5">
 	<Instruments>
-		<NIDigitalPatternInstrument name="PXI1Slot9" numberOfChannels="32" group="Digital" />
+		<NIDigitalPatternInstrument name="PXI2Slot7_6570" numberOfChannels="32" group="Digital" />
 	</Instruments>
 	<Pins>
 		<DUTPin name="BL_0" />
@@ -52,22 +52,22 @@
 		<Site siteNumber="0" />
 	</Sites>
 	<Connections>
-		<Connection pin="Body" siteNumber="0" instrument="PXI1Slot9" channel="31" />
-		<Connection pin="BL_0" siteNumber="0" instrument="PXI1Slot9" channel="2" />
-		<Connection pin="BL_1" siteNumber="0" instrument="PXI1Slot9" channel="3" />
-		<Connection pin="BL_2" siteNumber="0" instrument="PXI1Slot9" channel="4" />
-		<Connection pin="BL_3" siteNumber="0" instrument="PXI1Slot9" channel="5" />
-		<Connection pin="SL_0" siteNumber="0" instrument="PXI1Slot9" channel="0" />
+		<Connection pin="Body" siteNumber="0" instrument="PXI2Slot7_6570" channel="31" />
+		<Connection pin="BL_0" siteNumber="0" instrument="PXI2Slot7_6570" channel="2" />
+		<Connection pin="BL_1" siteNumber="0" instrument="PXI2Slot7_6570" channel="3" />
+		<Connection pin="BL_2" siteNumber="0" instrument="PXI2Slot7_6570" channel="4" />
+		<Connection pin="BL_3" siteNumber="0" instrument="PXI2Slot7_6570" channel="5" />
+		<Connection pin="SL_0" siteNumber="0" instrument="PXI2Slot7_6570" channel="0" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
-		<Connection pin="SL_1" siteNumber="0" instrument="PXI1Slot9" channel="16" />
-		<Connection pin="SL_2" siteNumber="0" instrument="PXI1Slot9" channel="17" />
-		<Connection pin="SL_3" siteNumber="0" instrument="PXI1Slot9" channel="18" />
+		<Connection pin="SL_1" siteNumber="0" instrument="PXI2Slot7_6570" channel="16" />
+		<Connection pin="SL_2" siteNumber="0" instrument="PXI2Slot7_6570" channel="17" />
+		<Connection pin="SL_3" siteNumber="0" instrument="PXI2Slot7_6570" channel="18" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
-		<Connection pin="WL_0" siteNumber="0" instrument="PXI1Slot9" channel="1" />
+		<Connection pin="WL_0" siteNumber="0" instrument="PXI2Slot7_6570" channel="1" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
-		<Connection pin="WL_1" siteNumber="0" instrument="PXI1Slot9" channel="19" />
-		<Connection pin="WL_2" siteNumber="0" instrument="PXI1Slot9" channel="20" />
-		<Connection pin="WL_3" siteNumber="0" instrument="PXI1Slot9" channel="21" />
+		<Connection pin="WL_1" siteNumber="0" instrument="PXI2Slot7_6570" channel="19" />
+		<Connection pin="WL_2" siteNumber="0" instrument="PXI2Slot7_6570" channel="20" />
+		<Connection pin="WL_3" siteNumber="0" instrument="PXI2Slot7_6570" channel="21" />
 		<!-- DUMMY PINS (TO MAINTAIN SAME PIN FORMAT) -->
 	</Connections>
 </PinMap>
