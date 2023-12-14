@@ -70,8 +70,9 @@ parser.add_argument("--initial-sweep-sleep", type=float, nargs="?", default=10.0
 # AC NBTI arguments
 parser.add_argument("--ac", action="store_true", default=False, help="Do AC pulsed stress")
 parser.add_argument("--ac-freq", type=float, nargs="?", default=100e3, help="AC frequency for stress")
+parser.add_argument("--ac-mode", type=str, nargs="?", default="", help="quick selection for stress-relax or relax-stress patterns")
 parser.add_argument("--dutycycle", type=float, nargs="?", default=0.1, help="AC pulse duty cycle for stress time (0.2 = 20 percent on, 80 percent off)")
-parser.add_argument("--pattern", type=str, nargs="?", default="settings/patterns/nbti_ac.digipat", help="ni digital pattern for ac nbti pulsing")
+parser.add_argument("--pattern", type=str, nargs="?", default="settings/patterns/nbti_ac_rs.digipat", help="ni digital pattern for ac nbti pulsing")
 parser.add_argument("--t-unit", type=float, nargs="?", default=50e-9, help="ni digital pattern unit cycle time interval")
 
 args = parser.parse_args()
@@ -103,8 +104,18 @@ ac_dutycycle = args.dutycycle
 ac_period = 1.0 / ac_freq
 ac_t_stress = ac_dutycycle * ac_period
 ac_t_relax = (1.0 - ac_dutycycle) * ac_period
-ac_stress_pattern = args.pattern
 t_nbti_ac_unit = args.t_unit
+ac_mode = args.ac_mode
+
+if ac_mode == "sr":
+    ac_stress_pattern ="settings/patterns/nbti_ac_sr.digipat"
+elif ac_mode =="rs":
+    ac_stress_pattern ="settings/patterns/nbti_ac_rs.digipat"
+else:
+    ac_stress_pattern = args.pattern
+
+if ac_stress == True:
+    print(f"Using AC stress pattern: {ac_stress_pattern}")
 
 # print info using AC stress
 if ac_stress:
@@ -689,12 +700,15 @@ def run_bias_stress_measurement_ac(
     # THERES SOME WEIRD EXTRA CYCLES APPEARING FROM PATTERN SOMEHOW... WTF
     # I ADJUSTED THESE PULSE WIDTHS TO MATCH, OTHERWISE FREQUENCY LOWER THAN DESIRED
     # I OSCILLOSCOPE TUNED UNTIL FREQUENCY MATCHED TO WITHIN 0.1%
-    pw_set = int(ac_t_stress / t_nbti_ac_unit) - 1
-    pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 2
+    pw_stress = int(ac_t_stress / t_nbti_ac_unit) - 1
+    if ac_dutycycle >= 0.8:
+        pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 1 # FOR 0.8-0.9 DUTY CYCLE USE THIS WTF???
+    else:
+        pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 2
 
-    # print(f"pw_set = {pw_set}, pw_relax = {pw_relax}")
+    # print(f"pw_stress = {pw_stress}, pw_relax = {pw_relax}")
 
-    nisys.digital.write_sequencer_register(reg_pw_stress, pw_set)
+    nisys.digital.write_sequencer_register(reg_pw_stress, pw_stress)
     nisys.digital.write_sequencer_register(reg_pw_relax, pw_relax)
 
     # set ppmu hi/lo voltages
@@ -798,7 +812,7 @@ def run_bias_stress_measurement_ac(
             with open(path_data, "w+") as f:
                 json.dump(data_measurement, f, indent=2)
         
-        nisys.digital.wait_until_done(timeout=80000.0)
+        nisys.digital.wait_until_done(timeout=100000.0)
 
         # time pattern finished and measurement is occuring
         t_measure = (time.perf_counter_ns() - t0) * 1e-9

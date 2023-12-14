@@ -2001,10 +2001,14 @@ class NIRRAM:
         
         meas_v_bl = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
         meas_i_bl = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
-        meas_v_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
-        meas_i_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+        # meas_v_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+        # meas_i_sl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
         meas_v_wl = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
         meas_i_wl = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+
+        # to ignore sl measurement
+        meas_v_sl = 0
+        meas_i_sl = 0
 
         # reset ppmu to measurement levels
         for pin in (body, wl, bl, sl):
