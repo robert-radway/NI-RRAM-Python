@@ -3,7 +3,7 @@
   <TimingSheet>
     <TimeSets>
       <TimeSet name="test">
-        <Period>1E-06</Period>
+        <Period>4E-05</Period>
         <PinEdges>
           <PinEdge pin="BLSLWLS">
             <DriveNonReturn>

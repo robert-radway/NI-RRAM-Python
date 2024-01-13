@@ -1,5 +1,6 @@
 """Defines the NI RRAM controller class"""
 import glob
+import pdb
 import tomli
 import math
 import time
@@ -15,6 +16,7 @@ from datetime import datetime
 from BitVector import BitVector
 from .mask import RRAMArrayMask
 from . import util
+import niswitch
 
 # Warnings become errors
 warnings.filterwarnings("error")
@@ -54,10 +56,12 @@ class NIRRAM:
         device,
         polarity = "NMOS",
         settings = "settings/default.toml",
+        debug_printout = False,
+        slow = False,
     ):
         # flag for indicating if connection to ni session is open
         self.closed = True
-
+        self.slow=slow
         # If settings is a string, load as TOML file
         if isinstance(settings, str):
             with open(settings, "rb") as settings_file:
@@ -69,15 +73,16 @@ class NIRRAM:
 
         # Convert NIDigital spec paths to absolute paths
         settings["NIDigital"]["specs"] = [abspath(path) for path in settings["NIDigital"]["specs"]]
-
+        self.debug_printout = debug_printout
         # Initialize RRAM logging
         self.mlogfile = open(settings["path"]["master_log_file"], "a")
         self.plogfile = open(settings["path"]["prog_log_file"], "a")
         self.datafile_path = settings["path"]["data_header"] + datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + str(chip) + "_" + str(device) + ".csv"
-        self.datafile = csv.writer(open(self.datafile_path, "a", newline=''))
+        
+        self.file_object = open(self.datafile_path, "a", newline='')
+        self.datafile = csv.writer(self.file_object)
 
         self.datafile.writerow(["Chip_ID", "Device_ID", "OP", "Row", "Col", "Res", "Cond", "Meas_I", "Meas_V", "Prog_VBL", "Prog_VSL", "Prog_VWL", "Prog_Pulse", "Success"])
-
         # Store/initialize parameters
         self.settings = settings
         self.chip = chip
@@ -97,9 +102,12 @@ class NIRRAM:
         self.wls = settings["device"]["WLS"]
         self.bls = settings["device"]["BLS"]
         self.sls = settings["device"]["SLS"]
+        self.wl_unsel = settings["device"]["WL_UNSEL"]
 
         self.all_off_mask = RRAMArrayMask(self.all_wls, [], [], self.all_wls, self.all_bls, self.all_sls, self.polarity)
 
+        if "wl_signals" in settings["device"]:
+            self.wl_signals = settings["device"]["wl_signals"]
         # Only works for 1T1R arrays, sets addr idx and prof
         self.addr_idxs = {}
         self.addr_prof = {}
@@ -118,11 +126,14 @@ class NIRRAM:
 
         # Initialize NI-Digital driver
         self.digital = nidigital.Session(settings["NIDigital"]["deviceID"])
+        # if multi-instrument session, error is "nidigital.errors.DriverError: -1074099215: The driver does not support multi-instrument sessions that use instruments of different models. Ensure that all instruments in the multi-instrument session are identical models."
+        #multi-instrument session achieved as below:
+        #self.digital = nidigital.Session('PXI1Slot9,PXI1Slot8')
         self.digital.load_pin_map(settings["NIDigital"]["pinmap"])
         ###TODO This replaces the DEC3.digilevles and DEC4.digitiming files
         ### you should update TOMLS accordingly to parameterise the configure_time
         self.digital.create_time_set("test")
-        self.digital.configure_time_set_period("test", 1e-8)
+        self.digital.configure_time_set_period("test", 5e-8)
         self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.ZERO)
         self.digital.unload_all_patterns() 
         for pattern in glob.glob(settings["NIDigital"]["patterns"]):
@@ -157,55 +168,20 @@ class NIRRAM:
         for wl in self.all_wls: self.set_vwl(wl, 0.0, 0.0)
         self.digital.commit()
 
-    def close(self):
-        """Do cleanup and then close all NI sessions"""
-        if not self.closed:
-            # set all body voltages back to zero
-            for body_i in self.body.keys(): self.ppmu_set_vbody(body_i, 0.0)
-            print("[close] set body")
-            self.ppmu_all_pins_to_zero()
-
-            # Close NI-Digital
-            # print("[close] TRY digital.close()", self.digital.is_done())
-            # self.digital.close()
-            # print("[close] COMPLETED digital.close()")
-
-            # Close log files
-            self.mlogfile.close()
-            print("[close] mlogfile.close()")
-            self.plogfile.close()
-            print("[close] plogfile.close()")
-            # self.datafile.close()
-
-            self.closed = True
     
-    def __del__(self):
-        """Make sure to automatically close connection in destructor."""
-        self.close()
-        
-    """
-    def set_relay_position(self, index, closed=True):
-        with niswitch.Session("2571_2") as session:
-            relay_name=session.get_relay_name(index=index+1) #one-indexed
-            count=session.get_relay_count(relay_name=relay_name)
-            position=session.get_relay_position(relay_name=relay_name)
-            if position==niswitch.RelayPosition.CLOSED:
-                if closed:
-                    return 0
-                else:
-                    try: session.disconnect(channel1=f"no{index}", channel2=f"com{index}")
-                    except: pass
-                    session.connect(channel1=f"nc{index}", channel2=f"com{index}")
-                    return 1
-            else:
-                if not closed:
-                    return 0
-                else:
-                    try: session.disconnect(channel1=f"nc{index}", channel2=f"com{index}")    
-                    except: pass
-                    session.connect(channel1=f"no{index}", channel2=f"com{index}")
-                    return 1
-    """
+    def dynamic_read(
+        self,
+        vbl=None,
+        vsl=None,
+        vwls=[-1,0,1,2],
+        vwl_unsel_offset=None,
+        vb=None,
+        record=False,
+        check=True,
+    ):
+        res_range = []
+        for vwl in vwls:
+            res_array, cond_array, meas_i_array, meas_v_array = self.read(vwl = vwl, record=True, dynam_read = True)
 
 
     def read(
@@ -216,6 +192,8 @@ class NIRRAM:
         vwl_unsel_offset=None,
         vb=None,
         record=False,
+        check=True,
+        dynam_read=False,
     ):
         """Perform a READ operation. This operation works for single 1T1R devices and 
         arrays of devices, where each device has its own WL/BL.
@@ -227,19 +205,16 @@ class NIRRAM:
         vsl = self.op["READ"][self.polarity]["VSL"] if vsl is None else vsl
         vb = self.op["READ"][self.polarity]["VB"] if vb is None else vb
 
+        '''Debug, print read values'''
+        # print(f"READ @ vbl: {vbl}, vwl: {vwl}, vsl: {vsl}, vb: {vb}")
+
         # unselected WL bias parameter
         if vwl_unsel_offset is None:
             if "VWL_UNSEL_OFFSET" in self.op["READ"][self.polarity]:
                 vwl_unsel_offset = self.op["READ"][self.polarity]["VWL_UNSEL_OFFSET"]
+                #print(vwl_unsel_offset)
             else:
                 vwl_unsel_offset = 0.0
-        
-        for bl in self.bls: 
-            self.ppmu_set_vbl(bl,vbl)
-            self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
-        for sl in self.sls: 
-            self.ppmu_set_vsl(sl,vsl)
-            self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
         """
         for b in self.body: 
             assert( -2 <= vb <= 6)
@@ -255,6 +230,10 @@ class NIRRAM:
         meas_v_array = pd.DataFrame(np.zeros((len(self.wls), len(self.bls))), self.wls, self.bls)
         if self.op["READ"]["mode"] == "digital":
             # Measure with NI-Digital
+
+            #set WL_UNSEL signal
+            # for wl_unsel_signal in self.wl_unsel:
+            #     self.ppmu_set_vwl(wl_unsel_signal, vsl + vwl_unsel_offset)
             for wl in self.wls:
                 # sets all WL voltages in the array: read WL is VWL, all others are VSL
                 for wl_i in self.all_wls: 
@@ -263,6 +242,17 @@ class NIRRAM:
                     else: # UNSELECTED WLs: set to ~vsl with some offset (to reduce bias)
                         self.ppmu_set_vwl(wl_i, vsl + vwl_unsel_offset)
                 self.digital.ppmu_source()
+
+                for bl in self.bls: 
+                    if self.slow:
+                        self.ppmu_set_vbl(bl,vbl/2)
+                    self.ppmu_set_vbl(bl,vbl)
+                    self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
+                for sl in self.sls: 
+                    if self.slow:
+                        self.ppmu_set_vsl(sl,vsl/2)
+                    self.ppmu_set_vsl(sl,vsl)
+                    self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
                 time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 
                 for bl in self.bls:
@@ -272,10 +262,12 @@ class NIRRAM:
                     # meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     # meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     # print(f"{bl} v: {meas_v} i: {meas_i} ig: {meas_i_gate}")
+
                     meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
                     meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
+
                     self.addr_prof[wl][bl]["READs"] +=1
                     # Compute values
                     res = np.abs((self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"])/meas_i - self.op["READ"]["shunt_res_value"])
@@ -286,7 +278,17 @@ class NIRRAM:
                     cond_array.loc[wl,bl] = cond
                     if record: 
                         self.datafile.writerow([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v])
-                        print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
+                        if check:
+                            check_on = "set" if (res < 60_000) else "reset"
+                            if dynam_read:
+                                print(res)
+                            else:
+                                print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate, check_on])
+                        else:
+                            if dynam_read:
+                                print(res)
+                            else:
+                                print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
@@ -360,6 +362,7 @@ class NIRRAM:
                     #     meas_i = self.digital.channels[x].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     #     meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     #     print(f"{x} v: {meas_v} i: {meas_i} ig: {meas_i_gate}")
+                    
                     
                     meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
                     meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
@@ -437,11 +440,15 @@ class NIRRAM:
         if vwl_unsel_offset is None:
             if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
                 vwl_unsel_offset = self.op[mode][self.polarity]["VWL_UNSEL_OFFSET"]
+                #print(vwl_unsel_offset)
+                print(f"VWL UNSEL: {vwl_unsel_offset + vsl}")
             else:
+                print("No\nNo")
                 vwl_unsel_offset = 0.0
         
         # set voltages
         for bl_i in self.bls:
+            print(f"bl_i = {bl_i}")
             if bl_selected is not None: # selecting specific bl, unselecting others
                 vbl_i = vbl if bl_i == bl_selected else vbl_unsel
             else:
@@ -459,6 +466,10 @@ class NIRRAM:
                 self.set_vwl(wl_i, vwl_hi = vwl, vwl_lo = vsl)
             else:
                 self.set_vwl(wl_i, vwl_hi = vsl, vwl_lo = vsl + vwl_unsel_offset)
+        # for wl_unsel_signal in self.wl_unsel:
+        #     print("\n oops \n")
+        #     self.set_vwl(wl_unsel_signal, vwl_hi = vbl, vwl_lo = vbl + vwl_unsel_offset)
+
 
         # Update the voltages    
         self.digital.commit()
@@ -467,8 +478,8 @@ class NIRRAM:
         self.pulse(mask, pulse_len=pulse_len)
 
         # Turn everything off high Z
+        # self.ppmu_all_pins_to_zero()
         self.digital_all_pins_to_zero()
-
         # # reset to high Z
         # for wl_i in self.wls:
         #     self.digital.channels[wl_i].termination_mode = nidigital.TerminationMode.HIGH_Z
@@ -530,6 +541,9 @@ class NIRRAM:
             else:
                 # Unselected Wls add in bias
                 self.set_vwl(wl_i, vwl_hi = vbl, vwl_lo = vbl + vwl_unsel_offset)
+        for wl_unsel_signal in self.wl_unsel:
+            self.set_vwl(wl_unsel_signal, vwl_hi = vbl, vwl_lo = vbl + vwl_unsel_offset)
+            #print(f"VWL_UNSEL: {wl_unsel_signal} set to {vbl + vwl_unsel_offset} V")
 
         for bl_i in self.bls:
             if bl_selected is not None: 
@@ -567,7 +581,7 @@ class NIRRAM:
         self.digital.commit()
 
         return
-     
+
     def ppmu_all_pins_to_zero(self):
         """ 
         Cleans up after PPMU operation (otherwise levels default when going back digital)
@@ -592,7 +606,7 @@ class NIRRAM:
 
     def set_vwl(self, vwl_chan, vwl_hi, vwl_lo):
         """Set (active) VWL using NI-Digital driver (inactive disabled)"""
-        assert(vwl_chan in self.all_wls)
+        assert(vwl_chan in self.all_wls or vwl_chan == "WL_UNSEL")
         self.digital.channels[vwl_chan].configure_voltage_levels(vwl_lo, vwl_hi, vwl_lo, vwl_hi, 0)
         return
 
@@ -626,7 +640,7 @@ class NIRRAM:
         assert(vwl_chan in self.all_wls)
         self.digital.channels[vwl_chan].ppmu_voltage_level = vwl
         self.digital.channels[vwl_chan].ppmu_source()
-        #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
+        #print("Setting VWL: " + str(vwl) + " on chan: " + str(vwl_chan))
 
     def ppmu_set_vbody(self, vbody_chan, vbody):
         """Set VBODY using NI-Digital driver"""
@@ -638,10 +652,27 @@ class NIRRAM:
         self.digital.channels[vbody_chan].ppmu_source()
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
+
+    def pulse(self, mask, pulse_len=10, prepulse_len=50, postpulse_len=0, max_pulse_len=10000, wl_first=True):
+        """Create waveform for directly contacting the array BLs, SLs, and WLs, then output that waveform"""
+        waveform, pulse_width = self.build_BLSLWLS_waveform(mask, pulse_len, prepulse_len, postpulse_len, max_pulse_len, wl_first)
+        #WL_PULSE_DEC3.digipat or PULSE_MPW_ProbeCard.digipat as template file
+        self.arbitrary_pulse(waveform, pin_group_name="BLSLWLS", digipat_file="PULSE_MPW_ProbeCard", data_variable_in_digipat="wl_data", pulse_width=pulse_width)
+        return
+    
+    def arbitrary_pulse(self, waveform, pin_group_name, digipat_file, data_variable_in_digipat,pulse_width=None):
+        broadcast = nidigital.SourceDataMapping.BROADCAST
+        self.digital.pins[pin_group_name].create_source_waveform_parallel(data_variable_in_digipat, broadcast)
+        self.digital.write_source_waveform_broadcast(data_variable_in_digipat, waveform)
+        if pulse_width:
+            self.set_pw(pulse_width)
+        self.digital.burst_pattern(digipat_file)
+        return
+    
     #TODO
-    #max_pulse length must be leass than the prepulse_len + postpulse_len + pulse_lne
+    #max_pulse length must be less than the prepulse_len + postpulse_len + pulse_lne
     #WL_first is currently defaulting off
-    def pulse(self, mask, pulse_len=10, prepulse_len=2, postpulse_len=0, max_pulse_len=10000, wl_first=True):
+    def build_BLSLWLS_waveform(self, mask, pulse_len, prepulse_len, postpulse_len, max_pulse_len, wl_first):
         """Create pulse train. Format of bits is [BL SL WL]. For an array
         with 2 BLs, 2 SLs, and 2 WLs, the bits are ordered:
             [ BL0 BL1 SL0 SL1 WL0 WL1]
@@ -657,14 +688,15 @@ class NIRRAM:
             [ 1 1 1 1 0 0 ]   } Post-pulse (WL zero'd, BL/SL active)
             [ 1 1 1 1 0 0 ]
         """
+        #print(f"pulse_len = {pulse_len}, pulse_len < {prepulse_len}, max_pulse_len = {max_pulse_len}")
         bl_bits_offset = len(self.all_wls) + len(self.all_sls)
         sl_bits_offset = len(self.all_wls)
         waveform = []
         for (wl_mask, bl_mask, sl_mask) in mask.get_pulse_masks():
             ### Print masks for debugging
-            # print(f"wl_mask = {wl_mask}")
-            # print(f"bl_mask = {bl_mask}")
-            # print(f"sl_mask = {sl_mask}")
+            #print(f"wl_mask = {wl_mask}")
+            #print(f"bl_mask = {bl_mask}")
+            #print(f"sl_mask = {sl_mask}")
             if not wl_first:
                 wl_pre_post_bits = BitVector(bitlist=(wl_mask & False)).int_val()
                 wl_mask_bits = BitVector(bitlist=wl_mask).int_val()
@@ -686,24 +718,22 @@ class NIRRAM:
                 data_postpulse = (bl_pre_post_bits << bl_bits_offset) + (sl_pre_post_bits << sl_bits_offset)  + wl_mask_bits
            
             ### print bits for debugging
-            # print(f"data_prepulse = {data_prepulse:b}")
-            # print(f"data = {data:b}")
-            # print(f"data_postpulse = {data_postpulse:b}")
+            #print(f"data_prepulse = {data_prepulse:b}")
+            #print(f"data = {data:b}")
+            #print(f"data_postpulse = {data_postpulse:b}")
 
             waveform += [data_prepulse for i in range(prepulse_len)] + [data for i in range(pulse_len)] + [data_postpulse for i in range(postpulse_len)]
         
+        
+
+        #print waveform for debugging
+        #for timestep in waveform:
+        #    print(bin(timestep))
+
         # zero-pad rest of waveform
         waveform += [0 for i in range(max_pulse_len*len(self.all_wls) - len(waveform))]
-
-        # print(waveform)
-        
-        # Configure and send pulse waveform
-        broadcast = nidigital.SourceDataMapping.BROADCAST
-        self.digital.pins["BLSLWLS"].create_source_waveform_parallel("wl_data", broadcast)
-        self.digital.write_source_waveform_broadcast("wl_data", waveform)
-        self.set_pw(prepulse_len + pulse_len + postpulse_len)
-        self.digital.burst_pattern("WL_PULSE_DEC3")
-        return
+        pulse_width = prepulse_len + pulse_len + postpulse_len
+        return waveform, pulse_width
 
     def set_pw(self, pulse_width):
         """Set pulse width"""
@@ -719,6 +749,7 @@ class NIRRAM:
         self,
         is_1tnr=False,
         bl_selected=None, # select specific bl for 1TNR measurements
+        relayed=False,
     ):
         """Performs SET pulses in increasing fashion until resistance reaches target_res.
         Returns tuple (res, cond, meas_i, meas_v, success)."""
@@ -726,6 +757,7 @@ class NIRRAM:
             mode="FORM",
             is_1tnr=is_1tnr,
             bl_selected=bl_selected,
+            relayed=relayed,
         )
 
     def dynamic_set(
@@ -736,6 +768,7 @@ class NIRRAM:
         target_res=None, # target res, if None will use value in settings
         is_1tnr=False,
         bl_selected=None, # select specific bl for 1TNR measurements
+        relayed=False,
     ):
         """Performs SET pulses in increasing fashion until resistance reaches
         target_res (either input or in the `target_res` config).
@@ -753,10 +786,11 @@ class NIRRAM:
 
         # Iterative pulse-verify
         success = False
-        for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
+        #for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
+        for pw in np.arange(cfg["PW_start"], cfg["PW_stop"], cfg["PW_steps"]):
             for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
                 for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
-                    #print(pw, vwl, vbl, vsl)
+                    print(f"PW = {pw}, Vwl = {vwl}, VBL-VSL = {vbl-vsl}")
                     self.set_pulse(
                         mask,
                         bl_selected=bl_selected, # specific selected BL for 1TNR
@@ -778,6 +812,7 @@ class NIRRAM:
                     if bl_selected is None: # use array success condition: all in array must hit target
                         for wl_i in self.wls:
                             for bl_i in self.bls:
+                                print(res_array.loc[wl_i,bl_i])
                                 if (res_array.loc[wl_i, bl_i] <= target_res) & mask.mask.loc[wl_i, bl_i]:
                                     mask.mask.loc[wl_i, bl_i] = False
                         success = (mask.mask.to_numpy().sum()==0)
@@ -794,7 +829,7 @@ class NIRRAM:
                     break
             if success:
                 break
-        
+    
         # report final cell results
         all_data = []
         for wl in self.wls:
@@ -839,14 +874,16 @@ class NIRRAM:
                         pulse_len=int(pw),
                     )
                     self.ppmu_all_pins_to_zero()
-                    
+                    if self.debug_printout:
+                        print([vsl-vbl, vwl-vbl, vbl+self.op[mode][self.polarity]['VWL_UNSEL_OFFSET'], int(pw)])
                     # use settling if parameter present, to discharge parasitic cap
                     if "settling_time" in self.op[mode]:
                         time.sleep(self.op[mode]["settling_time"])
                     
                     # read result resistance
                     res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
-                    
+                    print(f"vsl = {vsl}, vwl = {vwl}, vbl = {vbl}")
+                    print(res_array.loc[self.wls[0],self.bls[0]])
                     if bl_selected is None: # use array success condition: all in array must hit target
                         for wl_i in self.wls:
                             for bl_i in self.bls:
@@ -1989,6 +2026,59 @@ class NIRRAM:
             "v_wl": meas_v_wl,
             "i_wl": meas_i_wl,
         }
+
+    def close(self):
+        """Do cleanup and then close all NI sessions"""
+        if not self.closed:
+            # set all body voltages back to zero
+            for body_i in self.body.keys(): self.ppmu_set_vbody(body_i, 0.0)
+            print("[close] set body")
+            self.ppmu_all_pins_to_zero()
+
+            # Close NI-Digital
+            # print("[close] TRY digital.close()", self.digital.is_done())
+            #self.digital.close()
+            # print("[close] COMPLETED digital.close()")
+
+            # Close log files
+            self.mlogfile.close()
+            print("[close] mlogfile.close()")
+            self.plogfile.close()
+            print("[close] plogfile.close()")
+            #self.datafile.close()
+
+            print("Closing data file")
+            self.file_object.close()
+            self.closed = True
+            time.sleep(1)
+    
+    def __del__(self):
+        """Make sure to automatically close connection in destructor."""
+        self.close()
+    """
+    def set_relay_position(self, index, closed=True):
+        with niswitch.Session("2571_2") as session:
+            relay_name=session.get_relay_name(index=index+1) #one-indexed
+            count=session.get_relay_count(relay_name=relay_name)
+            position=session.get_relay_position(relay_name=relay_name)
+            if position==niswitch.RelayPosition.CLOSED:
+                if closed:
+                    return 0
+                else:
+                    try: session.disconnect(channel1=f"no{index}", channel2=f"com{index}")
+                    except: pass
+                    session.connect(channel1=f"nc{index}", channel2=f"com{index}")
+                    return 1
+            else:
+                if not closed:
+                    return 0
+                else:
+                    try: session.disconnect(channel1=f"nc{index}", channel2=f"com{index}")    
+                    except: pass
+                    session.connect(channel1=f"no{index}", channel2=f"com{index}")
+                    return 1
+    """
+
 
 if __name__ == "__main__":
     # Basic test

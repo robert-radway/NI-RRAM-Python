@@ -39,27 +39,20 @@ nisys.read(record=True)
 # NOTE: usually entire BL/SL is dead because one shorted cell causes entire
 # BL/SL to now have the parallel shorted FET. Fo for testing we can try
 # single BL/SL columns that did not short cells
-cells = { # (WL, BL/SL) => "bit"
-    (0, 0): 0,
-    (1, 0): 1,
-    (2, 0): 0,
-    (3, 0): 1,
+    # 2x2 Example:
+    #   1 0     set  reset
+    #   0 1    reset  set
+def create_checkerboard(width, height):
+    cells = {}
+    for x in range(width): #WL
+        for y in range(height): #BL
+            value = (x + y) % 2 # If (WL + BL)%2 = 1  (WL,BL) <- 1
+            cells[(x, y)] = value # Set (WL, BL) if their sum is odd
+            
+            #print(f"set: ({x},{y}) <- {value}") #Debug correct cells being set
+    return cells
 
-    (0, 1): 1,
-    (1, 1): 0,
-    (2, 1): 1,
-    (3, 1): 0,
-
-    (0, 2): 0,
-    (1, 2): 1,
-    (2, 2): 0,
-    (3, 2): 1,
-
-    (0, 3): 1,
-    (1, 3): 0,
-    (2, 3): 1,
-    (3, 3): 0,
-}
+cells = create_checkerboard(4,4)
 
 # first we want to reset all cells to avoid short paths
 for (wl_idx, blsl_idx), bit in cells.items():

@@ -37,6 +37,7 @@ nisys.bls = nisys.all_bls
 nisys.sls = nisys.all_sls
 nisys.read(record=True)
 
+# exit()
 # input("Checkerboard")
 
 ### CHECKERBOARD

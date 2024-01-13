@@ -98,49 +98,49 @@
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_0">
+      <DigitalPinLevelSet pin="WL_0_2_4_6">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_2">
+      <DigitalPinLevelSet pin="WL_8_10_12_14">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_4">
+      <DigitalPinLevelSet pin="WL_39_41_43_45">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_6">
+      <DigitalPinLevelSet pin="WL_37_47_49_53">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_8">
+      <DigitalPinLevelSet pin="WL_35_51_55_57">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_10">
+      <DigitalPinLevelSet pin="WL_59_61_63_65">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_12">
+      <DigitalPinLevelSet pin="WL_66_69_62_60">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
         <Voh>1</Voh>
       </DigitalPinLevelSet>
-      <DigitalPinLevelSet pin="WL_14">
+      <DigitalPinLevelSet pin="WL_56_54_52_58">
         <Vil>0</Vil>
         <Vih>1</Vih>
         <Vol>0</Vol>
@@ -148,9 +148,21 @@
       </DigitalPinLevelSet>
       <DigitalPinLevelSet pin="WL_UNSEL">
         <Vil>0</Vil>
-        <Vih>0</Vih>
+        <Vih>1</Vih>
         <Vol>0</Vol>
-        <Voh>0</Voh>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_48_34_77_79">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
+      </DigitalPinLevelSet>
+      <DigitalPinLevelSet pin="WL_UNSEL_2">
+        <Vil>0</Vil>
+        <Vih>1</Vih>
+        <Vol>0</Vol>
+        <Voh>1</Voh>
       </DigitalPinLevelSet>
     </DigitalPinLevelSets>
     <PpmuPinLevelSets>
@@ -218,39 +230,47 @@
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_0">
+      <PpmuPinLevelSet pin="WL_0_2_4_6">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_2">
+      <PpmuPinLevelSet pin="WL_8_10_12_14">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_4">
+      <PpmuPinLevelSet pin="WL_39_41_43_45">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_6">
-        <Vf>-0.2</Vf>
-        <IRange>2 µA</IRange>
-      </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_8">
+      <PpmuPinLevelSet pin="WL_37_47_49_53">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_10">
+      <PpmuPinLevelSet pin="WL_35_51_55_57">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_12">
+      <PpmuPinLevelSet pin="WL_59_61_63_65">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
-      <PpmuPinLevelSet pin="WL_14">
+      <PpmuPinLevelSet pin="WL_67_69_71_73">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_68_70_72_75">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
       <PpmuPinLevelSet pin="WL_UNSEL">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_UNSEL_2">
+        <Vf>0</Vf>
+        <IRange>2 µA</IRange>
+      </PpmuPinLevelSet>
+      <PpmuPinLevelSet pin="WL_48_34_77_79">
         <Vf>0</Vf>
         <IRange>2 µA</IRange>
       </PpmuPinLevelSet>
