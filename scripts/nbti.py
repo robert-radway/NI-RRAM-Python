@@ -492,6 +492,7 @@ config = {
     "v_g_relax": v0,
     # save ac parameters
     "ac": ac_stress,
+    "ac_mode": ac_mode,
     "ac_freq": ac_freq,
     "ac_dutycycle": ac_dutycycle,
     "ac_period": ac_period,
@@ -700,11 +701,19 @@ def run_bias_stress_measurement_ac(
     # THERES SOME WEIRD EXTRA CYCLES APPEARING FROM PATTERN SOMEHOW... WTF
     # I ADJUSTED THESE PULSE WIDTHS TO MATCH, OTHERWISE FREQUENCY LOWER THAN DESIRED
     # I OSCILLOSCOPE TUNED UNTIL FREQUENCY MATCHED TO WITHIN 0.1%
-    pw_stress = int(ac_t_stress / t_nbti_ac_unit) - 1
-    if ac_dutycycle >= 0.8:
-        pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 1 # FOR 0.8-0.9 DUTY CYCLE USE THIS WTF???
-    else:
-        pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 2
+    if t_nbti_ac_unit < 15e-9: # for 10 MHz
+        if ac_dutycycle >= 0.8:
+            pw_stress = int(ac_t_stress / t_nbti_ac_unit) - 2
+            pw_relax = int(ac_t_relax / t_nbti_ac_unit)    # FOR 0.8-0.9 DUTY CYCLE USE THIS WTF???
+        else:
+            pw_stress = int(ac_t_stress / t_nbti_ac_unit) - 1
+            pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 2
+    else: # for <=1 MHz
+        pw_stress = int(ac_t_stress / t_nbti_ac_unit) - 1
+        if ac_dutycycle >= 0.8:
+            pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 1 # FOR 0.8-0.9 DUTY CYCLE USE THIS WTF???
+        else:
+            pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 2
 
     # print(f"pw_stress = {pw_stress}, pw_relax = {pw_relax}")
 
