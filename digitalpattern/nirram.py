@@ -133,7 +133,7 @@ class NIRRAM:
         ###TODO This replaces the DEC3.digilevles and DEC4.digitiming files
         ### you should update TOMLS accordingly to parameterise the configure_time
         self.digital.create_time_set("test")
-        self.digital.configure_time_set_period("test", 5e-8)
+        self.digital.configure_time_set_period("test",2e-7)
         self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.ZERO)
         self.digital.unload_all_patterns() 
         for pattern in glob.glob(settings["NIDigital"]["patterns"]):
@@ -178,11 +178,12 @@ class NIRRAM:
         vb=None,
         record=False,
         check=True,
+        wl_name = None
     ):
         res_range = []
         for vwl in vwls:
-            res_array, cond_array, meas_i_array, meas_v_array = self.read(vwl = vwl, record=True, dynam_read = True)
-
+            res_array, cond_array, meas_i_array, meas_v_array = self.read(vwl = vwl, record=True, dynam_read = True, wl_name = wl_name)
+        return res_array
 
     def read(
         self,
@@ -194,6 +195,7 @@ class NIRRAM:
         record=False,
         check=True,
         dynam_read=False,
+        wl_name = None
     ):
         """Perform a READ operation. This operation works for single 1T1R devices and 
         arrays of devices, where each device has its own WL/BL.
@@ -207,7 +209,7 @@ class NIRRAM:
 
         '''Debug, print read values'''
         # print(f"READ @ vbl: {vbl}, vwl: {vwl}, vsl: {vsl}, vb: {vb}")
-
+        time.sleep(0.01)
         # unselected WL bias parameter
         if vwl_unsel_offset is None:
             if "VWL_UNSEL_OFFSET" in self.op["READ"][self.polarity]:
@@ -277,18 +279,28 @@ class NIRRAM:
                     res_array.loc[wl,bl] = res
                     cond_array.loc[wl,bl] = cond
                     if record: 
-                        self.datafile.writerow([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v])
+                        if wl_name is None:
+                            self.datafile.writerow([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v])
+                        else: 
+                            self.datafile.writerow([self.chip, self.device, "READ", wl_name, bl, res, cond, meas_i, meas_v])
                         if check:
-                            check_on = "set" if (res < 60_000) else "reset"
-                            if dynam_read:
-                                print(res)
+                            if res < 40_000:
+                                check_on = "set"
+                            elif (res > 60_000):
+                                check_on = "reset"
                             else:
-                                print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate, check_on])
+                                check_on = "unknown"
+                            if dynam_read:
+                                print([f"WL: {wl}   ", f"VWL: {vwl}", f"Res: {res}"])
+                            else:
+                                pass
+                                #print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate, check_on])
                         else:
                             if dynam_read:
-                                print(res)
+                                print([f"WL: {wl}   ", f"VWL: {vwl}", f"Res: {res}"])
                             else:
-                                print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
+                                pass
+                                #print([self.chip, self.device, "READ", wl, bl, res, cond, meas_i, meas_v, meas_i_gate])
         else:
             raise NIRRAMException("Invalid READ mode specified in settings")
 
@@ -441,14 +453,14 @@ class NIRRAM:
             if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
                 vwl_unsel_offset = self.op[mode][self.polarity]["VWL_UNSEL_OFFSET"]
                 #print(vwl_unsel_offset)
-                print(f"VWL UNSEL: {vwl_unsel_offset + vsl}")
+                # print(f"VWL UNSEL: {vwl_unsel_offset + vsl}")
             else:
-                print("No\nNo")
+                # print("No\nNo")
                 vwl_unsel_offset = 0.0
         
         # set voltages
         for bl_i in self.bls:
-            print(f"bl_i = {bl_i}")
+            # print(f"bl_i = {bl_i}")
             if bl_selected is not None: # selecting specific bl, unselecting others
                 vbl_i = vbl if bl_i == bl_selected else vbl_unsel
             else:
@@ -528,6 +540,7 @@ class NIRRAM:
             if "VWL_UNSEL_OFFSET" in self.op[mode][self.polarity]:
                 vwl_unsel_offset = self.op[mode][self.polarity]["VWL_UNSEL_OFFSET"]
             else:
+                print("Oops")
                 vwl_unsel_offset = 0.0
 
 
@@ -653,7 +666,7 @@ class NIRRAM:
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
 
 
-    def pulse(self, mask, pulse_len=10, prepulse_len=50, postpulse_len=0, max_pulse_len=10000, wl_first=True):
+    def pulse(self, mask, pulse_len=10, prepulse_len=50, postpulse_len=50, max_pulse_len=10000, wl_first=True):
         """Create waveform for directly contacting the array BLs, SLs, and WLs, then output that waveform"""
         waveform, pulse_width = self.build_BLSLWLS_waveform(mask, pulse_len, prepulse_len, postpulse_len, max_pulse_len, wl_first)
         #WL_PULSE_DEC3.digipat or PULSE_MPW_ProbeCard.digipat as template file
@@ -770,76 +783,92 @@ class NIRRAM:
         bl_selected=None, # select specific bl for 1TNR measurements
         relayed=False,
     ):
-        """Performs SET pulses in increasing fashion until resistance reaches
-        target_res (either input or in the `target_res` config).
-        This will try to SET ALL CELLS in self.bls and self.wls.
-        Returns tuple (res, cond, meas_i, meas_v, success).
-        """
-        # Get settings
-        cfg = self.op[mode][self.polarity]
-        target_res = target_res if target_res is not None else self.target_res[mode]
-        vsl = cfg["VSL"]
-        mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        datafile_path = self.settings["path"]["data_header"]+"set-file_"+ datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + str(self.chip) + "_" + str(self.device) + ".csv"
         
-        # select read method
-        read_pulse = self.read_1tnr if is_1tnr else self.read
+        #Record the resistance versus voltages and pulse widths in csv
+        with open(datafile_path, "a", newline="") as resfile:
+            writer = csv.writer(resfile)
+            writer.writerow(["VWL", "VBL", "VSL", "PW", "Res"])
 
-        # Iterative pulse-verify
-        success = False
-        #for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
-        for pw in np.arange(cfg["PW_start"], cfg["PW_stop"], cfg["PW_steps"]):
-            for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
-                for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
-                    print(f"PW = {pw}, Vwl = {vwl}, VBL-VSL = {vbl-vsl}")
-                    self.set_pulse(
-                        mask,
-                        bl_selected=bl_selected, # specific selected BL for 1TNR
-                        vbl=vbl,
-                        vsl=vsl,
-                        vwl=vwl,
-                        pulse_len=int(pw),
-                    )
-                    self.ppmu_all_pins_to_zero()
-                    
-                    # use settling if parameter present, to discharge parasitic cap
-                    if "settling_time" in self.op[mode]:
-                        time.sleep(self.op[mode]["settling_time"])
+            """Performs SET pulses in increasing fashion until resistance reaches
+            target_res (either input or in the `target_res` config).
+            This will try to SET ALL CELLS in self.bls and self.wls.
+            Returns tuple (res, cond, meas_i, meas_v, success).
+            """
+            # Get settings
+            cfg = self.op[mode][self.polarity]
+            target_res = target_res if target_res is not None else self.target_res[mode]
+            vsl = cfg["VSL"]
+            mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+            
+            # select read method
+            read_pulse = self.read_1tnr if is_1tnr else self.read
 
-                    # read result resistance
-                    res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
-                    #print(res_array)
-                    
-                    if bl_selected is None: # use array success condition: all in array must hit target
-                        for wl_i in self.wls:
-                            for bl_i in self.bls:
-                                print(res_array.loc[wl_i,bl_i])
-                                if (res_array.loc[wl_i, bl_i] <= target_res) & mask.mask.loc[wl_i, bl_i]:
-                                    mask.mask.loc[wl_i, bl_i] = False
-                        success = (mask.mask.to_numpy().sum()==0)
-                    else: # 1TNR success condition: check if selected 1tnr cell hit target
-                        success = True
-                        for wl_i in self.wls:
-                            if (res_array.loc[wl_i, bl_selected] > target_res) & mask.mask.loc[wl_i, bl_selected]:
-                                success = False
-                                break
-                    
+            # Iterative pulse-verify
+            success = False
+            # for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
+            for vbl in np.arange(cfg["VBL_start"], cfg["VBL_stop"], cfg["VBL_step"]):
+                for pw in np.arange(cfg["PW_start"], cfg["PW_stop"], cfg["PW_steps"]):
+                    for vwl in np.arange(cfg["VWL_SET_start"], cfg["VWL_SET_stop"], cfg["VWL_SET_step"]):
+                        self.set_pulse(
+                            mask,
+                            bl_selected=bl_selected, # specific selected BL for 1TNR
+                            vbl=vbl,
+                            vsl=vsl,
+                            vwl=vwl,
+                            pulse_len=int(pw),
+                        )
+                        self.ppmu_all_pins_to_zero()
+                        # pdb.set_trace()
+                        
+                        # use settling if parameter present, to discharge parasitic cap
+                        if "settling_time" in self.op[mode]:
+                            time.sleep(self.op[mode]["settling_time"])
+
+                        # read result resistance
+                        res_array1, cond_array1, meas_i_array1, meas_v_array1 = read_pulse()
+                        res_array2, cond_array2, meas_i_array2, meas_v_array2 = read_pulse()
+                        res_array3, cond_array3, meas_i_array3, meas_v_array3 = read_pulse()
+                        
+                        res_array = (res_array1 + res_array2 + res_array3)/3
+                        cond_array = (cond_array1 + cond_array2 + cond_array3)/3
+                        meas_i_array = (meas_i_array1 + meas_i_array2 + meas_i_array3)/3
+                        meas_v_array = (meas_v_array1 + meas_v_array2 + meas_v_array3)/3
+                        #print(res_array)
+                        
+                        if bl_selected is None: # use array success condition: all in array must hit target
+                            for wl_i in self.wls:
+                                for bl_i in self.bls:
+                                    writer.writerow([vwl,vbl,vsl, pw, res_array.loc[wl_i, bl_i]])
+                                    print(f"{res_array.loc[wl_i,bl_i]}")
+                                    if (res_array.loc[wl_i, bl_i] <= target_res) & mask.mask.loc[wl_i, bl_i]:
+                                        mask.mask.loc[wl_i, bl_i] = False
+                            success = (mask.mask.to_numpy().sum()==0)
+                        else: # 1TNR success condition: check if selected 1tnr cell hit target
+                            success = True
+                            for wl_i in self.wls:
+                                if (res_array.loc[wl_i, bl_selected] > target_res) & mask.mask.loc[wl_i, bl_selected]:
+                                    success = False
+                                    break
+                        
+                        if success:
+                            print(f"PW = {pw}, Vwl = {vwl}, VBL-VSL = {vbl-vsl}")
+                            break
                     if success:
                         break
                 if success:
                     break
-            if success:
-                break
-    
-        # report final cell results
-        all_data = []
-        for wl in self.wls:
-            for bl in self.bls:
-                cell_success = res_array.loc[wl,bl] <= target_res
-                cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
-                if print_data: print(cell_data)
-                if record: self.datafile.writerow(cell_data)
-                all_data.append(cell_data)
-        return all_data
+        
+            # report final cell results
+            all_data = []
+            for wl in self.wls:
+                for bl in self.bls:
+                    cell_success = res_array.loc[wl,bl] <= target_res
+                    cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                    if print_data: print(cell_data)
+                    if record: self.datafile.writerow(cell_data)
+                    all_data.append(cell_data)
+            return all_data
 
     def dynamic_reset(
         self,
@@ -862,9 +891,12 @@ class NIRRAM:
         read_pulse = self.read_1tnr if is_1tnr else self.read
         # Iterative pulse-verify
         success = False
-        for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
-            for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
-                for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+        # for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
+            # for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
+            #     for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+        for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+            for pw in np.arange(cfg["PW_start"], cfg["PW_stop"], cfg["PW_steps"]):
+                for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):    
                     self.reset_pulse(
                         mask,
                         bl_selected=bl_selected, # specific selected BL for 1TNR
@@ -874,6 +906,7 @@ class NIRRAM:
                         pulse_len=int(pw),
                     )
                     self.ppmu_all_pins_to_zero()
+                    time.sleep(0.01)
                     if self.debug_printout:
                         print([vsl-vbl, vwl-vbl, vbl+self.op[mode][self.polarity]['VWL_UNSEL_OFFSET'], int(pw)])
                     # use settling if parameter present, to discharge parasitic cap
@@ -881,8 +914,15 @@ class NIRRAM:
                         time.sleep(self.op[mode]["settling_time"])
                     
                     # read result resistance
-                    res_array, cond_array, meas_i_array, meas_v_array = read_pulse()
-                    print(f"vsl = {vsl}, vwl = {vwl}, vbl = {vbl}")
+                    res_array1, cond_array1, meas_i_array1, meas_v_array1 = read_pulse()
+                    res_array2, cond_array2, meas_i_array2, meas_v_array2 = read_pulse()
+                    res_array3, cond_array3, meas_i_array3, meas_v_array3 = read_pulse()
+                    
+                    res_array = (res_array1 + res_array2 + res_array3)/3
+                    cond_array = (cond_array1 + cond_array2 + cond_array3)/3
+                    meas_i_array = (meas_i_array1 + meas_i_array2 + meas_i_array3)/3
+                    meas_v_array = (meas_v_array1 + meas_v_array2 + meas_v_array3)/3
+                    # print(f"vsl = {vsl}, vwl = {vwl}, vbl = {vbl}")
                     print(res_array.loc[self.wls[0],self.bls[0]])
                     if bl_selected is None: # use array success condition: all in array must hit target
                         for wl_i in self.wls:
@@ -897,6 +937,7 @@ class NIRRAM:
                                 success = False
                                 break
                     if success:
+                        print(f"PW = {pw}, Vwl = {vwl}, VBL-VSL = {vbl-vsl}")
                         break
                 if success:
                     break

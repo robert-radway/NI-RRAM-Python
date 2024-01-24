@@ -41,11 +41,12 @@ if __name__ == "__main__":
     parser.add_argument("device", help="device name for logging")
     args = parser.parse_args()
 
-    nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_ProbeCard.toml", polarity="NMOS") # FOR CNFET RRAM
+    nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_ProbeCard.toml", polarity="PMOS") # FOR CNFET RRAM
     if nisys.polarity == "NMOS":
         MOS = "Si"
     else:
         MOS = "CNT"
+        
     wls = []
     cells = []
     wl_s = nisys.settings["device"]["wl_signals"]

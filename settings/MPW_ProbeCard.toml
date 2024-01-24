@@ -1,7 +1,7 @@
 [path]
 master_log_file = "logs/master.log"
 prog_log_file = "logs/prog.log"
-data_header = "data/"
+data_header = "data/MPW_Test/"
 path_data = "D:\\nirram\\data\\MPW_Test\\"
 
 [NIDigital]
@@ -91,14 +91,14 @@ WLS = [
   "WL_UNSEL"
 ]
 BLS = ["BL_15", "BL_14", "BL_13","BL_12","BL_11","BL_10","BL_9","BL_8" ]
-SLS = ["BL_15", "BL_14", "SL_13","SL_12","SL_11","SL_10","SL_9","SL_8" ]
+SLS = ["SL_15", "SL_14", "SL_13","SL_12","SL_11","SL_10","SL_9","SL_8" ]
 WL_UNSEL = [ "WL_UNSEL" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
 [target_res]
-FORM = 30_000
-SET = 20_000
+FORM = 20_000
+SET = 8_000
 RESET_0 = 70_000
 RESET_1 = 120_000
 RESET_2 = 190_000
@@ -107,7 +107,7 @@ RESET_4 = 210_000
 RESET_5 = 250_000
 RESET_6 = 290_000
 RESET_7 = 330_000
-RESET = 100_000
+RESET = 40_000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -127,60 +127,99 @@ mode = "digital"
 aperture_time = 0.0005
 current_limit_range = 0.000128
 relaxation_cycles = 1_000
-settling_time = 0.001
+settling_time = 0.0001
 shunt_res_value = 0
 
 [op.READ.NMOS]
 VWL = 2.2
-VBL = 0.5
+VBL = 0.2
 VSL = 0
 VWL_UNSEL_OFFSET = 0
 VB = 0
 
 [op.READ.PMOS]
-VWL = -1
-VBL = -0.2
-VSL = 0
-VWL_UNSEL_OFFSET = 4
+VWL = -1.5
+VBL = 0
+VSL = -0.3
+
+VWL_UNSEL_OFFSET = 4.4
 VB = 0
 
 # =============================================================================
 # FORM PULSE
 # =============================================================================
+
+# =============== #
+#    NMOS FORM    #
+# =============== #
 [op.FORM.NMOS]
 VWL = 1.8
 VBL = 3
 VSL = 0
 VWL_UNSEL_OFFSET = 0.0
 PW = 1200
+
 VWL_SET_start = 1.5
 VWL_SET_step = 0.2
-VWL_SET_stop = 1.8
+VWL_SET_stop = 3.0
+
 VBL_start = 1.0
 VBL_step = 0.2
-VBL_stop = 4
+VBL_stop = 3
+
 PW_start = 1
 PW_stop = 100
 PW_steps = 10
 
+# =============== #
+#    PMOS FORM    #
+# =============== #
 [op.FORM.PMOS]
-VWL = 0.5
-VBL = 0
+VWL = 1.5
+VBL = 0.5
 VSL = 0.5
-VWL_UNSEL_OFFSET = 2
 PW = 1200
-VWL_SET_start = 0.5
+
+#VWL_UNSEL_OFFSET from PMOS SET
+
+VWL_SET_start = -1.5
 VWL_SET_step = -0.1
-VWL_SET_stop = -1.5
-VBL_start = 0.5
-VBL_step = -0.05
-VBL_stop = -1.5
-PW_start = 1
-PW_stop = 1_000
-PW_steps = 3
+VWL_SET_stop = -1.51
+
+VBL_start = -0.5
+VBL_step = -0.1
+VBL_stop = -1
+
+PW_start = 100
+PW_stop = 101
+PW_steps = 1
+
+# # =============== #
+# #    PMOS FORM    #
+# # =============== #
+# [op.FORM.PMOS]
+# VWL = 1.5
+# VBL = 0.5
+# VSL = 0.5
+# PW = 1200
+
+# #VWL_UNSEL_OFFSET from PMOS SET
+
+# VWL_SET_start = -1
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -1.7
+
+# VBL_start = -0.6
+# VBL_step = -0.1
+# VBL_stop = -1.5
+
+# PW_start = 10
+# PW_stop = 100
+# PW_steps = 10
+
 
 # =============================================================================
-# SET/RESET PULSE
+# SET PULSE
 # =============================================================================
 [op.SET.NMOS]
 VWL = 1.8
@@ -198,21 +237,52 @@ PW_start = 1
 PW_stop = 100
 PW_steps = 10
 
+
 [op.SET.PMOS]
-VWL = 0.5
-VBL = 0.0
+VWL = 1.5
+VBL = 0.5
 VSL = 0.5
-VWL_UNSEL_OFFSET = 4.0
-PW = 1000
-VWL_SET_start = 0.0
+PW = 1200
+
+VWL_UNSEL_OFFSET = 3.5
+
+VWL_SET_start = -1.5
 VWL_SET_step = -0.1
-VWL_SET_stop = -0.7
-VBL_start = 0.0
+VWL_SET_stop = -1.71
+
+VBL_start = -0.5
 VBL_step = -0.1
-VBL_stop = -1.3
-PW_start = 1.0
-PW_stop = 50.0
-PW_steps = 3.0
+VBL_stop = -0.91
+
+PW_start = 1
+PW_stop = 101
+PW_steps = 99
+
+
+
+# [op.SET.PMOS]
+# VWL = 1.5
+# VBL = 0.5
+# VSL = 0
+# PW = 1200
+
+# VWL_UNSEL_OFFSET = 3.0
+
+# VWL_SET_start = -0.1
+# VWL_SET_step = -0.1
+# VWL_SET_stop = -2
+
+# VBL_start = -0.5
+# VBL_step = -0.1
+# VBL_stop = -2
+
+# PW_start = 1
+# PW_stop = 100
+# PW_steps = 10
+
+# =============================================================================
+# RESET PULSE
+# =============================================================================
 
 [op.RESET.NMOS]
 VWL = 4
@@ -222,30 +292,55 @@ VWL_UNSEL_OFFSET = 0
 PW = 100
 VWL_RESET_start = 1.5
 VWL_RESET_step = 0.25
-VWL_RESET_stop = 3
+VWL_RESET_stop = 3.0
 VSL_start = 1.5
 VSL_step = 0.05
 VSL_stop = 3
 PW_start = 1
-PW_stop = 100
-PW_steps = 10
+PW_stop = 1000
+PW_steps = 20
+
 
 [op.RESET.PMOS]
-VWL = -1
-VSL = 0
-VBL = 2.0
-VWL_UNSEL_OFFSET = 4.0
+VWL = 0.8
+VSL = 1.5
+VBL = 0.2
 PW = 100
-VWL_RESET_start = -1
-VWL_RESET_step = -0.1
-VWL_RESET_stop = -2
-VSL_start = 2.0
-VSL_step = -0.1
-VSL_stop = 1.0
-PW_start = 1
-PW_stop = 50
-PW_steps = 2
 
+VWL_UNSEL_OFFSET = 3.9
+
+VWL_RESET_start = -1.8
+VWL_RESET_step = -0.1
+VWL_RESET_stop = -1.81
+
+VSL_start = -1.7
+VSL_step = -0.1
+VSL_stop = -1.91
+
+PW_start = 1000
+PW_stop = 1001
+PW_steps = 33
+
+
+# [op.RESET.PMOS]
+# VWL = -1
+# VSL = 0
+# VBL = 2.0
+# VWL_UNSEL_OFFSET = 3.0
+# PW = 100
+# VWL_RESET_start = 2.0
+# VWL_RESET_step = -0.01
+# VWL_RESET_stop = 0
+# VSL_start = 2.0
+# VSL_step = -0.01
+# VSL_stop = 1.0
+# PW_start = 1
+# PW_stop = 50
+# PW_steps = 2
+
+# =============================================================================
+# MULTI-LEVEL RESET PULSE
+# =============================================================================
 [op.RESET_0.NMOS]
 VWL = 2.5
 VSL = 3

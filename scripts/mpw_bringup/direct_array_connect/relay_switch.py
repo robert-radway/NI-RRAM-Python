@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from time import sleep
 
 
-def relay_switch(wl,bl,sl, nisys):
+def relay_switch(wl,bl,sl, nisys,multi_wl=False):
     # Check Position of Program
 
     try:
@@ -23,13 +23,22 @@ def relay_switch(wl,bl,sl, nisys):
             if wl_value in wl_signal[1]:
                 relay_position = wl_signal[0][wl_signal[1].index(wl_value)]
                 wl_return = nisys.all_wls[wl_signals.index(wl_signal)]
-                print(f'connecting WL_{wl_value}')
+                #print(f'connecting WL_{wl_value}')
                 session.disconnect_all()
                 for relay_set in wl_signal[0]:
                     if relay_set == relay_position:
-                        print(relay_position) # Check it is the right postion
-                        print(f"Connecting COM_{relay_position} to NO_{wl_signal[0][wl_signal[1].index(wl_value)]}")
-                        session.connect(f'com{relay_position}', f'no{relay_position}')
+                        #print(relay_position) # Check it is the right postion
+                        #print(f"Connecting COM_{relay_position} to NO_{wl_signal[0][wl_signal[1].index(wl_value)]}")
+                        
+                        if multi_wl:
+                            print("Multi WL Selectd: connecting all relays to NO")
+
+                            # For the entire wordline, connect relays to NO
+                            for wl_signal_connection in wl_signal[0]:
+                                print(f"Connecting COM_{wl_signal_connection} to NO_{wl_signal_connection}")
+                                session.connect(f'com{wl_signal_connection}', f'no{wl_signal_connection}')
+                        else:
+                            session.connect(f'com{relay_position}', f'no{relay_position}')
                 break
             else:
                 #print(f"wl_value {wl_value} not in {wl_signal[1]}")

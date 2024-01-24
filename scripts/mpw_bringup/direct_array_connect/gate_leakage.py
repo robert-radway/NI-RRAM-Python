@@ -21,7 +21,7 @@ parser.add_argument("device_no", help="chip name for logging")
 parser.add_argument("--start-vds", type=float, default=0.1, help="start vds")
 parser.add_argument("--end-vds", type=float, default=-0.1, help="end vds")
 parser.add_argument("--step-vds", type=float, default=5, help="step vds")
-parser.add_argument("--start-vgs", type=float, default=1.0, help="start vgs")
+parser.add_argument("--start-vgs", type=float, default=4.0, help="start vgs")
 parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
 parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
 parser.add_argument("--array", type=int, default=0, help="input for array size, changes pins used")
@@ -57,6 +57,7 @@ def iv_curve(
     results_wl=[]
     results_vbl=[]
     results_vwl=[]
+    results_wl_unsel=[]
     vds_sweep = np.linspace(args.start_vds, args.end_vds, args.step_vds)
     vgs_sweep = np.linspace(args.start_vgs, args.end_vgs, args.step_vgs)
 
@@ -82,6 +83,7 @@ def iv_curve(
         results_wl.append([])
         results_vbl.append([])
         results_vwl.append([])
+        results_wl_unsel.append([])
         for vgs in vgs_sweep:
             nisys.ppmu_set_vwl(wl, vgs)
             nisys.ppmu_set_vwl("WL_UNSEL", 4)
@@ -90,10 +92,12 @@ def iv_curve(
             meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
             meas_v_gate = nisys.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)
             meas_i_gate = nisys.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
+            meas_i_gate_unsel = nisys.digital.channels["WL_UNSEL"].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
 
             # print(nisys.digital.get_pin_results_pin_information())
             results_bl[i].append(meas_i[0])
             results_wl[i].append(meas_i_gate[0])
+            results_wl_unsel[i].append(meas_i_gate_unsel[0])
             results_vbl[i].append(meas_v[0])
             results_vwl[i].append(meas_v_gate[0])
         i += 1
@@ -108,48 +112,51 @@ def iv_curve(
     results_wl = np.abs(np.array(results_wl))
     results_vbl = np.array(results_vbl)
     results_vwl = np.array(results_vwl)
+    results_wl_unsel = np.abs(np.array(results_wl_unsel))
 
     fig, axes = plt.subplots(nrows = 3, ncols = 2, figsize=(6,8))
 
-    # (0,0) id-vds 
-    ax_idvd = axes[0][0]
-    ax_idvd.set_xlabel("VDS")
-    ax_idvd.set_ylabel("ID")
-    ax_idvd.plot(vds_sweep, results_bl)
+    # # (0,0) id-vds 
+    # ax_idvd = axes[0][0]
+    # ax_idvd.set_xlabel("VDS")
+    # ax_idvd.set_ylabel("ID")
+    # ax_idvd.plot(vds_sweep, results_bl)
 
-    # (0,1) vbl vs. vds
-    ax_vblvds = axes[0][1]
-    ax_vblvds.set_xlabel("VDS")
-    ax_vblvds.set_ylabel("VBL")
-    ax_vblvds.plot(vds_sweep, results_vbl)
-
-
-    # (1,0) id-vgs 
-    ax_idvg = axes[1][0]
-    ax_idvg.set_yscale("log")
-    ax_idvg.set_xlabel("VGS")
-    ax_idvg.set_ylabel("ID")
-    ax_idvg.plot(vgs_sweep, results_bl.T)
-
-    # (1,1) vbl vs. vgs
-    ax_vblvgs = axes[1][1]
-    ax_vblvgs.set_xlabel("VGS")
-    ax_vblvgs.set_ylabel("VBL")
-    ax_vblvgs.plot(vgs_sweep, results_vbl.T)
+    # # (0,1) vbl vs. vds
+    # ax_vblvds = axes[0][1]
+    # ax_vblvds.set_xlabel("VDS")
+    # ax_vblvds.set_ylabel("VBL")
+    # ax_vblvds.plot(vds_sweep, results_vbl)
 
 
-    # (2,0) ig-vg
-    ax_igvg = axes[2][0]
+    # # (1,0) id-vgs 
+    # ax_idvg = axes[1][0]
+    # ax_idvg.set_yscale("log")
+    # ax_idvg.set_xlabel("VGS")
+    # ax_idvg.set_ylabel("ID")
+    # ax_idvg.plot(vgs_sweep, results_bl.T)
+
+    # # (1,1) vbl vs. vgs
+    # ax_vblvgs = axes[1][1]
+    # ax_vblvgs.set_xlabel("VGS")
+    # ax_vblvgs.set_ylabel("VBL")
+    # ax_vblvgs.plot(vgs_sweep, results_vbl.T)
+
+
+    # (0,0) ig-vg
+    ax_igvg = axes[0][0]
     ax_igvg.set_yscale("log")
     ax_igvg.set_xlabel("VGS")
+    ax_igvg.set_yscale("log")
     ax_igvg.set_ylabel("IG")
     ax_igvg.plot(vgs_sweep, results_wl.T)
 
-    # (2,1) vwl vs. vgs
-    ax_vwlvgs = axes[2][1]
-    ax_vwlvgs.set_xlabel("VGS")
-    ax_vwlvgs.set_ylabel("VWL")
-    ax_vwlvgs.plot(vgs_sweep, results_vwl.T)
+    # (0,1) ig-unsel vs. vgs
+    ax_igun_vgun = axes[0][1]
+    ax_igun_vgun.set_xlabel("VGS_UNSEL")
+    ax_igun_vgun.set_ylabel("IG_UNSEL")
+    ax_igun_vgun.set_yscale("log")
+    ax_igun_vgun.plot(vgs_sweep, results_wl_unsel.T)
 
     fig.tight_layout()
 
@@ -158,7 +165,7 @@ def iv_curve(
     os.makedirs(path_fig_dir, exist_ok=True)
     dev = "CNT" if nisys.polarity == "PMOS" else "Si"
     # Die3_FormedWL_{bl}\\
-    fig.savefig(os.path.join(f"D:\\nirram\\data\\MPW_Test\\1T1R_Chip12\\", f"Gates_{wl_name}_{bl}_{sl}_{dev}_GateLeakage_2.png"))
+    fig.savefig(os.path.join(f"D:\\nirram\\data\\MPW_Test\\1T1R_Chip11\\", f"Gate_Leakage_{wl_name}_{bl}_{sl}_{dev}.png"))
     #plt.show()
     plt.close()
 
@@ -226,13 +233,14 @@ def run_iv_curve(all_iv = False, gate_short = True):
                     bl=f"BL_8",
                     sl=f"SL_8",
                 )
-        else:
+        else:   
             iv_curve(
-                    args,
-                    wl=f"WL_2",
-                    bl=f"BL_10",
-                    sl=f"SL_10",
-                )
+                args,
+                wl=f"WL_54",
+                bl=f"BL_8",
+                sl=f"SL_8",
+            )
+
 if __name__ == "__main__":
     run_iv_curve()
-    # run_iv_curve(all_iv =False, gate_short=False)
+    # run_iv_curve(all_iv =True, gate_short=False)
