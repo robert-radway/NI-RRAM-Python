@@ -97,13 +97,13 @@ if __name__=="__main__":
     nisys = NIRRAM(args.chip, args.device, settings="settings/MPW_ProbeCard.toml", polarity="PMOS",slow=False) # FOR CNET + RRAM
 
     form_pulse = {
-        "vbl": -1.65,
+        "vbl": -1.5,
         "vsl": 0.5,
         "vwl": -1.5,
-        "pw": 100
+        "pw": 1000
     }
     
-    bl = "BL_11"
+    bl = "BL_8"
     wls_under_test = idxs_to_wl_name(ALL_WLS)
     wl_to_form = "WL_2"
     reset_then_form(nisys, bl, wls_under_test, wl_to_form, form_pulse, do_form = True, do_read = True, do_reset = True)

@@ -13,17 +13,17 @@ from digitalpattern import env
 import nidigital
 import matplotlib.pyplot as plt
 from relay_switch import relay_switch
-
+import csv
 # Get arguments
 parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("settings", help="path to settings file")
 parser.add_argument("device_no", help="chip name for logging")
-parser.add_argument("--start-vds", type=float, default=0.1, help="start vds")
-parser.add_argument("--end-vds", type=float, default=-0.1, help="end vds")
-parser.add_argument("--step-vds", type=float, default=5, help="step vds")
-parser.add_argument("--start-vgs", type=float, default=4.0, help="start vgs")
-parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
-parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
+parser.add_argument("--start-vds", type=float, default=0.0, help="start vds")
+parser.add_argument("--end-vds", type=float, default=0.1, help="end vds")
+parser.add_argument("--step-vds", type=float, default=1, help="step vds")
+parser.add_argument("--start-vgs", type=float, default=1, help="start vgs")
+parser.add_argument("--end-vgs", type=float, default=-1, help="end vgs")
+parser.add_argument("--step-vgs", type=float, default=10, help="step vgs")
 parser.add_argument("--array", type=int, default=0, help="input for array size, changes pins used")
 args = parser.parse_args()
 
@@ -32,6 +32,7 @@ def iv_curve(
     wl: str, # wl pin name 
     bl: str, # bl pin name
     sl: str, # sl pin name
+    path: str, # path to save data
 ):
     # Initialize NI system
     nisys = NIRRAM(args.device_no, args.device_no, settings=args.settings,polarity="PMOS")
@@ -102,6 +103,31 @@ def iv_curve(
             results_vwl[i].append(meas_v_gate[0])
         i += 1
 
+    #Specify your CSV file path
+    csv_file_path = os.path.join(f"D:\\nirram\\data\\MPW_Test\\{path}\\", f"Gate_Leakage.csv")
+    os.makedirs(f"D:\\nirram\\data\\MPW_Test\\{path}\\", exist_ok=True)
+    # Open the CSV file for writing
+    with open(csv_file_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        
+        # Write the header row
+        writer.writerow(['BL Current', 'WL Current', 'WL_UNSEL Current', 'BL Voltage', 'WL Voltage'])
+        
+        # Iterate over the length of the results lists
+        for i in range(len(results_bl)):
+            # For each sweep, write a row in the CSV
+            # Assuming all lists are of the same length and properly aligned
+            row = [
+                results_bl[i],
+                results_wl[i],
+                results_wl_unsel[i],
+                results_vbl[i],
+                results_vwl[i]
+            ]
+            # Write the combined row to the CSV
+            writer.writerow(row)
+
+
     for bl_i in nisys.bls: nisys.ppmu_set_vbl(bl_i,0)
     for sl_i in nisys.sls: nisys.ppmu_set_vsl(sl_i,0)
     for wl_i in nisys.wls: nisys.ppmu_set_vwl(wl_i,0)
@@ -116,33 +142,6 @@ def iv_curve(
 
     fig, axes = plt.subplots(nrows = 3, ncols = 2, figsize=(6,8))
 
-    # # (0,0) id-vds 
-    # ax_idvd = axes[0][0]
-    # ax_idvd.set_xlabel("VDS")
-    # ax_idvd.set_ylabel("ID")
-    # ax_idvd.plot(vds_sweep, results_bl)
-
-    # # (0,1) vbl vs. vds
-    # ax_vblvds = axes[0][1]
-    # ax_vblvds.set_xlabel("VDS")
-    # ax_vblvds.set_ylabel("VBL")
-    # ax_vblvds.plot(vds_sweep, results_vbl)
-
-
-    # # (1,0) id-vgs 
-    # ax_idvg = axes[1][0]
-    # ax_idvg.set_yscale("log")
-    # ax_idvg.set_xlabel("VGS")
-    # ax_idvg.set_ylabel("ID")
-    # ax_idvg.plot(vgs_sweep, results_bl.T)
-
-    # # (1,1) vbl vs. vgs
-    # ax_vblvgs = axes[1][1]
-    # ax_vblvgs.set_xlabel("VGS")
-    # ax_vblvgs.set_ylabel("VBL")
-    # ax_vblvgs.plot(vgs_sweep, results_vbl.T)
-
-
     # (0,0) ig-vg
     ax_igvg = axes[0][0]
     ax_igvg.set_yscale("log")
@@ -153,7 +152,7 @@ def iv_curve(
 
     # (0,1) ig-unsel vs. vgs
     ax_igun_vgun = axes[0][1]
-    ax_igun_vgun.set_xlabel("VGS_UNSEL")
+    ax_igun_vgun.set_xlabel("VGS")
     ax_igun_vgun.set_ylabel("IG_UNSEL")
     ax_igun_vgun.set_yscale("log")
     ax_igun_vgun.plot(vgs_sweep, results_wl_unsel.T)
@@ -165,13 +164,13 @@ def iv_curve(
     os.makedirs(path_fig_dir, exist_ok=True)
     dev = "CNT" if nisys.polarity == "PMOS" else "Si"
     # Die3_FormedWL_{bl}\\
-    fig.savefig(os.path.join(f"D:\\nirram\\data\\MPW_Test\\1T1R_Chip11\\", f"Gate_Leakage_{wl_name}_{bl}_{sl}_{dev}.png"))
+    fig.savefig(os.path.join(f"D:\\nirram\\data\\MPW_Test\\{path}\\", f"Gate_Leakage_{wl_name}_{bl}_{sl}_{dev}.png"))
     #plt.show()
     plt.close()
 
     nisys.close()
 
-def run_iv_curve(all_iv = False, gate_short = True):
+def run_iv_curve(all_iv = False, gate_short = True, path ="Data"):
     all_wls = [0,2,4,6,8,10,12,14,39,41,43,45,37,47,49,53,35,51,55,57,59,61,63,65,66,69,62,60,56,54,52,58,48,34,77,79]
     all_bls = [8,9,10,11,12,13,14,15]
     #iv_curve(wl_ind=0,bl_sl_ind=0,args=args)
@@ -189,6 +188,7 @@ def run_iv_curve(all_iv = False, gate_short = True):
                     wl=f"A2_WL_{wl_ind}",
                     bl=f"A2_BL_{bl_sl_ind}",
                     sl=f"A2_SL_{bl_sl_ind}",
+                    path = path
                 )
     elif args.array == 4:
         print("Array size 4")
@@ -199,6 +199,7 @@ def run_iv_curve(all_iv = False, gate_short = True):
                     wl=f"A4_WL_{wl_ind}",
                     bl=f"A4_BL_{bl_sl_ind}",
                     sl=f"A4_SL_{bl_sl_ind}",
+                    path = path
                 )
     elif args.array == 8:
         print("Array size 8")
@@ -209,6 +210,7 @@ def run_iv_curve(all_iv = False, gate_short = True):
                     wl=f"A8_WL_{wl_ind}",
                     bl=f"A8_BL_{bl_sl_ind}",
                     sl=f"A8_SL_{bl_sl_ind}",
+                    path=path
                 )
     else: # default, single device
         print("Defaulting to single device")
@@ -222,6 +224,7 @@ def run_iv_curve(all_iv = False, gate_short = True):
                         wl=f"WL_{wl}",
                         bl=f"BL_{bl}",
                         sl=f"SL_{bl}",
+                        path=path
                     )
         
         elif gate_short:   
@@ -232,6 +235,7 @@ def run_iv_curve(all_iv = False, gate_short = True):
                     wl=f"WL_{wl}",
                     bl=f"BL_8",
                     sl=f"SL_8",
+                    path=path
                 )
         else:   
             iv_curve(
@@ -239,8 +243,10 @@ def run_iv_curve(all_iv = False, gate_short = True):
                 wl=f"WL_54",
                 bl=f"BL_8",
                 sl=f"SL_8",
+                path=path
             )
 
 if __name__ == "__main__":
-    run_iv_curve()
+    path = device_name = args.device_no
+    run_iv_curve(path = path)
     # run_iv_curve(all_iv =True, gate_short=False)

@@ -39,27 +39,14 @@
 		<DUTPin name="SA_CLK" />
 		<DUTPin name="SA_RDY_0" />
 		<DUTPin name="SA_RDY_1" />
-		<DUTPin name="SA_RDY_2" />
-		<DUTPin name="SA_RDY_3" />
-		<DUTPin name="SA_RDY_4" />
-		<DUTPin name="SA_RDY_5" />
-		<DUTPin name="SA_RDY_6" />
-		<DUTPin name="SA_RDY_7" />
 		<DUTPin name="DO_0" />
 		<DUTPin name="DO_1" />
-		<DUTPin name="DO_2" />
-		<DUTPin name="DO_3" />
-		<DUTPin name="DO_4" />
-		<DUTPin name="DO_5" />
-		<DUTPin name="DO_6" />
-		<DUTPin name="DO_7" />
-		<DUTPin name="COL_SEL_0" />
-		<DUTPin name="COL_SEL_1" />
-		<DUTPin name="COL_SEL_2" />
-		<DUTPin name="COL_SEL_3" />
+		<DUTPin name="COL_SEL" />
 		<DUTPin name="VDD" />
 		<DUTPin name="VSA" />
 		<DUTPin name="MUX_SEL_CONV_CLK" />
+		<DUTPin name="MUX_SEL_WT" />
+		<DUTPin name="VSS" />
 	</Pins>
 	<PinGroups>
 		<PinGroup name="BLSLWLS">
@@ -94,20 +81,8 @@
 		<PinGroup name="SA_RDY_DO">
 			<PinReference pin="SA_RDY_0" />
 			<PinReference pin="SA_RDY_1" />
-			<PinReference pin="SA_RDY_2" />
-			<PinReference pin="SA_RDY_3" />
-			<PinReference pin="SA_RDY_4" />
-			<PinReference pin="SA_RDY_5" />
-			<PinReference pin="SA_RDY_6" />
-			<PinReference pin="SA_RDY_7" />
 			<PinReference pin="DO_0" />
 			<PinReference pin="DO_1" />
-			<PinReference pin="DO_2" />
-			<PinReference pin="DO_3" />
-			<PinReference pin="DO_4" />
-			<PinReference pin="DO_5" />
-			<PinReference pin="DO_6" />
-			<PinReference pin="DO_7" />
 		</PinGroup>
 		<PinGroup name="WLS_COL_SEL">
 			<PinReference pin="WL_0_2_4_6" />
@@ -121,10 +96,6 @@
 			<PinReference pin="WL_48_34_77_79" />
 			<PinReference pin="WL_UNSEL_2" />
 			<PinReference pin="WL_UNSEL" />
-			<PinReference pin="COL_SEL_0" />
-			<PinReference pin="COL_SEL_1" />
-			<PinReference pin="COL_SEL_2" />
-			<PinReference pin="COL_SEL_3" />
 		</PinGroup>
 		<PinGroup name="BLSLS">
 			<PinReference pin="BL_8" />
@@ -149,20 +120,12 @@
 			<PinReference pin="BL_9" />
 			<PinReference pin="BL_10" />
 			<PinReference pin="BL_11" />
-			<PinReference pin="BL_12" />
-			<PinReference pin="BL_13" />
-			<PinReference pin="BL_14" />
-			<PinReference pin="BL_15" />
 		</PinGroup>
 		<PinGroup name="SL_MULTI_READ">
 			<PinReference pin="SL_8" />
 			<PinReference pin="SL_9" />
 			<PinReference pin="SL_10" />
 			<PinReference pin="SL_11" />
-			<PinReference pin="SL_12" />
-			<PinReference pin="SL_13" />
-			<PinReference pin="SL_14" />
-			<PinReference pin="SL_15" />
 		</PinGroup>
 	</PinGroups>
 	<Sites>
@@ -201,28 +164,15 @@
 		<Connection pin="SA_CLK" siteNumber="0" instrument="PXI1Slot8" channel="24" />
 		<Connection pin="SA_EN" siteNumber="0" instrument="PXI1Slot8" channel="6" />
 		<Connection pin="VREAD" siteNumber="0" instrument="PXI1Slot8" channel="7" />
-		<Connection pin="SA_RDY_0" siteNumber="0" instrument="PXI1Slot8" channel="9" />
-		<Connection pin="SA_RDY_1" siteNumber="0" instrument="PXI1Slot8" channel="13" />
-		<Connection pin="SA_RDY_2" siteNumber="0" instrument="PXI1Slot8" channel="11" />
-		<Connection pin="SA_RDY_3" siteNumber="0" instrument="PXI1Slot8" channel="8" />
-		<Connection pin="SA_RDY_4" siteNumber="0" instrument="PXI1Slot8" channel="15" />
-		<Connection pin="SA_RDY_5" siteNumber="0" instrument="PXI1Slot8" channel="12" />
-		<Connection pin="DO_0" siteNumber="0" instrument="PXI1Slot8" channel="22" />
-		<Connection pin="DO_1" siteNumber="0" instrument="PXI1Slot8" channel="18" />
-		<Connection pin="DO_2" siteNumber="0" instrument="PXI1Slot8" channel="20" />
-		<Connection pin="DO_3" siteNumber="0" instrument="PXI1Slot8" channel="23" />
-		<Connection pin="DO_4" siteNumber="0" instrument="PXI1Slot8" channel="16" />
-		<Connection pin="DO_5" siteNumber="0" instrument="PXI1Slot8" channel="19" />
-		<Connection pin="DO_6" siteNumber="0" instrument="PXI1Slot8" channel="21" />
-		<Connection pin="DO_7" siteNumber="0" instrument="PXI1Slot8" channel="17" />
-		<Connection pin="SA_RDY_6" siteNumber="0" instrument="PXI1Slot8" channel="10" />
-		<Connection pin="SA_RDY_7" siteNumber="0" instrument="PXI1Slot8" channel="14" />
-		<Connection pin="COL_SEL_0" siteNumber="0" instrument="PXI1Slot8" channel="0" />
-		<Connection pin="COL_SEL_1" siteNumber="0" instrument="PXI1Slot8" channel="3" />
-		<Connection pin="COL_SEL_2" siteNumber="0" instrument="PXI1Slot8" channel="5" />
-		<Connection pin="COL_SEL_3" siteNumber="0" instrument="PXI1Slot8" channel="1" />
-		<Connection pin="MUX_SEL_CONV_CLK" siteNumber="0" instrument="PXI1Slot8" channel="26" />
+		<Connection pin="MUX_SEL_CONV_CLK" siteNumber="0" instrument="PXI1Slot8" channel="15" />
+		<Connection pin="SA_RDY_1" siteNumber="0" instrument="PXI1Slot8" channel="16" />
+		<Connection pin="SA_RDY_0" siteNumber="0" instrument="PXI1Slot8" channel="19" />
+		<Connection pin="DO_1" siteNumber="0" instrument="PXI1Slot8" channel="21" />
+		<Connection pin="DO_0" siteNumber="0" instrument="PXI1Slot8" channel="17" />
+		<Connection pin="COL_SEL" siteNumber="0" instrument="PXI1Slot8" channel="26" />
+		<Connection pin="MUX_SEL_WT" siteNumber="0" instrument="PXI1Slot8" channel="10" />
 		<Connection pin="VDD" siteNumber="0" instrument="PXI1Slot8" channel="30" />
 		<Connection pin="VSA" siteNumber="0" instrument="PXI1Slot8" channel="31" />
+		<Connection pin="VSS" siteNumber="0" instrument="PXI1Slot8" channel="29" />
 	</Connections>
 </PinMap>

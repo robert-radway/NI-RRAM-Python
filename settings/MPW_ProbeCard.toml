@@ -6,13 +6,16 @@ path_data = "D:\\nirram\\data\\MPW_Test\\"
 
 [NIDigital]
 deviceID = "PXI1Slot9"
-pinmap = "settings/MPW_ProbeCard_multiWL.pinmap"
+pinmap = "settings/MPW_ProbeCard_multiWL_Si.pinmap"
 specs = [
   "settings/DEC3.specs",
   "settings/MPW_ProbeCard.digilevels",
   "settings/MPW_ProbeCard.digitiming"
 ]
-patterns = "settings/patterns/*MPW_ProbeCard.digipat"
+patterns = [
+  "settings/patterns/PULSE_MPW_ProbeCard.digipat",
+  "settings/patterns/CSA_Read_Si.digipat"
+]
 
 
 [device]
@@ -42,7 +45,7 @@ all_BLS = [
   "BL_12",
   "BL_13",
   "BL_14",
-  "BL_15"
+  "BL_15",
 ]
 all_SLS = [
   "SL_8",
@@ -52,7 +55,7 @@ all_SLS = [
   "SL_12",
   "SL_13",
   "SL_14",
-  "SL_15"
+  "SL_15",
 ]
 wl_signals = [
     [[7, 6, 5, 4], ['0', '2', '4', '6']],
@@ -90,15 +93,15 @@ WLS = [
   "WL_UNSEL_2",
   "WL_UNSEL"
 ]
-BLS = ["BL_15", "BL_14", "BL_13","BL_12","BL_11","BL_10","BL_9","BL_8" ]
-SLS = ["SL_15", "SL_14", "SL_13","SL_12","SL_11","SL_10","SL_9","SL_8" ]
+BLS = ["BL_15", "BL_14", "BL_13","BL_12","BL_11","BL_10","BL_9","BL_8"]
+SLS = ["SL_15", "SL_14", "SL_13","SL_12","SL_11","SL_10","SL_9","SL_8"]
 WL_UNSEL = [ "WL_UNSEL" ]
 
 
 # RRAM resistance target level corresponding to each operation defined below
 [target_res]
 FORM = 20_000
-SET = 8_000
+SET = 5_000
 RESET_0 = 70_000
 RESET_1 = 120_000
 RESET_2 = 190_000
@@ -107,7 +110,7 @@ RESET_4 = 210_000
 RESET_5 = 250_000
 RESET_6 = 290_000
 RESET_7 = 330_000
-RESET = 40_000
+RESET = 50_000
 
 # =============================================================================
 # MEASUREMENT OPERATION (OP) CONFIGS
@@ -125,24 +128,34 @@ RESET = 40_000
 [op.READ]
 mode = "digital"
 aperture_time = 0.0005
-current_limit_range = 0.000128
+
+#2 uA, 32uA, 128uA, 2mA, 32mA
+current_limit_range = 0.032
 relaxation_cycles = 1_000
 settling_time = 0.0001
 shunt_res_value = 0
 
 [op.READ.NMOS]
 VWL = 2.2
-VBL = 0.2
+VBL = 0.3
 VSL = 0
 VWL_UNSEL_OFFSET = 0
 VB = 0
 
-[op.READ.PMOS]
-VWL = -1.5
-VBL = 0
-VSL = -0.3
+# [op.READ.PMOS]
+# VWL = 3
+# VBL = 0
+# VSL = 0
 
-VWL_UNSEL_OFFSET = 4.4
+# VWL_UNSEL_OFFSET = 0
+# VB = 0
+
+[op.READ.PMOS]
+VWL = -1.2
+VBL = 0.3
+VSL = 0
+
+VWL_UNSEL_OFFSET = 3
 VB = 0
 
 # =============================================================================
@@ -161,14 +174,14 @@ PW = 1200
 
 VWL_SET_start = 1.5
 VWL_SET_step = 0.2
-VWL_SET_stop = 3.0
+VWL_SET_stop = 2.21
 
-VBL_start = 1.0
-VBL_step = 0.2
-VBL_stop = 3
+VBL_start = 2
+VBL_step = 0.5
+VBL_stop = 3.1
 
-PW_start = 1
-PW_stop = 100
+PW_start = 100
+PW_stop = 101
 PW_steps = 10
 
 # =============== #
@@ -244,19 +257,19 @@ VBL = 0.5
 VSL = 0.5
 PW = 1200
 
-VWL_UNSEL_OFFSET = 3.5
+VWL_UNSEL_OFFSET = 2
 
 VWL_SET_start = -1.5
 VWL_SET_step = -0.1
-VWL_SET_stop = -1.71
+VWL_SET_stop = -2
 
-VBL_start = -0.5
+VBL_start = -2
 VBL_step = -0.1
-VBL_stop = -0.91
+VBL_stop = -2.01
 
-PW_start = 1
-PW_stop = 101
-PW_steps = 99
+PW_start = 1000
+PW_stop = 1001
+PW_steps = 100
 
 
 
@@ -304,18 +317,18 @@ PW_steps = 20
 [op.RESET.PMOS]
 VWL = 0.8
 VSL = 1.5
-VBL = 0.2
+VBL = 0.5
 PW = 100
 
-VWL_UNSEL_OFFSET = 3.9
+VWL_UNSEL_OFFSET = 2
 
 VWL_RESET_start = -1.8
 VWL_RESET_step = -0.1
-VWL_RESET_stop = -1.81
+VWL_RESET_stop = -1.91
 
-VSL_start = -1.7
+VSL_start = -0.8
 VSL_step = -0.1
-VSL_stop = -1.91
+VSL_stop = -2
 
 PW_start = 1000
 PW_stop = 1001
@@ -337,6 +350,14 @@ PW_steps = 33
 # PW_start = 1
 # PW_stop = 50
 # PW_steps = 2
+
+# =============================================================================
+# TIMING
+# =============================================================================
+[TIMING]
+direct = 2e-7
+CSA_out = 1e-5
+CSA_in = 1e-5
 
 # =============================================================================
 # MULTI-LEVEL RESET PULSE

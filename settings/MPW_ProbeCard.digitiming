@@ -2,10 +2,42 @@
 <TimingFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.0" xmlns="http://www.ni.com/Semiconductor/Timing">
   <TimingSheet>
     <TimeSets>
-      <TimeSet name="test">
+      <TimeSet name="direct">
         <Period>4E-05</Period>
         <PinEdges>
           <PinEdge pin="BLSLWLS">
+            <DriveNonReturn>
+              <On>0</On>
+              <Data>1E-08</Data>
+              <Off>1E-08</Off>
+            </DriveNonReturn>
+            <CompareStrobe>
+              <Strobe>7.5E-07</Strobe>
+            </CompareStrobe>
+            <DataSource>Pattern</DataSource>
+          </PinEdge>
+        </PinEdges>
+      </TimeSet>
+      <TimeSet name="CSA_in">
+        <Period>4E-05</Period>
+        <PinEdges>
+          <PinEdge pin="WLS_COL_SEL">
+            <DriveNonReturn>
+              <On>0</On>
+              <Data>1E-08</Data>
+              <Off>1E-08</Off>
+            </DriveNonReturn>
+            <CompareStrobe>
+              <Strobe>7.5E-07</Strobe>
+            </CompareStrobe>
+            <DataSource>Pattern</DataSource>
+          </PinEdge>
+        </PinEdges>
+      </TimeSet>
+      <TimeSet name="CSA_out">
+        <Period>4E-05</Period>
+        <PinEdges>
+          <PinEdge pin="SA_RDY_DO">
             <DriveNonReturn>
               <On>0</On>
               <Data>1E-08</Data>

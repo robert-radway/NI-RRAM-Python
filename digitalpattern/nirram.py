@@ -125,20 +125,17 @@ class NIRRAM:
                 self.addr_prof[wl][bl] = {"FORMs": 0, "READs": 0, "SETs": 0, "RESETs": 0} 
 
         # Initialize NI-Digital driver
-        self.digital = nidigital.Session(settings["NIDigital"]["deviceID"])
+        #self.digital = nidigital.Session(settings["NIDigital"]["deviceID"])
         # if multi-instrument session, error is "nidigital.errors.DriverError: -1074099215: The driver does not support multi-instrument sessions that use instruments of different models. Ensure that all instruments in the multi-instrument session are identical models."
         #multi-instrument session achieved as below:
-        #self.digital = nidigital.Session('PXI1Slot9,PXI1Slot8')
+        self.digital = nidigital.Session('PXI1Slot9,PXI1Slot8')
         self.digital.load_pin_map(settings["NIDigital"]["pinmap"])
-        ###TODO This replaces the DEC3.digilevles and DEC4.digitiming files
-        ### you should update TOMLS accordingly to parameterise the configure_time
-        self.digital.create_time_set("test")
-        self.digital.configure_time_set_period("test",2e-7)
+        for time_set in settings["TIMING"]:
+            self.digital.create_time_set(time_set)
+            self.digital.configure_time_set_period(time_set,settings["TIMING"][time_set])
         self.digital.channels[self.all_channels].write_static(nidigital.WriteStaticPinState.ZERO)
         self.digital.unload_all_patterns() 
-        for pattern in glob.glob(settings["NIDigital"]["patterns"]):
-            print(pattern)
-        #TODO you can remove this grep and just do the single pattern that is all that is needed now
+        for pattern in settings["NIDigital"]["patterns"]:
             self.digital.load_pattern(abspath(pattern))
         self.closed = False
 
@@ -169,6 +166,45 @@ class NIRRAM:
         self.digital.commit()
 
     
+    def multi_bl_read(
+        self,
+        vbl=None,
+        vsl=None,
+        vwl=None,
+        vwl_unsel_offset=None,
+        vb=None,
+        record=False,
+        check=True,
+        dynam_read=False,
+        wl_name = None,
+        wl = None
+    ):
+        print("Multiple Bit Line Read")
+        
+        if vwl_unsel_offset is None:
+            if "VWL_UNSEL_OFFSET" in self.op["READ"][self.polarity]:
+                vwl_unsel_offset = self.op["READ"][self.polarity]["VWL_UNSEL_OFFSET"]
+                #print(vwl_unsel_offset)
+            else:
+                vwl_unsel_offset = 0.0
+
+        vbl = self.op["READ"][self.polarity]["VBL"] if vbl is None else vbl
+        vwl = self.op["READ"][self.polarity]["VWL"] if vwl is None else vwl
+        vsl = self.op["READ"][self.polarity]["VSL"] if vsl is None else vsl
+        vb = self.op["READ"][self.polarity]["VB"] if vb is None else vb
+        
+        self.ppmu_set_vwl("WL_UNSEL", vsl + vwl_unsel_offset)
+        self.ppmu_set_vwl(wl, vwl)
+        print(f"vsl {vsl}, vbl {vbl}, vwl {vwl}")
+        self.digital.channels["BL_MULTI_READ"].ppmu_voltage_level = vbl
+        self.digital.channels["SL_MULTI_READ"].ppmu_voltage_level = vsl
+        meas_v = self.digital.channels["BL_MULTI_READ"].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+        meas_i = self.digital.channels["BL_MULTI_READ"].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+        self.ppmu_all_pins_to_zero()
+        print(meas_v)
+        print(meas_i)
+        return meas_v, meas_i
+
     def dynamic_read(
         self,
         vbl=None,
@@ -217,12 +253,7 @@ class NIRRAM:
                 #print(vwl_unsel_offset)
             else:
                 vwl_unsel_offset = 0.0
-        """
-        for b in self.body: 
-            assert( -2 <= vb <= 6)
-            self.digital.channels[b].ppmu_voltage_level = vb
-            self.digital.channels[b].selected_function = nidigital.SelectedFunction.PPMU
-        """
+
         time.sleep(self.op["READ"]["settling_time"]) # let the supplies settle for accurate measurement
         
         # Measure
@@ -245,17 +276,21 @@ class NIRRAM:
                         self.ppmu_set_vwl(wl_i, vsl + vwl_unsel_offset)
                 self.digital.ppmu_source()
 
-                for bl in self.bls: 
-                    if self.slow:
-                        self.ppmu_set_vbl(bl,vbl/2)
+                if "BL_MULTI_READ" in self.bls:
+                    bl = "BL_MULTI_READ"
                     self.ppmu_set_vbl(bl,vbl)
-                    self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
-                for sl in self.sls: 
-                    if self.slow:
-                        self.ppmu_set_vsl(sl,vsl/2)
-                    self.ppmu_set_vsl(sl,vsl)
-                    self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
-                time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
+                    self.ppmu_set_vsl("SL_MULTI_READ",vsl)
+                    meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
+                    meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)
+
+                else:
+                    for bl in self.bls: 
+                        self.ppmu_set_vbl(bl,vbl)
+                        self.digital.channels[bl].selected_function = nidigital.SelectedFunction.PPMU
+                    for sl in self.sls: 
+                        self.ppmu_set_vsl(sl,vsl)
+                        self.digital.channels[sl].selected_function = nidigital.SelectedFunction.PPMU
+                    #time.sleep(self.op["READ"]["settling_time"]) #Let the supplies settle for accurate measurement
                 
                 for bl in self.bls:
                     # DEBUGGING: test each bitline 
@@ -264,13 +299,66 @@ class NIRRAM:
                     # meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     # meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
                     # print(f"{bl} v: {meas_v} i: {meas_i} ig: {meas_i_gate}")
+                    #print(f"BL: {bl}") 
+                    #print(f"SL: {sl}")
+                    #print(f"VBL: {vbl}")
+                    #print(f"VSL: {vsl}")
+                    
+                    if not (bl == "BL_MULTI_READ"):
+                        #meas_vsl = self.digital.channels[sl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)
+                        meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
+                        meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                    else:
+                        # print("Multi-BL-Read-Occured")
+                        r = []
+                        for bl_current in meas_i:
+                            r.append(np.abs((self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"])/bl_current - self.op["READ"]["shunt_res_value"]))
+                        cond = [1/res if res != 0 else 1_000_000_000 for res in r]
+                        meas_i_array = meas_i
+                        meas_v_array = meas_v
+                        if record:
+                            if wl_name is None:
+                                self.datafile.writerow(["Multi-BL-Read-Occured"])
+                                self.datafile.writerow([self.chip, self.device, "READ", f"WL{wl}", "BL_8_Res","BL_9_Res","BL_10_Res","BL_11_res"])
+                                self.datafile.writerow([self.chip, self.device, "READ", f"WL{wl}"]+r)
+                            else: 
+                                self.datafile.writerow(["Multi-BL-Read-Occured"])
+                                self.datafile.writerow([self.chip, self.device, "READ", f"WL{wl_name}", "BL_8_Res","BL_9_Res","BL_10_Res","BL_11_res"])
+                                self.datafile.writerow([self.chip, self.device, "READ", f"WL{wl}"]+r)
+                        
+                        # r = r[6:7]  + r[0:1] + r[5:6] + r[3:5]+ r[4:5] + r[7:] + r[2:3]
+                        r = np.array(r)
+                        c = [1/res if res != 0 else 1_000_000_000 for res in r]
+                        meas_i = np.array(meas_i)
+                        meas_v = np.array(meas_v)
+                        np.set_printoptions(formatter={'float': '{:.2e}'.format})
 
-                    meas_v = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)[0]
-                    meas_i = self.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
-                    meas_i_gate = self.digital.channels[wl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)[0]
+                        headers = [" ", "BL_8", "BL_9", "BL_10", "BL_11", "BL_12", "BL_13", "BL_14", "BL_15"]
+
+                        # Determine the maximum width needed for alignment based on the longest header name or value
+                        max_width = max(max(len(str(x)) for x in headers), max(len(str(x)) for x in r))
+
+                        # Print headers aligned
+                        # print(" ".join(f"{header:^{max_width}}" for header in headers))
+                        formatted_r = ["Res"] + [f"{value/1000:.2f}kΩ" for value in r]
+                        formatted_v = ["VBL"] + [f"{value:.2f}V" for value in meas_v]
+                        formatted_i = ["I"] + [f"{value:.2e}A" for value in meas_i]
+                        # Print corresponding values aligned
+                        print(" ".join(f"{(value):^{max_width}}" for value in formatted_r))
+                        # print(" ".join(f"{(value):^{max_width}}" for value in formatted_v))
+                        # print(" ".join(f"{(value):^{max_width}}" for value in formatted_i))
+
+
+
+
+                        np.set_printoptions() 
+                        self.ppmu_all_pins_to_zero()
+                        time.sleep(self.op["READ"]["settling_time"]) # let the supplies settle
+                        return r, c, meas_i, meas_v  
+                    
                     #self.digital.channels[bl].selected_function = nidigital.SelectedFunction.DIGITAL
 
-                    self.addr_prof[wl][bl]["READs"] +=1
+                    # self.addr_prof[wl][bl]["READs"] +=1
                     # Compute values
                     res = np.abs((self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"])/meas_i - self.op["READ"]["shunt_res_value"])
                     cond = 1/res
@@ -312,6 +400,8 @@ class NIRRAM:
         # self.mlogfile.write(f"{self.chip},{time.time()},{self.addr},")
         # self.mlogfile.write(f"READ,{res},{cond},{meas_i},{meas_v}\n")
         # Return measurement results
+        if (bl == "SL_MULTI_READ"):
+            return res_array, meas_i_array, meas_v_array
         return res_array, cond_array, meas_i_array, meas_v_array
         
     def read_1tnr(self, vbl=None, vsl=None, vwl=None, vb=None, record=False):
@@ -606,14 +696,16 @@ class NIRRAM:
     
     def set_vsl(self, vsl_chan, vsl, vsl_lo):
         """Set VSL using NI-Digital driver"""
-        assert(vsl_chan in self.all_sls)
+        if vsl_chan != "SL_MULTI_READ":
+            assert(vsl_chan in self.all_sls)
         self.digital.channels[vsl_chan].configure_voltage_levels(vsl_lo, vsl, vsl_lo, vsl, 0)
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
         return
 
     def set_vbl(self, vbl_chan, vbl, vbl_lo):
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
-        assert(vbl_chan in self.all_bls)
+        if vbl_chan != "BL_MULTI_READ":
+            assert(vbl_chan in self.all_bls)
         self.digital.channels[vbl_chan].configure_voltage_levels(vbl_lo, vbl, vbl_lo, vbl, 0)
         return
 
@@ -627,7 +719,7 @@ class NIRRAM:
         """Set VSL using NI-Digital driver"""
         assert(vsl <= 6)
         assert(vsl >= -2)
-        assert(vsl_chan in self.all_sls)
+        # assert(vsl_chan in self.all_sls)
         self.digital.channels[vsl_chan].ppmu_voltage_level = vsl
         self.digital.channels[vsl_chan].ppmu_source()
         #print("Setting VSL: " + str(vsl) + " on chan: " + str(vsl_chan))
@@ -642,7 +734,7 @@ class NIRRAM:
         """Set (active) VBL using NI-Digital driver (inactive disabled)"""
         assert(vbl <= 6)
         assert(vbl >= -2)
-        assert(vbl_chan in self.all_bls)
+        #assert(vbl_chan in self.all_bls)
         self.digital.channels[vbl_chan].ppmu_voltage_level = vbl
         self.digital.channels[vbl_chan].ppmu_source()
 
@@ -670,16 +762,16 @@ class NIRRAM:
         """Create waveform for directly contacting the array BLs, SLs, and WLs, then output that waveform"""
         waveform, pulse_width = self.build_BLSLWLS_waveform(mask, pulse_len, prepulse_len, postpulse_len, max_pulse_len, wl_first)
         #WL_PULSE_DEC3.digipat or PULSE_MPW_ProbeCard.digipat as template file
-        self.arbitrary_pulse(waveform, pin_group_name="BLSLWLS", digipat_file="PULSE_MPW_ProbeCard", data_variable_in_digipat="wl_data", pulse_width=pulse_width)
+        self.arbitrary_pulse(waveform, pin_group_name="BLSLWLS", data_variable_in_digipat="wl_data", pulse_width=pulse_width)
+        self.digital.burst_pattern("PULSE_MPW_ProbeCard")
         return
     
-    def arbitrary_pulse(self, waveform, pin_group_name, digipat_file, data_variable_in_digipat,pulse_width=None):
+    def arbitrary_pulse(self, waveform, pin_group_name, data_variable_in_digipat,pulse_width=None):
         broadcast = nidigital.SourceDataMapping.BROADCAST
         self.digital.pins[pin_group_name].create_source_waveform_parallel(data_variable_in_digipat, broadcast)
         self.digital.write_source_waveform_broadcast(data_variable_in_digipat, waveform)
         if pulse_width:
             self.set_pw(pulse_width)
-        self.digital.burst_pattern(digipat_file)
         return
     
     #TODO
@@ -786,6 +878,7 @@ class NIRRAM:
         datafile_path = self.settings["path"]["data_header"]+"set-file_"+ datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + str(self.chip) + "_" + str(self.device) + ".csv"
         
         #Record the resistance versus voltages and pulse widths in csv
+        print("SET")
         with open(datafile_path, "a", newline="") as resfile:
             writer = csv.writer(resfile)
             writer.writerow(["VWL", "VBL", "VSL", "PW", "Res"])
@@ -831,7 +924,7 @@ class NIRRAM:
                         res_array3, cond_array3, meas_i_array3, meas_v_array3 = read_pulse()
                         
                         res_array = (res_array1 + res_array2 + res_array3)/3
-                        cond_array = (cond_array1 + cond_array2 + cond_array3)/3
+                        cond_array = None
                         meas_i_array = (meas_i_array1 + meas_i_array2 + meas_i_array3)/3
                         meas_v_array = (meas_v_array1 + meas_v_array2 + meas_v_array3)/3
                         #print(res_array)
@@ -839,10 +932,16 @@ class NIRRAM:
                         if bl_selected is None: # use array success condition: all in array must hit target
                             for wl_i in self.wls:
                                 for bl_i in self.bls:
-                                    writer.writerow([vwl,vbl,vsl, pw, res_array.loc[wl_i, bl_i]])
-                                    print(f"{res_array.loc[wl_i,bl_i]}")
-                                    if (res_array.loc[wl_i, bl_i] <= target_res) & mask.mask.loc[wl_i, bl_i]:
-                                        mask.mask.loc[wl_i, bl_i] = False
+                                    if bl_i == "BL_MULTI_READ":
+                                        for res in res_array:
+                                            if res <= target_res:
+                                                print(f"PW = {pw}, Vwl = {vwl}, VBL-VSL = {vbl-vsl}")
+                                                return None
+                                    else: 
+                                        writer.writerow([vwl,vbl,vsl, pw, res_array.loc[wl_i, bl_i]])
+                                        print(f"{res_array.loc[wl_i,bl_i]}")
+                                        if (res_array.loc[wl_i, bl_i] <= target_res) & mask.mask.loc[wl_i, bl_i]:
+                                            mask.mask.loc[wl_i, bl_i] = False
                             success = (mask.mask.to_numpy().sum()==0)
                         else: # 1TNR success condition: check if selected 1tnr cell hit target
                             success = True
@@ -863,12 +962,14 @@ class NIRRAM:
             all_data = []
             for wl in self.wls:
                 for bl in self.bls:
-                    cell_success = res_array.loc[wl,bl] <= target_res
-                    cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
-                    if print_data: print(cell_data)
-                    if record: self.datafile.writerow(cell_data)
-                    all_data.append(cell_data)
-            return all_data
+                    if not bl=="BL_MULTI_READ":
+                        cell_success = res_array.loc[wl,bl] <= target_res
+                        cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
+                        if print_data: print(cell_data)
+                        if record: self.datafile.writerow(cell_data)
+                        all_data.append(cell_data)
+                return all_data
+            return None
 
     def dynamic_reset(
         self,
@@ -894,6 +995,7 @@ class NIRRAM:
         # for pw in np.logspace(int(np.log10(cfg["PW_start"])), int(np.log10(cfg["PW_stop"])), cfg["PW_steps"]):
             # for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):
             #     for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
+        print("RESET")
         for vsl in np.arange(cfg["VSL_start"], cfg["VSL_stop"], cfg["VSL_step"]):
             for pw in np.arange(cfg["PW_start"], cfg["PW_stop"], cfg["PW_steps"]):
                 for vwl in np.arange(cfg["VWL_RESET_start"], cfg["VWL_RESET_stop"], cfg["VWL_RESET_step"]):    
@@ -919,16 +1021,26 @@ class NIRRAM:
                     res_array3, cond_array3, meas_i_array3, meas_v_array3 = read_pulse()
                     
                     res_array = (res_array1 + res_array2 + res_array3)/3
-                    cond_array = (cond_array1 + cond_array2 + cond_array3)/3
+                    # cond_array = np.array(cond_array1 + cond_array2 + cond_array3)/3
                     meas_i_array = (meas_i_array1 + meas_i_array2 + meas_i_array3)/3
                     meas_v_array = (meas_v_array1 + meas_v_array2 + meas_v_array3)/3
+                    if type(cond_array1) is list:
+                        cond_array = (np.array(cond_array1 + cond_array2 + cond_array3))/3
+                    else:
+                        cond_array = (cond_array1 + cond_array2 + cond_array3)/3
                     # print(f"vsl = {vsl}, vwl = {vwl}, vbl = {vbl}")
-                    print(res_array.loc[self.wls[0],self.bls[0]])
                     if bl_selected is None: # use array success condition: all in array must hit target
                         for wl_i in self.wls:
                             for bl_i in self.bls:
-                                if (res_array.loc[wl_i, bl_i] >= target_res) & mask.mask.loc[wl_i, bl_i]:
-                                    mask.mask.loc[wl_i, bl_i] = False
+                                if bl_i not in ["BL_MULTI_READ"]:
+                                    if (res_array.loc[wl_i, bl_i] >= target_res) & mask.mask.loc[wl_i, bl_i]:
+                                        mask.mask.loc[wl_i, bl_i] = False
+                                else:
+                                    for res in res_array:
+                                        if res >= target_res:
+                                            print(f"PW = {pw}, Vwl = {vwl}, VBL-VSL = {vbl-vsl}")
+                                            return None
+                                        
                         success = (mask.mask.to_numpy().sum() == 0)
                     else: # 1TNR success condition: check if selected 1tnr cell hit target
                         success = True
@@ -948,6 +1060,8 @@ class NIRRAM:
         all_data = []
         for wl in self.wls:
             for bl in self.bls:
+                if bl in ["BL_MULTI_READ"]:
+                  return None  
                 cell_success = res_array.loc[wl,bl] >= target_res
                 cell_data = [self.chip, self.device, mode, wl, bl, res_array.loc[wl,bl], cond_array.loc[wl,bl], meas_i_array.loc[wl,bl], meas_v_array.loc[wl,bl], vwl, vsl, vbl, pw, cell_success]
                 if print_data: print(cell_data)
@@ -2119,6 +2233,114 @@ class NIRRAM:
                     session.connect(channel1=f"no{index}", channel2=f"com{index}")
                     return 1
     """
+
+    def csa_read(
+        self,
+        wls,
+        vread=None,
+        vwl=None,
+        pw=1,
+        col_sel_idx=None,
+        vwl_unsel=None,
+        si_selectors=True
+    ):
+        """Perform a READ operation with all 2 or 8 SAs at once. Returns 2-or-8-entry dict (per-SA) of results and associated BLs"""
+        # Set the read voltage levels
+        vread = (self.op["READ"][self.polarity]["VBL"] - self.op["READ"][self.polarity]["VSL"]) if vread is None else vread
+        vwl = self.op["READ"][self.polarity]["VWL"] if vwl is None else vwl
+        vwl_unsel = (self.op["READ"][self.polarity]["VWL_UNSEL_OFFSET"] - self.op["READ"][self.polarity]["VSL"]) if vwl_unsel is None else vwl_unsel
+
+
+        time.sleep(self.op["READ"]["settling_time"]) # let the supplies settle for accurate measurement
+
+        # set voltage levels
+        v_rmux_en = 5
+        v_col_sel = 5
+        self.digital.configure_voltage_levels(0, 1.8, 0.5, 0.7, 0)
+        self.digital.channels["VREAD"].configure_voltage_levels(0, vread, 0, vread, 0)
+        self.digital.channels["COL_SEL"].configure_voltage_levels(0, v_col_sel, 0, v_col_sel, 0)
+        self.digital.channels["RMUX_EN"].configure_voltage_levels(0, v_rmux_en, 0, v_rmux_en, 0)
+        
+        for wl_i in self.all_wls:
+                self.digital.channels[wl_i].configure_voltage_levels(vwl_unsel, vwl, vwl_unsel, vwl, 0)
+
+        # Update the voltages    
+        self.digital.commit()
+        self.set_pw(pw)
+
+        results_dict = {}
+        for wl in wls:
+            # Define and setup outputs
+            waveform = self.build_CSA_Read_waveform(wl, col_sel_idx, pw,si_selectors)
+            self.arbitrary_pulse(waveform, pin_group_name="WLS_COL_SEL", data_variable_in_digipat="wl_col_data")
+
+            # Define and setup inputs
+            self.digital.pins["SA_RDY_DO"].create_capture_waveform_parallel("sa_data")
+
+            # Run the pattern and store results
+            if si_selectors:
+                self.digital.burst_pattern("CSA_Read_Si")
+            else:
+                self.digital.burst_pattern("CSA_Read")
+            wl_results = self.digital.fetch_capture_waveform("sa_data", pw*2)[0]
+            wl_results = [wl_results[i] for i in range(0,pw*2)] #convert from memoryview to list
+            signals_over_time = self.interpret_csa(wl_results, col_sel_idx, si_selectors)
+
+            # dict(zip(bls,wl_results))
+            #wl_results is an int: convert to list of bool
+            
+            results_dict[wl] = signals_over_time
+        
+        return results_dict
+
+    def build_CSA_Read_waveform(self, wl, col_sel_idx, pw,si_selectors):
+        """Create pulse train for CSA read. Format of bits is [WLS COL_SEL_0 ... COL_SEL_3]."""
+        col_sel_cycles_before_wl = 3 #don't change unless you also change CSA_Read.digipat: this is the number of cycles of 'D' before the loop
+        #build masks
+        wl_mask = [wl==wl_i for wl_i in self.all_wls]
+        if si_selectors:
+            col_sel_only =  BitVector(bitlist=[False]*len(wl_mask)).int_val()
+            col_sel_and_wl = BitVector(bitlist=wl_mask).int_val()
+        else:
+            col_sel_mask = [False]*4
+            col_sel_mask[col_sel_idx] = True
+        
+            col_sel_only = BitVector(bitlist=([False]*len(wl_mask)+col_sel_mask)).int_val()
+            col_sel_and_wl = BitVector(bitlist=(wl_mask + col_sel_mask)).int_val()
+        waveform = [col_sel_only]*col_sel_cycles_before_wl + [col_sel_and_wl]*pw*2
+        return waveform
+
+
+    def interpret_csa(self, wl_results, col_sel_idx, si_selectors):
+        """Interpret DO and SA_RDY signals by reading DO when corresponding SA_RDY goes high"""
+        if si_selectors:
+            n_csas=2
+        else:
+            n_csas=8
+        #BL names used only for logging purposes. formula from how CSAs are hardwired to BLs
+        bls = [f"BL_{int(32/n_csas*i+col_sel_idx)}" for i in range(n_csas)]
+
+        #value of wl_result[0] is 1 if DO_7 is high and 2^15 if SA_RDY_0 is high. Defined in the pinmap
+        name_order = [f"DO_{n_csas-1-i}" for i in range(n_csas)] + [f"SA_RDY_{n_csas-1-i}" for i in range(n_csas)]
+
+        signals_over_time = []
+        for timestep in wl_results:
+            signal_values = [bool(timestep & (1<<i)) for i in range(16)]
+            signals = dict(zip(name_order, signal_values))
+            signals_over_time.append(signals)
+        return signals_over_time
+    
+        #TODO: read DO when corresponding SA_RDY goes high
+
+    def multi_set(self, vbl, vsl, vwl, pw):
+        mask = RRAMArrayMask(self.wls, self.bls, self.sls, self.all_wls, self.all_bls, self.all_sls, self.polarity)
+        self.set_pulse(
+            mask,
+            vbl=vbl,
+            vsl=vsl,
+            vwl=vwl,
+            pulse_len=int(pw)
+        )
 
 
 if __name__ == "__main__":

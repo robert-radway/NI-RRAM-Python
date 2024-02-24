@@ -18,12 +18,12 @@ from relay_switch import relay_switch
 parser = argparse.ArgumentParser(description="RESET a chip.")
 parser.add_argument("settings", help="path to settings file")
 parser.add_argument("device_no", help="chip name for logging")
-parser.add_argument("--start-vds", type=float, default=0.1, help="start vds")
-parser.add_argument("--end-vds", type=float, default=-0.1, help="end vds")
-parser.add_argument("--step-vds", type=float, default=5, help="step vds")
-parser.add_argument("--start-vgs", type=float, default=1.0, help="start vgs")
-parser.add_argument("--end-vgs", type=float, default=-2.0, help="end vgs")
-parser.add_argument("--step-vgs", type=float, default=20, help="step vgs")
+parser.add_argument("--start-vds", type=float, default=0.01, help="start vds")
+parser.add_argument("--end-vds", type=float, default=-0.01, help="end vds")
+parser.add_argument("--step-vds", type=float, default=3, help="step vds")
+parser.add_argument("--start-vgs", type=float, default=1, help="start vgs")
+parser.add_argument("--end-vgs", type=float, default=-1, help="end vgs")
+parser.add_argument("--step-vgs", type=float, default=10, help="step vgs")
 parser.add_argument("--array", type=int, default=0, help="input for array size, changes pins used")
 args = parser.parse_args()
 
@@ -34,7 +34,7 @@ def iv_curve(
     sl: str, # sl pin name
 ):
     # Initialize NI system
-    nisys = NIRRAM(args.device_no, args.device_no, settings=args.settings,polarity="PMOS")
+    nisys = NIRRAM(args.device_no, args.device_no, settings=args.settings,polarity="NMOS")
     wls, bls, sls = (nisys.wls, nisys.bls, nisys.sls)
     wl_name = wl
     wl, bl, sl = relay_switch(wl, bl, sl, nisys)
@@ -77,6 +77,11 @@ def iv_curve(
     nisys.digital.channels[wl].ppmu_output_function = nidigital.PPMUOutputFunction.VOLTAGE
     nisys.digital.channels[wl].ppmu_current_limit_range = 2e-6
 
+
+    nisys.digital.ppmu_aperture_time_units = nidigital.PPMUApertureTimeUnits.SECONDS
+    # nisys.digital.ppmu_aperture_time = 0.065
+    # nisys.digital.ppmu_current_limit_range = 128e-8
+            
     for vds in vds_sweep:
         results_bl.append([])
         results_wl.append([])
@@ -84,7 +89,7 @@ def iv_curve(
         results_vwl.append([])
         for vgs in vgs_sweep:
             nisys.ppmu_set_vwl(wl, vgs)
-            nisys.ppmu_set_vwl("WL_UNSEL", 4)
+            nisys.ppmu_set_vwl("WL_UNSEL", 0)
             nisys.ppmu_set_vbl(bl, vds)
             meas_v = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.VOLTAGE)
             meas_i = nisys.digital.channels[bl].ppmu_measure(nidigital.PPMUMeasurementType.CURRENT)
@@ -158,7 +163,7 @@ def iv_curve(
     os.makedirs(path_fig_dir, exist_ok=True)
     dev = "CNT" if nisys.polarity == "PMOS" else "Si"
     # Die3_FormedWL_{bl}\\
-    fig.savefig(os.path.join(f"D:\\nirram\\data\\MPW_Test\\1T1R_Chip12\\", f"Gates_{wl_name}_{bl}_{sl}_{dev}_GateLeakage_2.png"))
+    fig.savefig(os.path.join(f"D:\\nirram\\data\\MPW_Test\\open_iv\\", f"Gates_{wl_name}_{bl}_{sl}_{dev}_GateLeakage.png"))
     #plt.show()
     plt.close()
 
