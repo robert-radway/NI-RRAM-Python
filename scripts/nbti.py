@@ -52,8 +52,12 @@ parser.add_argument("--tstart-relax", type=float, nargs="?", default=10e-3, help
 parser.add_argument("--tend-relax", type=float, nargs="?", default=2e3, help="when to stop reading relaxation")
 parser.add_argument("--samples", type=int, nargs="?", default=100, help="number of samples to read during the time range")
 parser.add_argument("--samples-relax", type=int, nargs="?", default=100, help="number of samples to read during the time range")
+parser.add_argument("--stress-iv", action=argparse.BooleanOptionalAction, default=False, help="Do stress IV sweep measurement")
+# parser.add_argument("--stress-iv-sweep", type=float, nargs="+", default=[0.4, -1.4, 0.2], help="TODO]")
 parser.add_argument("--relax", action=argparse.BooleanOptionalAction, default=True, help="Do relaxation measurement")
-parser.add_argument("--relax-iv", action=argparse.BooleanOptionalAction, default=False, help="Do relaxation IV measurement")
+parser.add_argument("--relax-iv", action=argparse.BooleanOptionalAction, default=False, help="Do relaxation IV sweep measurement")
+# parser.add_argument("--relax-iv-sweep", type=float, nargs="+", default=[0.4, -1.4, 0.2], help="TODO]")
+parser.add_argument("--stress-relax-cycles", type=int, nargs="?", default=0, help="number of DC stress-relax cycles to run, like a DC biased version of AC stress")
 parser.add_argument("--read-bias", type=float, nargs="?", default=-0.1, help="read drain bias in volts")
 parser.add_argument("--read-gate-bias", type=float, nargs="?", default=-1.2, help="read gate bias in volts")
 parser.add_argument("--gate-bias", type=float, nargs="?", default=-2.0, help="stress constant gate bias in volts")
@@ -81,14 +85,16 @@ args = parser.parse_args()
 tstart = args.tstart
 tend = args.tend
 samples = args.samples
+do_stress_iv = args.stress_iv
 tstart_relax = args.tstart_relax
 tend_relax = args.tend_relax
 samples_relax = args.samples_relax
 do_relax = args.relax
 do_relax_iv = args.relax_iv
+stress_relax_cycles = args.stress_relax_cycles
 v_read = args.read_bias
 v_read_gate_bias = args.read_gate_bias
-v_gate = args.gate_bias
+v_gate = args.gate_bias # stress bias, TODO: rename this variable
 v0 = args.boost_voltage
 boost_sleep = args.boost_sleep
 efield_ox = args.efield
@@ -165,6 +171,11 @@ def into_sweep_range(v) -> list:
 # convert initial idvg sweep vwl (vg) input format into sweep range
 v_wl_initial_sweep = into_sweep_range(v_wl_initial_sweep)
 print(f"vwl initial sweep: {v_wl_initial_sweep}")
+
+# TODO: make stress and relax IV sampling ranges configurable
+# in future, can do small IV segment to do gm sampling
+v_wl_stress_sweep = into_sweep_range([v_gate, 0.0, 0.2]) # start, stop, step
+v_wl_relax_sweep = into_sweep_range([0.0, v_read_gate_bias, 0.2]) # start, stop, step
 
 # create time points when device should be measured
 print(f"STRESS: Creating log sampling points from {tstart} to {tend} with {samples} samples")
@@ -316,35 +327,10 @@ nisys = NIRRAM(args.chip, args.device, settings=args.settings, polarity=args.pol
 # nisys.close()
 # exit()
 
-# used for fitting I-V to find VT shift
-# run spot measurement to get current at some voltage
-
-### TODO: abstract initial sweep range into an input
-# V_WL_INITIAL_SWEEP = [0.0]
-# V_WL_INITIAL_SWEEP = [0.0] # for 1 V bias
-# V_WL_INITIAL_SWEEP = [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # for 1 V bias
-# V_WL_INITIAL_SWEEP = [0.0, -0.4, -0.8, -1.2]
-# V_WL_INITIAL_SWEEP = [0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4] # 2 MV/cm
-# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6] # 2 MV/cm
-# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8] # 4 MV/cm
-# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0] # 6-8 MV/cm
-# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2] # 8 - 10 MV/cm
-# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 - 12 MV/cm
-# V_WL_INITIAL_SWEEP = [0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6] # 10 - 12 MV/cm
-# V_WL_INITIAL_SWEEP = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 - 12 MV/cm
-# V_WL_INITIAL_SWEEP = [1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2]
-# V_WL_INITIAL_SWEEP = [-1.2, -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
-# V_WL_INITIAL_SWEEP = np.linspace(-2.0, 2.0, 41)
-
-# V_WL_INITIAL_SWEEP = [0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4] # for 0.6 V stress
-# V_WL_INITIAL_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4] # 10 MV/cm
-
-# TODO: need to turn this into an arg
-V_WL_POST_SWEEP = [0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4, -1.6, -1.8, -2.0] # 10 MV/cm
+# initial IV sweep used for fitting I-V to find VT shift
+# run spot measurement of current vs gate voltage
 
 initial_iv = []
-
-# v_wl_initial_sweep = []
 
 for v_wl in v_wl_initial_sweep:
     iv_data = nisys.cnfet_spot_iv(
@@ -531,7 +517,8 @@ def run_bias_stress_measurement_dc(
     t_save_threshold: float = 10.0, # time before saving to json during measurement
 ):
     """Common routine for stress and relaxation NBTI current measurement.
-    Implements a "on-the-fly" method of holding an initial stressing
+    Implements a "on-the-fly" method: holding a initial stress voltage and
+    do single spot read at a read voltage. The read takes ~1 ms on NI.
     """
     # turn on DC gate bias
     nisys.ppmu_set_vwl(wl, v0 + v_stress)
@@ -594,11 +581,19 @@ def run_bias_stress_measurement_dc(
 def run_bias_stress_measurement_iv_sweep(
     v0: float, # reference zero voltage level
     v_stress: float,
+    v_wl_sweep: list[float],
     t_measure_points: list[float],
     path_data: str,
 ):
-    """Common routine for stress and relaxation NBTI current measurement.
-    Implements a "on-the-fly" method of holding an initial stressing
+    """
+    Common routine for stress and relaxation NBTI current measurement.
+    Implements a IV staircase sweep at measurement points. Each step will
+    take ~1 ms. This is sometimes called "slow IDVG" method because this will
+    allow relaxation during staircase sampling. However, if we want to sample
+    gm or subthreshold swing during stress, it is required to sample some
+    points. Ideally, during stress sample from high-to-low voltage while
+    during relax sample from low-to-high voltage, to minimize relaxation
+    effects. The caller must manage these sweep directions.
     """
     # turn on DC gate bias
     nisys.ppmu_set_vwl(wl, v0 + v_stress)
@@ -623,7 +618,7 @@ def run_bias_stress_measurement_iv_sweep(
         t_measure = (time.perf_counter_ns() - t0) * 1e-9
 
         iv_sweep = nisys.cnfet_iv_sweep(
-            v_wl=v_wl_initial_sweep,
+            v_wl=v_wl_sweep,
             v_bl=v_read,
             v_sl=0.0,
             v_0=v0,
@@ -636,14 +631,20 @@ def run_bias_stress_measurement_iv_sweep(
             measure_v_wl = False,
         )
 
+        # turn on DC gate bias
+        nisys.ppmu_set_vwl(wl, v0 + v_stress)
+
+        # set v_wl
+        iv_sweep["v_wl"] = v_wl_sweep
+
         # print measurement
         # THIS CAUSES UNPREDICTABLE DELAY IN CODE, BUT IS OKAY BECAUSE
         # STRESS IS ON BEFORE WE PRINT. JUST MAKE SURE DO NOT PRINT BEFORE STRESS ON
         print(f"t={t_measure}")
 
         # save measurement to file
-        # (only do after ~10 seconds to reduce effect of delay from saving to file
-        # during early fast measurements)
+        # (ideally only do after ~10 seconds to reduce effect of delay from saving
+        # to file during early fast measurements)
         with open(f"{path_data}_t_{t_measure}.json", "w+") as f:
             json.dump(iv_sweep, f, indent=2)
     
@@ -702,7 +703,13 @@ def run_bias_stress_measurement_ac(
     # I ADJUSTED THESE PULSE WIDTHS TO MATCH, OTHERWISE FREQUENCY LOWER THAN DESIRED
     # I OSCILLOSCOPE TUNED UNTIL FREQUENCY MATCHED TO WITHIN 0.1%
     if t_nbti_ac_unit < 15e-9: # for 10 MHz
-        if ac_dutycycle >= 0.8:
+        if ac_dutycycle <= 0.1:
+            pw_stress = int(ac_t_stress / t_nbti_ac_unit)
+            pw_relax = int(ac_t_relax / t_nbti_ac_unit) - 3
+        elif ac_dutycycle >= 0.9:
+            pw_stress = 6
+            pw_relax = 1    # FOR 0.8-0.9 DUTY CYCLE USE THIS WTF???
+        elif ac_dutycycle >= 0.8:
             pw_stress = int(ac_t_stress / t_nbti_ac_unit) - 2
             pw_relax = int(ac_t_relax / t_nbti_ac_unit)    # FOR 0.8-0.9 DUTY CYCLE USE THIS WTF???
         else:
@@ -854,86 +861,134 @@ def run_bias_stress_measurement_ac(
     
     return data_measurement
 
-### STRESS MEASUREMENT
 
-# boost voltages
-if v0 != 0:
-    print(f"boosting wl/sl/bl voltage to {v0} V")
-    nisys.ppmu_set_all_to_voltage(
-        val=v0,
-        vwl_chan=wl,
-        vsl_chan=sl,
-        vbl_chan=bl,
-    )
-    print(f"sleeping for {boost_sleep} s")
-    time.sleep(boost_sleep)
-
-if ac_stress:
-    run_stress = run_bias_stress_measurement_ac
-else: # dc
-    run_stress = run_bias_stress_measurement_dc
-
-data_stress = run_stress(
-    v0=v0,
-    v_stress=v_gate,
-    t_measure_points=t_measure_points_stress,
-    path_data=path_data_stress + ".json",
-)
-
-### POST STRESS IV
-if do_relax_iv:
-    post_iv = nisys.cnfet_iv_sweep(
-        v_wl=list(reversed(V_WL_POST_SWEEP)),
-        v_bl=v_read,
-        v_sl=0.0,
-        v_0=v0,
-        v_wl_0=v0 + v_gate,
-        measure_i_bl = True,
-        measure_v_bl = False,
-        measure_i_sl = False,
-        measure_v_sl = False,
-        measure_i_wl = False,
-        measure_v_wl = False,
-    )
-    print(iv_data)
-
-    ### save in json format
-    path_post_iv_json = os.path.join(path_data_folder, f"post_iv.json")
-    with open(path_post_iv_json, "w+") as f:
-        json.dump(post_iv, f, indent=2)
-
-# nisys.close()
-# exit()
-
-
-### RELAXATION (reset all to zero)
-if do_relax:
+def run_stress_relax(
+    cycle: int = 0,
+    num_cycles: int = 0,
+):
+    """Routine for doing a stress-relax sampling cycle.
+    Abstracted into this so I could sample a DC stress-relax cycle multiple
+    times to make a thesis figure depicting IDVG stress-relaxation over time.
+    This allows manually making stress-relax cycle without AC stress pattern.
+    - acyu
+    """
+    if num_cycles == 0:
+        path_data_stress_n = path_data_stress
+        path_data_relax_n = path_data_relax
+    else:
+        path_data_stress_n = f"{path_data_stress}_{cycle}"
+        path_data_relax_n = f"{path_data_relax}_{cycle}"
+    
+    # boost voltages
     if v0 != 0:
+        print(f"boosting wl/sl/bl voltage to {v0} V")
+        nisys.ppmu_set_all_to_voltage(
+            val=v0,
+            vwl_chan=wl,
+            vsl_chan=sl,
+            vbl_chan=bl,
+        )
+        print(f"sleeping for {boost_sleep} s")
+        time.sleep(boost_sleep)
+
+    ### STRESS MEASUREMENT
+    if do_stress_iv: # slow IDVGS
+        run_bias_stress_measurement_iv_sweep(
+            v0=v0,
+            v_stress=v_gate,
+            v_wl_sweep=v_wl_stress_sweep,
+            t_measure_points=t_measure_points_stress,
+            path_data=path_data_stress_n,
+        )
+        data_stress = None
+    else: # on-the-fly
+        if ac_stress:
+            run_stress = run_bias_stress_measurement_ac
+        else: # dc
+            run_stress = run_bias_stress_measurement_dc
+
+        data_stress = run_stress(
+            v0=v0,
+            v_stress=v_gate,
+            t_measure_points=t_measure_points_stress,
+            path_data=path_data_stress_n + ".json",
+        )
+
+    ### POST STRESS IV
+    if do_relax_iv:
+        post_iv = nisys.cnfet_iv_sweep(
+            v_wl=v_wl_stress_sweep,
+            v_bl=v_read,
+            v_sl=0.0,
+            v_0=v0,
+            v_wl_0=v0 + v_gate,
+            measure_i_bl = True,
+            measure_v_bl = False,
+            measure_i_sl = False,
+            measure_v_sl = False,
+            measure_i_wl = False,
+            measure_v_wl = False,
+        )
+        post_iv["v_wl"] = v_wl_stress_sweep
+        print(iv_data)
+
+        ### save in json format
+        path_post_iv_json = os.path.join(path_data_folder, f"post_iv.json")
+        with open(path_post_iv_json, "w+") as f:
+            json.dump(post_iv, f, indent=2)
+
+    # nisys.close()
+    # exit()
+
+    ### RELAXATION (reset all to zero)
+    if do_relax:
+        if do_relax_iv:
+            run_bias_stress_measurement_iv_sweep(
+                v0=0,
+                v_stress=0,
+                v_wl_sweep=v_wl_relax_sweep,
+                t_measure_points=t_measure_points_relax,
+                path_data=path_data_relax_n,
+            )
+            data_relax = None
+        else:
+            if v0 != 0:
+                nisys.ppmu_all_pins_to_zero()
+            data_relax = run_bias_stress_measurement_dc(
+                v0=0,
+                v_stress=0,
+                t_measure_points=t_measure_points_relax,
+                path_data=path_data_relax_n + ".json",
+            )
+    else:
         nisys.ppmu_all_pins_to_zero()
-    data_relax = run_bias_stress_measurement_dc(v0=0, v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax + ".json")
-elif do_relax_iv:
-    run_bias_stress_measurement_iv_sweep(v0=0, v_stress=0, t_measure_points=t_measure_points_relax, path_data=path_data_relax)
-    data_relax = None
+        data_relax = None
+
+    # also results as csv
+    for path_data, data in [
+        (path_data_stress_n, data_stress),
+        (path_data_relax_n, data_relax),
+    ]:
+        if data is None:
+            continue
+        
+        path_data_csv = path_data + ".csv"
+        with open(path_data_csv, "w+") as f:
+            f.write("t,i_d\n")
+            for t, i_d in zip(data["t"], data["i_d"]):
+                f.write(f"{t},{i_d}\n")
+            # f.write("t,v_d,i_d\n")
+            # for t, v_d, i_d in zip(data_measurement["t"], data_measurement["v_d"], data_measurement["i_d"]):
+            #     f.write(f"{t},{v_d},{i_d}\n")
+
+if stress_relax_cycles > 0:
+    for n in range(stress_relax_cycles):
+        run_stress_relax(cycle=n, num_cycles=stress_relax_cycles)
 else:
-    data_relax = None
+    run_stress_relax(cycle=0, num_cycles=0)
+
 
 # close ni system connection
 nisys.ppmu_all_pins_to_zero()
 nisys.close()
 
-# also results as csv
-for path_data, data in [
-    (path_data_stress, data_stress),
-    (path_data_relax, data_relax),
-]:
-    if data is None:
-        continue
-    
-    path_data_csv = path_data + ".csv"
-    with open(path_data_csv, "w+") as f:
-        f.write("t,i_d\n")
-        for t, i_d in zip(data["t"], data["i_d"]):
-            f.write(f"{t},{i_d}\n")
-        # f.write("t,v_d,i_d\n")
-        # for t, v_d, i_d in zip(data_measurement["t"], data_measurement["v_d"], data_measurement["i_d"]):
-        #     f.write(f"{t},{v_d},{i_d}\n")

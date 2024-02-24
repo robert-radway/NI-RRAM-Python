@@ -190,3 +190,18 @@ python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_4
 ```
 python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_10_burnin_relax_iv --no-relax --tend 1e3 --samples 40 --tend-relax 2e3 --samples-relax 20 --relax-iv
 ```
+
+
+
+
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_22_test --tstart 5e-3 --tend 1e2 --samples 50 --tstart-relax 5e-3 --tend-relax 1e2 --samples-relax 50 --initial-sweep 0.4 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
+
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w4_x_-2_y_0_lc_400_lch_160 col2_21_test --tstart 5e-3 --tend 1e2 --samples 50 --tstart-relax 5e-3 --tend-relax 1e2 --samples-relax 50 --initial-sweep 0.4 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
+
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w4_x_-2_y_0_lc_400_lch_160 col2_21_test_duty_50_vg_1200_rs --no-relax --tstart 5e-3 --tend 1e2 --samples 20 --ac --ac-mode rs --ac-freq 1e6 --dutycycle 0.5 --t-unit 50e-9 --initial-sweep 0.4 -0.8 0.2 --read-gate-bias -0.6 --gate-bias -1.2
+
+
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_10_efield_4_T_125C --tend 2e3 --tend-relax 5e3 --samples 100 --samples-relax 100 --initial-sweep 0.4 -0.8 0.2 --eot 2.13 --efield -4
+
+python .\scripts\nbti.py .\settings\NBTI_GAX2.toml cnfet_scaling_w2_x_2_y_1_lc_400_lch_160 col1_10_efield_2_T_125C --tend 2e3 --tend-relax 5e3 --samples 100 --samples-relax 100 --initial-sweep 0.4 -0.5 0.1 --eot 2.13 --efield -2
+
